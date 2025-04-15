@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+h1 {
+  font-size: 2.25rem;
+  font-weight: bold;
+}
+
+h2 {
+  font-size: 1.875rem;
+  font-weight: bold;
+}
+
+h3 {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+ul,
+ol {
+  padding: 0 1rem;
+  margin: 1.25rem 1rem 1.25rem 0.4rem;
+  list-style-position: outside;
+
+  li p {
+    margin-top: 0.25em;
+    margin-bottom: 0.25em;
+  }
+
+  list-style-type: disc;
+  list-style-color: black;
+}
+
+li {
+  margin-bottom: 0.5rem;
+}
+
+.ProseMirror pre {
+  background-color: #dfeaf6;
+  color: #11245d;
+  padding: 4rem;
+  font-weight: 600;
+  border-radius: 24px;
+  text-align: center;
+}
+
+.ProseMirror a {
+  color: #4572bb;
+}
+.tiptap:focus {
+  outline: none;
+}
+
+.TooltipContent {
+  width: var(--radix-tooltip-trigger-width);
+  max-height: var(--radix-tooltip-content-available-height);
+}
+
+.TooltipContent {
+  transform-origin: var(--radix-tooltip-content-transform-origin);
+  animation: scaleIn 0.5s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.checkbox-thick [data-state="checked"] svg {
+  stroke-width: 3;
+}

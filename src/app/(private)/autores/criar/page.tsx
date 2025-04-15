@@ -1,0 +1,17 @@
+import Header from "@/components/header";
+import FormCreateAuthors from "@/components/painel/cards/authors/forms/create-authors";
+
+export default function CriarAutor() {
+  return (
+    <div className="h-screen bg-primary-light flex flex-col overflow-hidden">
+      <Header
+        title="Criar Autor"
+        buttonHidden
+        description="Criar autores para poderem publicarem artigos/postagens para o blog"
+      />
+      <div className="flex-1 p-6">
+        <FormCreateAuthors />
+      </div>
+    </div>
+  );
+}
