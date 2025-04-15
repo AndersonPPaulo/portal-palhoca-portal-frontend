@@ -2,6 +2,7 @@
 
 import { api } from "@/service/api";
 import { useRouter } from "next/navigation";
+import { parseCookies } from "nookies";
 import { createContext, ReactNode, useState } from "react";
 import { toast } from "sonner";
 
@@ -63,7 +64,6 @@ interface ICompanyData {
   company: ICompanyProps | null;
 }
 
-
 interface IChildrenReact {
   children: ReactNode;
 }
@@ -81,16 +81,18 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
     const response = await api
       .get("/company", config)
       .then((res) => {
-        const dataWithStatus = res.data.response.data.map((company: ICompanyProps) => ({
-          ...company,
-          status: company.status || "active"
-        }));
-  
+        const dataWithStatus = res.data.response.data.map(
+          (company: ICompanyProps) => ({
+            ...company,
+            status: company.status || "active",
+          })
+        );
+
         const formattedResponse = {
           ...res.data.response,
-          data: dataWithStatus
+          data: dataWithStatus,
         };
-  
+
         setListCompany(formattedResponse);
         return formattedResponse;
       })
@@ -101,30 +103,38 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
           page: 0,
           limit: 0,
           totalPages: 0,
-          data: []
+          data: [],
         };
       });
     return response;
   };
-  
 
   const CreateCompany = async (data: UpdateCompanyProps): Promise<void> => {
+    const { "user:token": token } = parseCookies();
+    const config = {
+      headers: { Authorization: `bearer ${token}` },
+      params: { company },
+    };
     try {
-      await api.post("/company", data);
+      await api.post("/company", data, config);
       toast.success("Empresa criada com sucesso!");
       push("/comercio");
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Erro ao criar empresa");
     }
   };
-  
 
   const UpdateCompany = async (
     data: UpdateCompanyProps,
     id: string
   ): Promise<void> => {
+    const { "user:token": token } = parseCookies();
+    const config = {
+      headers: { Authorization: `bearer ${token}` },
+      params: { company },
+    };
     try {
-      await api.patch(`/company/${id}`, data);
+      await api.patch(`/company/${id}`, data, config);
       toast.success("Empresa atualizada com sucesso!");
       push("/comercio");
     } catch (err: any) {
@@ -139,7 +149,7 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
       .then((res) => {
         const companyWithStatus = {
           ...res.data.response,
-          status: res.data.response.status || "inactive"
+          status: res.data.response.status || "inactive",
         };
         setCompany(companyWithStatus);
         return companyWithStatus;
@@ -160,7 +170,7 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
         UpdateCompany,
         listCompany,
         SelfCompany,
-        company
+        company,
       }}
     >
       {children}
