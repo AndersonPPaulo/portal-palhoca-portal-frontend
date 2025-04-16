@@ -43,19 +43,6 @@ export default function TableCompany({ filter }: TableCompanyProps) {
     return matchesName
   }) || [];
 
-  return (
-    <>
-      {loading ? (
-        <div className="flex justify-center items-center p-8">
-          <p>Carregando dados...</p>
-        </div>
-      ) : filteredCompanies.length === 0 ? (
-        <div className="flex justify-center items-center p-8">
-          <p>Nenhum comércio encontrado.</p>
-        </div>
-      ) : (
-        <DataTable columns={columns} data={filteredCompanies} />
-      )}
-    </>
-  );
+  return  <DataTable columns={columns} data={filteredCompanies} />
+  
 }

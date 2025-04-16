@@ -1,6 +1,5 @@
 "use client";
 
-import Header from "@/components/header";
 import CompanyFilter from "@/components/painel/cards/company/filters";
 import TableCompany from "@/components/tables/company/page";
 import { Card } from "@/components/ui/card";

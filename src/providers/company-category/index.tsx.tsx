@@ -1,85 +1,147 @@
-import { api } from "@/service/api";
-import { createContext, useContext, useState } from "react";
-import { toast } from "sonner";
-import { getCookie } from "cookies-next";
+"use client";
 
-export interface CompanyCategoryProps {
+import { api } from "@/service/api";
+import { useRouter } from "next/navigation";
+import { parseCookies } from "nookies";
+import { createContext, ReactNode, useState } from "react";
+import { toast } from "sonner";
+
+export interface CategoryCompanyProps {
   id: string;
   name: string;
-  created_at: string;
-  updated_at: string;
-  company?: {
-    id: string;
-    name: string;
-  }[];
 }
 
-interface CreateCompanyCategoryData {
+export type CompanyCategoryListProps = {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  data: CategoryCompanyProps[];
+};
+
+interface UpdateCategoryCompanyProps {
   name: string;
-  companyIds?: string[];
+  description?: string;
+
 }
 
-interface CompanyCategoryContextType {
-  createCompanyCategory: (data: CreateCompanyCategoryData) => Promise<void>;
-  loading: boolean;
-  categories: CompanyCategoryProps[];
-  fetchCategories: (page?: number, limit?: number) => Promise<void>;
+interface ICompanyCategoryData {
+  ListCompanyCategory(limit?: number, page?: number): Promise<CompanyCategoryListProps>;
+  CreateCompanyCategory(data: UpdateCategoryCompanyProps): Promise<void>;
+  UpdateCompanyCategory(data: UpdateCategoryCompanyProps, id: string): Promise<void>;
+  listCompanyCategory: CompanyCategoryListProps | null;
+  SelfCompanyCategory(categoryId: string): Promise<CategoryCompanyProps>;
+  companyCategory: CategoryCompanyProps | null;
 }
 
-export const CompanyCategoryContext = createContext({} as CompanyCategoryContextType);
+interface IChildrenReact {
+  children: ReactNode;
+}
 
-export const CompanyCategoryProvider = ({ children }: { children: React.ReactNode }) => {
-  const [categories, setCategories] = useState<CompanyCategoryProps[]>([]);
-  const [loading, setLoading] = useState(false);
+export const CompanyCategoryContext = createContext<ICompanyCategoryData>({} as ICompanyCategoryData);
 
-  const token = getCookie("token"); // Autenticação com token
+export const CompanyCategoryProvider = ({ children }: IChildrenReact) => {
+  const { push } = useRouter();
+  const [listCompanyCategory, setListCompanyCategory] = useState<CompanyCategoryListProps | null>(null);
+  const [companyCategory, setCompanyCategory] = useState<CategoryCompanyProps | null>(null);
 
-  // Função para criar uma nova categoria
-  const createCompanyCategory = async (data: CreateCompanyCategoryData) => {
-    try {
-      setLoading(true);
+  const ListCompanyCategory = async (
+    limit: number = 30,
+    page: number = 1
+  ): Promise<CompanyCategoryListProps> => {
+    const config = { params: { limit, page } };
+    const response = await api
+      .get("/company-category", config)
+      .then((res) => {
+        const dataWithStatus = res.data.response.data.map(
+          (category: CategoryCompanyProps) => ({
+            ...category,
+          })
+        );
 
-      const response = await api.post("/company-category", data, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        const formattedResponse = {
+          ...res.data.response,
+          data: dataWithStatus,
+        };
+
+        setListCompanyCategory(formattedResponse);
+        return formattedResponse;
+      })
+      .catch((err) => {
+        toast.error(err.response?.data?.message || "Erro ao listar categorias de empresas");
+        return {
+          total: 0,
+          page: 0,
+          limit: 0,
+          totalPages: 0,
+          data: [],
+        };
       });
+    return response;
+  };
 
+  const CreateCompanyCategory = async (data: UpdateCategoryCompanyProps): Promise<void> => {
+    const { "user:token": token } = parseCookies();
+    const config = {
+      headers: { Authorization: `bearer ${token}` },
+    };
+    try {
+      await api.post("/company-category", data, config);
       toast.success("Categoria criada com sucesso!");
-      await fetchCategories(); // Recarrega as categorias após a criação
-    } catch (error: any) {
-      const message = error?.response?.data?.message || "Erro ao criar categoria";
-      toast.error(message);
-    } finally {
-      setLoading(false);
+      push("/categorias");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro ao criar categoria");
     }
   };
 
-  // Função para buscar categorias com paginação
-  const fetchCategories = async (page: number = 1, limit: number = 30) => {
+  const UpdateCompanyCategory = async (
+    data: UpdateCategoryCompanyProps,
+    id: string
+  ): Promise<void> => {
+    const { "user:token": token } = parseCookies();
+    const config = {
+      headers: { Authorization: `bearer ${token}` },
+    };
     try {
-      setLoading(true);
-      const response = await api.get("/company-category", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        params: { page, limit },
-      });
-      setCategories(response.data.data);
-    } catch (error) {
-      toast.error("Erro ao carregar categorias");
-    } finally {
-      setLoading(false);
+      await api.patch(`/company-category/${id}`, data, config);
+      toast.success("Categoria atualizada com sucesso!");
+      push("/categorias");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro ao atualizar categoria");
     }
+  };
+
+  const SelfCompanyCategory = async (categoryId: string): Promise<CategoryCompanyProps> => {
+    const response = await api
+      .get(`/company-category/${categoryId}`)
+      .then((res) => {
+        const categoryWithStatus = {
+          ...res.data.response,
+          status: res.data.response.status || "inactive",
+        };
+        setCompanyCategory(categoryWithStatus);
+        return categoryWithStatus;
+      })
+      .catch((err) => {
+        toast.error(err.response?.data?.message || "Erro ao buscar categoria");
+        return err;
+      });
+
+    return response;
   };
 
   return (
     <CompanyCategoryContext.Provider
-      value={{ createCompanyCategory, loading, categories, fetchCategories }}
+      value={{
+        ListCompanyCategory,
+        CreateCompanyCategory,
+        UpdateCompanyCategory,
+        listCompanyCategory,
+        SelfCompanyCategory,
+        companyCategory,
+      }}
     >
       {children}
     </CompanyCategoryContext.Provider>
   );
 };
-
-export const useCompanyCategory = () => useContext(CompanyCategoryContext);
