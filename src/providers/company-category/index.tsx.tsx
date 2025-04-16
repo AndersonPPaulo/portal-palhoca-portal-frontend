@@ -49,7 +49,6 @@ export const CompanyCategoryProvider = ({ children }: IChildrenReact) => {
   const { push } = useRouter();
   const [listCompanyCategory, setListCompanyCategory] = useState<CompanyCategoryListProps | null>(null);
   const [companyCategory, setCompanyCategory] = useState<CategoryCompanyProps | null>(null);
-  const [updateCompanyCategory, setUpadateCompanyCategory] = useState<string>()
 
   const ListCompanyCategory = async (
     limit: number = 30,
@@ -113,7 +112,7 @@ export const CompanyCategoryProvider = ({ children }: IChildrenReact) => {
     try {
       await api.post("/company-category", data, config);
       toast.success("Categoria criada com sucesso!");
-      push("/categorias");
+      push("/comercio?tab=categoria");
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Erro ao criar categoria");
     }

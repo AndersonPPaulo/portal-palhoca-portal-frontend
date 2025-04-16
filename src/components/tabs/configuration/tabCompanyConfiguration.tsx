@@ -12,12 +12,12 @@ export const tabCompanyConfigurations = [
     path: "/comercio",
   },
   {
-    value: "companyCategory",
+    value: "categoria",
     label: "Categorias de comércios",
     description:
       "Gerencie, edite e monitore as categorias dos comércios cadastrados do seu site.",
     component: <CategoriaComercio/>,
-    path: "/comercio/categoria",
+    path: "/comercio/categoria/criar",
   },
   
 ];
