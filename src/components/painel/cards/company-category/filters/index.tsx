@@ -26,10 +26,10 @@ const CompanyCategoryFilter = ({ filter, setFilter, onFilterChange }: FilterProp
     <div className="flex flex-col w-full gap-4">
       <div className="flex items-center gap-4">
         <div className="flex-grow">
-          <span className="text-body-g ms-4">Empresa:</span>
+          <span className="text-body-g ms-4">Categoria</span>
           <CustomInput
             type="search"
-            placeholder="Digite o nome da empresa..."
+            placeholder="Digite o nome da categoria..."
             value={filters.name}
             icon={<Search />}
             onChange={handleNameChange}

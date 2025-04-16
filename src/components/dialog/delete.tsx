@@ -24,11 +24,12 @@ import { TagContext } from "@/providers/tags";
 import { CategorysContext } from "@/providers/categorys";
 import { ArticleContext } from "@/providers/article";
 import { UserContext } from "@/providers/user";
+import { CompanyCategoryContext } from "@/providers/company-category/index.tsx";
 
 interface Props {
   item_id: string;
   item_name: string;
-  context: "tags" | "categories" | "articles" | "users";
+  context: "tags" | "categories" | "articles" | "users" | "companyCategory";
 }
 
 export function DialogDelete({ item_id, item_name, context }: Props) {
@@ -36,6 +37,9 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
   const { DeleteCategory, ListCategorys } = useContext(CategorysContext);
   const { DeleteArticle, ListArticles } = useContext(ArticleContext);
   const { DeleteUser } = useContext(UserContext);
+  const { DeleteCompanyCategory, ListCompanyCategory } = useContext(
+    CompanyCategoryContext
+  );
 
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -62,6 +66,9 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
         ListArticles();
       } else if (context === "users") {
         DeleteUser(item_id);
+      } else if (context === "companyCategory") {
+        await DeleteCompanyCategory(item_id);
+        ListCompanyCategory()
       }
       setError("");
       setInputValue("");
@@ -91,6 +98,8 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
         return `Você tem certeza que deseja deletar este artigo? Caso realmente for deletar informe o nome do artigo e confirme `;
       case "users":
         return `Você tem certeza que deseja deletar este artigo? Caso realmente for deletar informe o nome do artigo e confirme `;
+      case "companyCategory":
+        return `Você tem certeza que deseja deletar esta categoria? Caso realmente for deletar informe o nome da categoria e confirme `;
       default:
         return "";
     }
@@ -100,6 +109,7 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
     tags: "tag",
     categories: "categorias",
     articles: "artigos",
+    companyCategory: "categorias",
   };
 
   return (
@@ -126,6 +136,8 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
                   ? "categoria"
                   : context === "users"
                   ? "usuário"
+                  : context === "companyCategory"
+                  ? "categoria de comércio"
                   : "artigo"}
               </span>
 
@@ -138,14 +150,16 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
       <DialogContent className="bg-white border-none outline-none !rounded-3xl">
         <DialogHeader className="mb-2">
           <DialogTitle className="text-header-s">
-            Deletar{" "}
-            {context === "tags"
-              ? "tag"
-              : context === "categories"
-              ? "categoria"
-              : context === "users"
-              ? "usuário"
-              : "artigo"}
+          Deletar{" "}
+                {context === "tags"
+                  ? "tag"
+                  : context === "categories"
+                  ? "categoria"
+                  : context === "users"
+                  ? "usuário"
+                  : context === "companyCategory"
+                  ? "categoria de comércio"
+                  : "artigo"}
           </DialogTitle>
           <DialogDescription className="flex flex-col gap-4 pt-2">
             {getDialogDescription()}

@@ -24,6 +24,10 @@ interface UpdateCategoryCompanyProps {
   description?: string;
 
 }
+type ResponsePromise = {
+  name: string;
+  id: string;
+};
 
 interface ICompanyCategoryData {
   ListCompanyCategory(limit?: number, page?: number): Promise<CompanyCategoryListProps>;
@@ -32,6 +36,7 @@ interface ICompanyCategoryData {
   listCompanyCategory: CompanyCategoryListProps | null;
   SelfCompanyCategory(categoryId: string): Promise<CategoryCompanyProps>;
   companyCategory: CategoryCompanyProps | null;
+  DeleteCompanyCategory(categoryId: string): Promise<void>;
 }
 
 interface IChildrenReact {
@@ -44,6 +49,7 @@ export const CompanyCategoryProvider = ({ children }: IChildrenReact) => {
   const { push } = useRouter();
   const [listCompanyCategory, setListCompanyCategory] = useState<CompanyCategoryListProps | null>(null);
   const [companyCategory, setCompanyCategory] = useState<CategoryCompanyProps | null>(null);
+  const [updateCompanyCategory, setUpadateCompanyCategory] = useState<string>()
 
   const ListCompanyCategory = async (
     limit: number = 30,
@@ -77,6 +83,25 @@ export const CompanyCategoryProvider = ({ children }: IChildrenReact) => {
           data: [],
         };
       });
+    return response;
+  };
+
+  const DeleteCompanyCategory = async (categoryId: string): Promise<void> => {
+    const { "user:token": token } = parseCookies();
+    const config = {
+      headers: { Authorization: `bearer ${token}` },
+      
+    };
+    const response = await api
+      .delete(`/company-category/${categoryId}`, config)
+      .then(() => {
+        toast.success("Categoria deletada com sucesso!");
+      })
+      .catch((err) => {
+        toast.error(err.response.data.message);
+        return err;
+      });
+
     return response;
   };
 
@@ -139,6 +164,7 @@ export const CompanyCategoryProvider = ({ children }: IChildrenReact) => {
         listCompanyCategory,
         SelfCompanyCategory,
         companyCategory,
+        DeleteCompanyCategory
       }}
     >
       {children}

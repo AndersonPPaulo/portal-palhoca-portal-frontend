@@ -13,7 +13,7 @@ export default function CategoriaComercio() {
     });
     
     return (
-      <div className="bg-primary-light flex flex-col h-screen overflow-hidden">
+      <div className="bg-primary-light flex flex-col  overflow-hidden">
         <div className="flex flex-col gap-4 h-full p-4">
           <Card className="rounded-3xl min-h-[140px] bg-white flex items-center gap-4 p-4">
             <CompanyCategoryFilter

@@ -17,17 +17,7 @@ export default function TableCategoryCompany({ filter }: TableCategoryCompanyPro
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchCategories = async () => {
-      setLoading(true);
-      try {
-        await ListCompanyCategory(4000, 1);
-      } catch (error) {
-        console.error("Erro ao carregar categorias:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCategories();
+    ListCompanyCategory()
   }, []);
 
   const filteredCategories = listCompanyCategory?.data?.filter((item: CategoryCompanyProps) => {

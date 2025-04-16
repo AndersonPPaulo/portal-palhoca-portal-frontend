@@ -1,28 +1,41 @@
 import { ColumnDef } from "@tanstack/react-table";
-import { Edit } from "lucide-react";
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Edit, Trash2 } from "lucide-react";
+import {
+  TooltipProvider,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { useRouter } from "next/navigation";
+import { DialogDelete } from "@/components/dialog/delete";
 
 export interface CompanyCategoryItem {
   id: string;
   name: string;
 }
 
-const CellActions = (categoryId: string) => {
+const CellActions = ({ category }: { category: CompanyCategoryItem }) => {
   const { push } = useRouter();
 
   return (
-    <div className="flex gap-6">
+    <div className="flex items-center justify-center gap-4">
+      <DialogDelete
+        context="companyCategory"
+        item_name={category.name}
+        item_id={category.id}
+      />
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <Edit
-              onClick={() => push(`/comercio/categorias/editar/${categoryId}`)}
-              size={20}
-              className="text-primary cursor-pointer"
+              onClick={() =>
+                push(`/comercio/categorias/editar/${category.id}`)
+              }
+              size={18}
+              className="text-primary cursor-pointer hover:text-blue-600 transition-colors"
             />
           </TooltipTrigger>
-          <TooltipContent className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn" sideOffset={5}>
+          <TooltipContent sideOffset={5}>
             <p>Editar Categoria</p>
           </TooltipContent>
         </Tooltip>
@@ -34,17 +47,29 @@ const CellActions = (categoryId: string) => {
 export const columns: ColumnDef<CompanyCategoryItem>[] = [
   {
     accessorKey: "name",
-    header: () => <div>Categoria</div>,
+    header: () => (
+      <div className="text-left font-semibold text-lg text-gray-700">
+        Categoria
+      </div>
+    ),
     cell: ({ row }) => (
-      <div className="truncate max-w-[300px]">{row.original.name}</div>
+      <div className=" max-w-[300px] text-gray-800 text-base">
+        {row.original.name}
+      </div>
     ),
   },
   {
     id: "actions",
-    header: () => <div className="text-center">Ações</div>,
+    header: () => (
+      <div className="text-center font-semibold text-lg text-gray-700">
+        Ações
+      </div>
+    ),
     size: 100,
     cell: ({ row }) => (
-      <div className="flex justify-center">{CellActions(row.original.id)}</div>
+      <div className="flex justify-center">
+        <CellActions category={row.original} />
+      </div>
     ),
   },
 ];
