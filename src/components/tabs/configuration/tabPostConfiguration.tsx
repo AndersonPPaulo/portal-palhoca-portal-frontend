@@ -3,7 +3,7 @@ import Articles from "../cards/articles/articles";
 import Categorys from "../cards/categorys/categorys";
 import Tags from "../cards/tags/tags";
 
-export const tabConfigurations = [
+export const tabPostConfigurations = [
   {
     value: "articles",
     label: "Artigos",

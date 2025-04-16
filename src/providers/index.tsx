@@ -6,6 +6,7 @@ import { CategorysProvider } from "./categorys";
 import { TagProvider } from "./tags";
 import { UserProvider } from "./user";
 import { CompanyProvider } from "./company";
+import { CompanyCategoryProvider } from "./company-category/index.tsx";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -14,7 +15,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <CompanyProvider>
           <ArticleProvider>
             <CategorysProvider>
+           <CompanyCategoryProvider>
               <TagProvider>{children}</TagProvider>
+              </CompanyCategoryProvider>
             </CategorysProvider>
           </ArticleProvider>
         </CompanyProvider>
