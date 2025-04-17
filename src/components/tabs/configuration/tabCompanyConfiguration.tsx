@@ -9,7 +9,7 @@ export const tabCompanyConfigurations = [
     description:
       "Gerencie, edite e monitore os comércios cadastrados do seu site.",
     component: <Comercio />,
-    path: "/comercio",
+    path: "/comercio/criar",
   },
   {
     value: "categoria",

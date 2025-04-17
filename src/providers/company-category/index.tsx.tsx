@@ -22,7 +22,6 @@ export type CompanyCategoryListProps = {
 interface UpdateCategoryCompanyProps {
   name: string;
   description?: string;
-
 }
 type ResponsePromise = {
   name: string;
@@ -30,25 +29,32 @@ type ResponsePromise = {
 };
 
 interface ICompanyCategoryData {
-  ListCompanyCategory(limit?: number, page?: number): Promise<CompanyCategoryListProps>;
+  ListCompanyCategory(
+    limit?: number,
+    page?: number
+  ): Promise<CompanyCategoryListProps>;
   CreateCompanyCategory(data: UpdateCategoryCompanyProps): Promise<void>;
-  UpdateCompanyCategory(data: UpdateCategoryCompanyProps, id: string): Promise<void>;
+  UpdateCompanyCategory(
+    data: UpdateCategoryCompanyProps,
+    id: string
+  ): Promise<void>;
   listCompanyCategory: CompanyCategoryListProps | null;
-  SelfCompanyCategory(categoryId: string): Promise<CategoryCompanyProps>;
-  companyCategory: CategoryCompanyProps | null;
+  SelfCompanyCategory(categoryId: string): Promise<ResponsePromise>;
+  companyCategory: ResponsePromise | null;
   DeleteCompanyCategory(categoryId: string): Promise<void>;
 }
 
 interface IChildrenReact {
   children: ReactNode;
 }
-
-export const CompanyCategoryContext = createContext<ICompanyCategoryData>({} as ICompanyCategoryData);
+export const CompanyCategoryContext = createContext<ICompanyCategoryData>(
+  {} as ICompanyCategoryData
+);
 
 export const CompanyCategoryProvider = ({ children }: IChildrenReact) => {
   const { push } = useRouter();
-  const [listCompanyCategory, setListCompanyCategory] = useState<CompanyCategoryListProps | null>(null);
-  const [companyCategory, setCompanyCategory] = useState<CategoryCompanyProps | null>(null);
+  const [listCompanyCategory, setListCompanyCategory] =
+    useState<CompanyCategoryListProps | null>(null);
 
   const ListCompanyCategory = async (
     limit: number = 30,
@@ -73,7 +79,9 @@ export const CompanyCategoryProvider = ({ children }: IChildrenReact) => {
         return formattedResponse;
       })
       .catch((err) => {
-        toast.error(err.response?.data?.message || "Erro ao listar categorias de empresas");
+        toast.error(
+          err.response?.data?.message || "Erro ao listar categorias de empresas"
+        );
         return {
           total: 0,
           page: 0,
@@ -89,7 +97,6 @@ export const CompanyCategoryProvider = ({ children }: IChildrenReact) => {
     const { "user:token": token } = parseCookies();
     const config = {
       headers: { Authorization: `bearer ${token}` },
-      
     };
     const response = await api
       .delete(`/company-category/${categoryId}`, config)
@@ -104,7 +111,9 @@ export const CompanyCategoryProvider = ({ children }: IChildrenReact) => {
     return response;
   };
 
-  const CreateCompanyCategory = async (data: UpdateCategoryCompanyProps): Promise<void> => {
+  const CreateCompanyCategory = async (
+    data: UpdateCategoryCompanyProps
+  ): Promise<void> => {
     const { "user:token": token } = parseCookies();
     const config = {
       headers: { Authorization: `bearer ${token}` },
@@ -120,34 +129,40 @@ export const CompanyCategoryProvider = ({ children }: IChildrenReact) => {
 
   const UpdateCompanyCategory = async (
     data: UpdateCategoryCompanyProps,
-    id: string
+    categoryId: string
   ): Promise<void> => {
     const { "user:token": token } = parseCookies();
     const config = {
       headers: { Authorization: `bearer ${token}` },
     };
-    try {
-      await api.patch(`/company-category/${id}`, data, config);
-      toast.success("Categoria atualizada com sucesso!");
-      push("/categorias");
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Erro ao atualizar categoria");
-    }
+
+    const response = await api
+      .patch(`/company-category/${categoryId}`, data, config)
+      .then(() => {
+        toast.success("Categoria atualizada com sucesso!");
+        push("/comercio?tab=categoria");
+      })
+      .catch((err) => {
+        toast.error(err.response.data.message);
+        return err;
+      });
+
+    return response;
   };
 
-  const SelfCompanyCategory = async (categoryId: string): Promise<CategoryCompanyProps> => {
+  const [companyCategory, setCompanyCategory] =
+    useState<ResponsePromise | null>(null);
+  const SelfCompanyCategory = async (
+    categoryId: string
+  ): Promise<ResponsePromise> => {
+    // setCompanyCategory(null)
     const response = await api
       .get(`/company-category/${categoryId}`)
       .then((res) => {
-        const categoryWithStatus = {
-          ...res.data.response,
-          status: res.data.response.status || "inactive",
-        };
-        setCompanyCategory(categoryWithStatus);
-        return categoryWithStatus;
+        setCompanyCategory(res.data.response);
       })
       .catch((err) => {
-        toast.error(err.response?.data?.message || "Erro ao buscar categoria");
+        toast.error(err.response.data.message);
         return err;
       });
 
@@ -163,7 +178,7 @@ export const CompanyCategoryProvider = ({ children }: IChildrenReact) => {
         listCompanyCategory,
         SelfCompanyCategory,
         companyCategory,
-        DeleteCompanyCategory
+        DeleteCompanyCategory,
       }}
     >
       {children}

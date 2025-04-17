@@ -29,7 +29,7 @@ const CellActions = ({ category }: { category: CompanyCategoryItem }) => {
           <TooltipTrigger asChild>
             <Edit
               onClick={() =>
-                push(`/comercio/categorias/editar/${category.id}`)
+                push(`/comercio/categoria/editar/${category.id}`)
               }
               size={18}
               className="text-primary cursor-pointer hover:text-blue-600 transition-colors"

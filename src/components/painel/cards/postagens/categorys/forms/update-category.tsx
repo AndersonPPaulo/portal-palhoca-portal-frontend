@@ -8,7 +8,7 @@ import { useRouter, useParams } from "next/navigation";
 import CustomInput from "@/components/input/custom-input";
 import { Button } from "@/components/ui/button";
 import ReturnPageButton from "@/components/button/returnPage";
-import { CompanyCategoryContext } from "@/providers/company-category/index.tsx";
+import { CategorysContext } from "@/providers/categorys";
 
 const categorySchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -16,8 +16,9 @@ const categorySchema = z.object({
 
 type CategoryFormData = z.infer<typeof categorySchema>;
 
-export default function FormUpdateCompanyCategory() {
-  const { UpdateCompanyCategory, SelfCompanyCategory } = useContext(CompanyCategoryContext);
+export default function FormUpdateCategory() {
+  const { UpdateCategory, category } =
+    useContext(CategorysContext);
   const { back } = useRouter();
   const params = useParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,7 +27,6 @@ export default function FormUpdateCompanyCategory() {
     register,
     handleSubmit,
     formState: { errors },
-    reset,
     setValue,
   } = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
@@ -36,14 +36,7 @@ export default function FormUpdateCompanyCategory() {
   });
 
   useEffect(() => {
-    const loadCategory = async () => {
-      const id = params?.id as string;
-      if (id) {
-        const category = await SelfCompanyCategory(id);
-        setValue("name", category.name);
-      }
-    };
-    loadCategory();
+    setValue("name", category!.name);
   }, [params?.id, setValue]);
 
   const onSubmit = async (data: CategoryFormData) => {
@@ -51,7 +44,7 @@ export default function FormUpdateCompanyCategory() {
     if (!id) return;
     setIsSubmitting(true);
     try {
-      await UpdateCompanyCategory(data, id);
+      await UpdateCategory(data, id);
     } finally {
       setIsSubmitting(false);
     }

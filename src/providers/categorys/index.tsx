@@ -73,12 +73,8 @@ export const CategorysProvider = ({ children }: ICihldrenReact) => {
 
   const [listCategorys, setListCategorys] = useState<ResponsePromise[]>([]);
   const ListCategorys = async (): Promise<ResponsePromise[]> => {
-    const { "user:token": token } = parseCookies();
-    const config = {
-      headers: { Authorization: `bearer ${token}` },
-    };
     const response = await api
-      .get("/categorys", config)
+      .get("/category")
       .then((res) => {
         setListCategorys(res.data.response);
       })
@@ -136,12 +132,12 @@ export const CategorysProvider = ({ children }: ICihldrenReact) => {
     const { "user:token": token } = parseCookies();
     const config = {
       headers: { Authorization: `bearer ${token}` },
-      params: { categoryId },
     };
     const response = await api
-      .get("/category", config)
+      .get(`/category/${categoryId}`, config)
       .then((res) => {
         setCategory(res.data.response);
+        console.log("res.data.response", res.data.response);
       })
       .catch((err) => {
         toast.error(err.response.data.message);

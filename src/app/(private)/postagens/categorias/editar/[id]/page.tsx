@@ -31,7 +31,7 @@ export default function EditCategoryPage({ params }: Props) {
         {loading || !category ? (
           <SkeletonTagForm />
         ) : (
-          <FormEditCategory categoryData={category} />
+          <FormEditCategory/>
         )}
       </div>
     </div>
