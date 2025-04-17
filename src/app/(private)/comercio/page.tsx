@@ -3,7 +3,7 @@ import { tabCompanyConfigurations } from "@/components/tabs/configuration/tabCom
 
 export default function Companytagens() {
   return (
-    <div className="bg-primary-light  overflow-x-hidden">
+    <div className="bg-primary-light overflow-x-hidden">
       <DynamicTabs tabs={tabCompanyConfigurations} />
     </div>
   );
