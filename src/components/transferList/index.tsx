@@ -54,18 +54,18 @@ const CompanyTransferList: React.FC<CompanyTransferListProps> = ({
 
         <div className="flex justify-between mb-2 px-2">
           <div className="flex gap-2">
-            <button 
+            <Button 
               onClick={() => selectAll("source")} 
-              className="text-sm text-gray-600 hover:text-gray-900"
+              className="rounded-3xl h-8 text-[13px] p-1"
             >
               Selecionar todos
-            </button>
-            <button 
+            </Button>
+            <Button 
               onClick={() => deselectAll("source")} 
-              className="text-sm text-gray-600 hover:text-gray-900"
+              className="rounded-3xl h-8 text-[13px] p-1" 
             >
               Limpar
-            </button>
+            </Button>
           </div>
           <div className="text-sm text-gray-500">
             {selectedSourceItems.length} de {filteredSourceItems.length} Selecionados
@@ -108,7 +108,7 @@ const CompanyTransferList: React.FC<CompanyTransferListProps> = ({
         <Button
           onClick={() => moveToTarget(selectedSourceItems)}
           disabled={selectedSourceItems.length === 0}
-          className={`p-2 rounded-full border-2${
+          className={`p-4 mb-1 rounded-full border-2${
             selectedSourceItems.length === 0
               ? "border-gray-200 text-gray-300 cursor-not-allowed"
               : "border-primary-light text-primary-light hover:bg-primary-light hover:text-white"
@@ -116,18 +116,6 @@ const CompanyTransferList: React.FC<CompanyTransferListProps> = ({
           title="Move selected companies to target"
         >
           <ChevronRight className="h-5 w-5" />
-        </Button>
-        <Button
-          onClick={moveAllToTarget}
-          disabled={filteredSourceItems.length === 0}
-          className={`p-2 rounded-full border-2  ${
-            filteredSourceItems.length === 0
-              ? "border-gray-200 text-gray-300 cursor-not-allowed"
-              : "border-primary-light text-primary-light hover:bg-primary-light hover:text-white"
-          }`}
-          title="Move all companies to target"
-        >
-          <span className="text-xs font-bold">ALL</span>
         </Button>
         <Button
           onClick={() => moveToSource(selectedTargetItems)}
