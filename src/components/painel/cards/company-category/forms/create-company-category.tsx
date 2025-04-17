@@ -80,7 +80,8 @@ export default function FormCreateCompanyCategory() {
           <Button
             type="button"
             onClick={toggleTransferList}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
+            className=" hover:bg-blue-700 text-white rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
+            
           >
             {showTransferList ? "Ocultar associação de comércios" : "Associar comércios a esta categoria"}
           </Button>

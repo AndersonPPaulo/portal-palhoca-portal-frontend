@@ -1,3 +1,8 @@
+"use client";
+import { api } from "@/service/api";
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react";
+import { toast } from "sonner";
+
 // types.ts
 export interface ICompanyProps {
   id: string;
@@ -19,12 +24,9 @@ export interface TransferListItem {
   label: string;
 }
 
-// context/CompanyTransferProvider.tsx
-"use client";
 
-import { api } from "@/service/api";
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react";
-import { toast } from "sonner";
+
+
 
 interface CompanyTransferContextProps {
   // Company data
@@ -60,7 +62,6 @@ interface CompanyTransferContextProps {
 const CompanyTransferContext = createContext<CompanyTransferContextProps | undefined>(undefined);
 
 export const CompanyTransferProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Company data state
   const [companies, setCompanies] = useState<CompanyResponseProps>({
     total: 0,
     page: 0,
@@ -70,7 +71,6 @@ export const CompanyTransferProvider: React.FC<{ children: React.ReactNode }> = 
   });
   const [isLoading, setIsLoading] = useState<boolean>(false);
   
-  // Transfer list state
   const [sourceItems, setSourceItems] = useState<TransferListItem[]>([]);
   const [targetItems, setTargetItems] = useState<TransferListItem[]>([]);
   const [selectedSourceItems, setSelectedSourceItems] = useState<string[]>([]);
@@ -78,7 +78,6 @@ export const CompanyTransferProvider: React.FC<{ children: React.ReactNode }> = 
   const [sourceSearchQuery, setSourceSearchQuery] = useState<string>("");
   const [targetSearchQuery, setTargetSearchQuery] = useState<string>("");
 
-  // Fetch companies from API
   const fetchCompanies = useCallback(async (limit: number = 1000, page: number = 1) => {
     setIsLoading(true);
     try {
@@ -99,7 +98,6 @@ export const CompanyTransferProvider: React.FC<{ children: React.ReactNode }> = 
 
       setCompanies(formattedResponse);
       
-      // Initialize source items with all companies
       const companyItems: TransferListItem[] = dataWithStatus.map((company: ICompanyProps) => ({
         id: company.id,
         label: company.name,
@@ -121,12 +119,10 @@ export const CompanyTransferProvider: React.FC<{ children: React.ReactNode }> = 
     }
   }, []);
 
-  // Initialize data on component mount
   useEffect(() => {
     fetchCompanies();
   }, [fetchCompanies]);
 
-  // Filter items based on search queries
   const filteredSourceItems = useMemo(() => {
     return sourceItems.filter((item) => 
       item.label.toLowerCase().includes(sourceSearchQuery.toLowerCase())
@@ -139,7 +135,6 @@ export const CompanyTransferProvider: React.FC<{ children: React.ReactNode }> = 
     );
   }, [targetItems, targetSearchQuery]);
 
-  // Selection methods
   const toggleSelection = useCallback((id: string, listType: "source" | "target") => {
     if (listType === "source") {
       setSelectedSourceItems(prev => 
@@ -174,7 +169,6 @@ export const CompanyTransferProvider: React.FC<{ children: React.ReactNode }> = 
     }
   }, []);
 
-  // Transfer methods
   const moveToTarget = useCallback((itemIds: string[]) => {
     const itemsToMove = sourceItems.filter(item => itemIds.includes(item.id));
     setSourceItems(prev => prev.filter(item => !itemIds.includes(item.id)));

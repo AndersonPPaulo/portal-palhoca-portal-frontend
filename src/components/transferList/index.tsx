@@ -4,6 +4,7 @@
 import { Search, ChevronRight, ChevronLeft, Check } from "lucide-react";
 import CustomInput from "../input/custom-input";
 import { useCompanyTransfer } from "@/providers/CompanyTransfer";
+import { Button } from "../ui/button";
 
 interface CompanyTransferListProps {
   sourceTitle?: string;
@@ -12,8 +13,8 @@ interface CompanyTransferListProps {
 }
 
 const CompanyTransferList: React.FC<CompanyTransferListProps> = ({
-  sourceTitle = "Available Companies",
-  targetTitle = "Selected Companies",
+  sourceTitle = "Comércios Cadastrados",
+  targetTitle = "Comércios Selecionados",
   className = "",
 }) => {
   const {
@@ -35,17 +36,16 @@ const CompanyTransferList: React.FC<CompanyTransferListProps> = ({
   } = useCompanyTransfer();
 
   if (isLoading) {
-    return <div className="flex justify-center items-center h-64">Loading companies...</div>;
+    return <div className="flex justify-center items-center h-64">Carregando Comércios</div>;
   }
 
   return (
     <div className={`flex flex-col md:flex-row gap-6 ${className}`}>
-      {/* Source List */}
       <div className="flex-1 border-2 border-primary-light rounded-[24px] p-4">
         <h3 className="text-lg font-medium mb-3 px-2">{sourceTitle}</h3>
 
         <CustomInput
-          placeholder="Search companies..."
+          placeholder="Procurar Comércios"
           value={sourceSearchQuery}
           onChange={(e) => setSourceSearchQuery(e.target.value)}
           icon={<Search className="h-5 w-5" />}
@@ -58,17 +58,17 @@ const CompanyTransferList: React.FC<CompanyTransferListProps> = ({
               onClick={() => selectAll("source")} 
               className="text-sm text-gray-600 hover:text-gray-900"
             >
-              Select all
+              Selecionar todos
             </button>
             <button 
               onClick={() => deselectAll("source")} 
               className="text-sm text-gray-600 hover:text-gray-900"
             >
-              Clear
+              Limpar
             </button>
           </div>
           <div className="text-sm text-gray-500">
-            {selectedSourceItems.length} of {filteredSourceItems.length} selected
+            {selectedSourceItems.length} de {filteredSourceItems.length} Selecionados
           </div>
         </div>
 
@@ -99,17 +99,16 @@ const CompanyTransferList: React.FC<CompanyTransferListProps> = ({
               ))}
             </ul>
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-500">No companies found</div>
+            <div className="flex items-center justify-center h-full text-gray-500">Nenhum comércio encontrado</div>
           )}
         </div>
       </div>
 
-      {/* Transfer Controls */}
-      <div className="flex md:flex-col justify-center items-center gap-2 py-4">
-        <button
+      <div className="flex md:flex-col justify-center ">
+        <Button
           onClick={() => moveToTarget(selectedSourceItems)}
           disabled={selectedSourceItems.length === 0}
-          className={`p-2 rounded-full border-2 ${
+          className={`p-2 rounded-full border-2${
             selectedSourceItems.length === 0
               ? "border-gray-200 text-gray-300 cursor-not-allowed"
               : "border-primary-light text-primary-light hover:bg-primary-light hover:text-white"
@@ -117,11 +116,11 @@ const CompanyTransferList: React.FC<CompanyTransferListProps> = ({
           title="Move selected companies to target"
         >
           <ChevronRight className="h-5 w-5" />
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={moveAllToTarget}
           disabled={filteredSourceItems.length === 0}
-          className={`p-2 rounded-full border-2 ${
+          className={`p-2 rounded-full border-2  ${
             filteredSourceItems.length === 0
               ? "border-gray-200 text-gray-300 cursor-not-allowed"
               : "border-primary-light text-primary-light hover:bg-primary-light hover:text-white"
@@ -129,11 +128,11 @@ const CompanyTransferList: React.FC<CompanyTransferListProps> = ({
           title="Move all companies to target"
         >
           <span className="text-xs font-bold">ALL</span>
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => moveToSource(selectedTargetItems)}
           disabled={selectedTargetItems.length === 0}
-          className={`p-2 rounded-full border-2 ${
+          className={`p-2 rounded-full border-2 bg-blue-600 hover:bg-blue-700 text-white ${
             selectedTargetItems.length === 0
               ? "border-gray-200 text-gray-300 cursor-not-allowed"
               : "border-primary-light text-primary-light hover:bg-primary-light hover:text-white"
@@ -141,15 +140,14 @@ const CompanyTransferList: React.FC<CompanyTransferListProps> = ({
           title="Move selected companies to source"
         >
           <ChevronLeft className="h-5 w-5" />
-        </button>
+        </Button>
       </div>
 
-      {/* Target List */}
       <div className="flex-1 border-2 border-primary-light rounded-[24px] p-4">
         <h3 className="text-lg font-medium mb-3 px-2">{targetTitle}</h3>
 
         <CustomInput
-          placeholder="Search selected companies..."
+          placeholder="Procurar Comércios Selecionados"
           value={targetSearchQuery}
           onChange={(e) => setTargetSearchQuery(e.target.value)}
           icon={<Search className="h-5 w-5" />}
@@ -162,17 +160,17 @@ const CompanyTransferList: React.FC<CompanyTransferListProps> = ({
               onClick={() => selectAll("target")} 
               className="text-sm text-gray-600 hover:text-gray-900"
             >
-              Select all
+              Selecionar todos
             </button>
             <button 
               onClick={() => deselectAll("target")} 
               className="text-sm text-gray-600 hover:text-gray-900"
             >
-              Clear
+              Limpar
             </button>
           </div>
           <div className="text-sm text-gray-500">
-            {selectedTargetItems.length} of {filteredTargetItems.length} selected
+            {selectedTargetItems.length} de {filteredTargetItems.length} Selecionados
           </div>
         </div>
 
@@ -203,7 +201,7 @@ const CompanyTransferList: React.FC<CompanyTransferListProps> = ({
               ))}
             </ul>
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-500">No selected companies</div>
+            <div className="flex items-center justify-center h-full text-gray-500">Nenhum Comércio Selecionado</div>
           )}
         </div>
       </div>
@@ -212,34 +210,3 @@ const CompanyTransferList: React.FC<CompanyTransferListProps> = ({
 };
 
 export default CompanyTransferList;
-
-// // Usage example in a page
-// // pages/companies/selection.tsx
-// "use client";
-
-// import React from "react";
-// import { CompanyTransferProvider } from "../../context/CompanyTransferProvider";
-// import CompanyTransferList from "../../components/CompanyTransferList";
-// import CustomInput from "../input/custom-input";
-
-// export default function CompanySelectionPage() {
-//   return (
-//     <div className="container mx-auto py-8">
-//       <h1 className="text-2xl font-bold mb-6">Select Companies</h1>
-      
-//       <CompanyTransferProvider>
-//         <CompanyTransferList 
-//           sourceTitle="Available Companies" 
-//           targetTitle="Selected Companies" 
-//         />
-        
-//         {/* Example: Submit button to use selected companies */}
-//         <div className="mt-6 flex justify-end">
-//           <button className="bg-primary-light text-white px-4 py-2 rounded-md hover:bg-primary">
-//             Save Selection
-//           </button>
-//         </div>
-//       </CompanyTransferProvider>
-//     </div>
-//   );
-//}
