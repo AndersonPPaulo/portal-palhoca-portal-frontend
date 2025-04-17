@@ -90,6 +90,7 @@ export default function FormCreateCompanyCategory() {
             <p className="text-sm text-gray-600 mb-4">
               Selecione os comércios que deseja associar a esta categoria.
             </p>
+            
             <TransferList/>
           </div>
         )}
