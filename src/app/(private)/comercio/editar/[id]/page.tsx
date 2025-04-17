@@ -26,9 +26,9 @@ export default function EditCompanyPage({ params }: Props) {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-primary-light overflow-hidden">
+    <div className="flex flex-col h-screen bg-primary-light overflow-scroll overflow-x-hidden">
       <Header title={`Edita Comercio - ${company?.name}`} buttonHidden={true} />
-      <div className="flex-1 overflow-hidden p-6">
+      <div className="flex-1 p-6">
         {loading || !company ? (
           <SkeletonTagForm />
         ) : (

@@ -3,7 +3,7 @@ import FormCreateCategory from "@/components/painel/cards/postagens/categorys/fo
 
 export default function CreateCategorys() {
   return (
-    <div className="h-full bg-primary-light">
+    <div className="bg-primary-light h-screen overflow-hidden">
       <Header title="Cadastro de categoria" buttonHidden={true} />
       <div className="p-6">
         <FormCreateCategory />

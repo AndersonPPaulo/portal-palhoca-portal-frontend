@@ -5,9 +5,10 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useContext, useState } from "react";
 import CustomInput from "@/components/input/custom-input";
-import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { CompanyContext } from "@/providers/company";
+import ReturnPageButton from "@/components/button/returnPage";
+import { Button } from "@/components/ui/button";
 
 const companySchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -69,13 +70,7 @@ export default function FormCreateCompany() {
       <div className="flex-1 overflow-y-auto no-scrollbar">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-6">
           <div className="flex justify-between items-center">
-            <Button
-              type="button"
-              onClick={back}
-              className="bg-muted text-muted-foreground hover:bg-muted/80 rounded-3xl px-6"
-            >
-              Voltar
-            </Button>
+            <ReturnPageButton />
 
             <div className="flex flex-col">
               <label htmlFor="status" className="text-gray-500 mb-1">
@@ -105,7 +100,9 @@ export default function FormCreateCompany() {
               {...register("name")}
               placeholder="Digite o nome"
             />
-            {errors.name && <span className="text-red-500">{errors.name.message}</span>}
+            {errors.name && (
+              <span className="text-red-500">{errors.name.message}</span>
+            )}
 
             <CustomInput
               id="phone"
@@ -120,7 +117,11 @@ export default function FormCreateCompany() {
               {...register("openingHours")}
               placeholder="Seg a Sab - 09h às 18h"
             />
-            {errors.openingHours && <span className="text-red-500">{errors.openingHours.message}</span>}
+            {errors.openingHours && (
+              <span className="text-red-500">
+                {errors.openingHours.message}
+              </span>
+            )}
 
             <CustomInput
               id="address"
@@ -128,7 +129,9 @@ export default function FormCreateCompany() {
               {...register("address")}
               placeholder="Rua, número, cidade..."
             />
-            {errors.address && <span className="text-red-500">{errors.address.message}</span>}
+            {errors.address && (
+              <span className="text-red-500">{errors.address.message}</span>
+            )}
 
             <CustomInput
               id="linkLocationMaps"

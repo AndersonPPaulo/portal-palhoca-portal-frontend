@@ -22,7 +22,7 @@ export default function EditCategoryPage({ params }: Props) {
   }, [params]);
 
   return (
-    <div className="flex flex-col h-screen bg-primary-light overflow-hidden">
+    <div className="bg-primary-light h-screen overflow-scroll">
       <Header title={`Editar artigo - ${article?.title}`} buttonHidden={true} />
       <div className="flex-1 overflow-hidden p-6">
         {loading || !article ? (

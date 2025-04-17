@@ -22,7 +22,7 @@ export default function EditTagPage({ params }: Props) {
   }, [params]);
 
   return (
-    <div className="h-full bg-primary-light">
+    <div className="bg-primary-light h-screen overflow-hidden">
       <Header title={`Editar tag - ${tag?.name}`} buttonHidden={true} />
       <div className="p-6">
         {loading || !tag ? <SkeletonTagForm /> : <FormEditTag tagData={tag} />}

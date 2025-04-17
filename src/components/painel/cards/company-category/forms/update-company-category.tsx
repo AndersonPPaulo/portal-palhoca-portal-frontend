@@ -50,7 +50,7 @@ export default function FormUpdateCompanyCategory() {
   };
 
   return (
-    <div className="w-full p-6 rounded-[24px] bg-white">
+    <div className=" bg-white p-6 rounded-3xl h-auto">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="w-full flex justify-between items-center">
           <ReturnPageButton />

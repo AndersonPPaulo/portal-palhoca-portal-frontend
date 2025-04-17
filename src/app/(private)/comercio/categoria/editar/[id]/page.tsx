@@ -22,7 +22,7 @@ export default function EditCompanyCategoryPage({ params }: Props) {
   }, [params]);
   
   return (
-    <div className="h-full bg-primary-light">
+    <div className="h-screen bg-primary-light flex flex-col overflow-hidden">
       <Header
         title={`Editar categoria de comércio - ${companyCategory?.name || ""}`}
         buttonHidden={true}
