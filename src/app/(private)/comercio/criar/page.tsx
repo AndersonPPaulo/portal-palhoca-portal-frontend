@@ -3,7 +3,7 @@ import FormCreateCompany from "@/components/painel/cards/company/forms/create-co
 
 export default function CreateCompany() {
   return (
-    <div className="bg-primary-light flex flex-col h-screen overflow-hidden ">
+    <div className="bg-primary-light h-screen overflow-scroll overflow-x-hidden">
       <Header title="Cadastrar comércio" buttonHidden />
       <div className="flex-1 p-6 overflow-hidden">
         <FormCreateCompany />

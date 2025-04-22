@@ -25,11 +25,12 @@ interface FilterProps {
 
 const ArticleFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
   const { listArticles } = useContext(ArticleContext);
+  console.log("listArticles", listArticles?.data);
 
   const categories = [
-    ...new Set(listArticles.map((item) => item.category.name)),
+    ...new Set(listArticles?.data.map((item) => item.category.name)),
   ];
-  const creators = [...new Set(listArticles.map((item) => item.creator))];
+  // const creators = [...new Set(listArticles?.data.map((item) => item.creator))];
 
   const [filters, setFilters] = useState<FilterState>({
     categories: [],
@@ -161,76 +162,18 @@ const ArticleFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
             onChange={(e) => setFilter(e.target.value)}
           />
         </div>
-
-        <Popover
-          open={openPopovers.status}
-          onOpenChange={(open) =>
-            setOpenPopovers((prev) => ({ ...prev, status: open }))
-          }
-        >
-          <div className="flex flex-col min-w-[180px]">
-            <label className="ms-4">Status</label>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="text-body-m mt-1 h-14 rounded-[24px] px-6 py-4 outline-none border-2 border-primary-light flex justify-between items-center"
-              >
-                {filters.status === null
-                  ? "Selecione"
-                  : (filters.status === false || filters.status === true) &&
-                    `Selecionado:`}{" "}
-                <div className="flex items-center gap-2">
-                  {filters.status !== null && (
-                    <span className="rounded-full bg-primary-light w-6 h-6 flex items-center justify-center text-primary">
-                      <Check className="h-4 w-4" />
-                    </span>
-                  )}
-                  {openPopovers.status ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </div>
-              </Button>
-            </PopoverTrigger>
-          </div>
-          <PopoverContent
-            className="w-56 bg-white rounded-2xl shadow-lg"
-            sideOffset={20}
-          >
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  checked={filters.status === false}
-                  className="text-white rounded checkbox-thick"
-                  onCheckedChange={() => handleFilterChange("status", false)}
-                />
-                <label className="ms-4">Publicado</label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  checked={filters.status === true}
-                  className="text-white rounded checkbox-thick"
-                  onCheckedChange={() => handleFilterChange("status", true)}
-                />
-                <label className="ms-4">Inativo</label>
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-
         {renderFilterButton(
           "categories",
           "Categoria",
           categories,
           categories.length === 0
         )}
-        {renderFilterButton(
+        {/* {renderFilterButton(
           "creators",
           "Criador",
           creators,
           creators.length === 0
-        )}
+        )} */}
 
         <Popover
           open={openPopovers.highlight}

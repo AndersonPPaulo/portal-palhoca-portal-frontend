@@ -1,6 +1,6 @@
 import React from "react";
 import Comercio from "../cards/company/company";
-import TableCategoryCompany from "@/components/tables/company-category/page";
+import CategoriaComercio from "../cards/company-category/companyCategory";
 
 export const tabCompanyConfigurations = [
   {
@@ -9,15 +9,15 @@ export const tabCompanyConfigurations = [
     description:
       "Gerencie, edite e monitore os comércios cadastrados do seu site.",
     component: <Comercio />,
-    path: "/comercio",
+    path: "/comercio/criar",
   },
   {
-    value: "companyCategory",
+    value: "categoria",
     label: "Categorias de comércios",
     description:
       "Gerencie, edite e monitore as categorias dos comércios cadastrados do seu site.",
-    component: <TableCategoryCompany/>,
-    path: "/comercio/categoria",
+    component: <CategoriaComercio/>,
+    path: "/comercio/categoria/criar",
   },
   
 ];

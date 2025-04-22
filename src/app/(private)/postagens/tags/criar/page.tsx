@@ -3,7 +3,7 @@ import FormCreateTag from "@/components/painel/cards/postagens/tags/forms/create
 
 export default function CreateTags() {
   return (
-    <div className="h-full bg-primary-light">
+    <div className="bg-primary-light h-screen overflow-hidden">
       <Header title="Cadastro de Tags Semelhantes" buttonHidden={true} />
       <div className="p-6">
         <FormCreateTag />

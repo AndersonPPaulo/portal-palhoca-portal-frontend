@@ -7,24 +7,19 @@ export const navigationMain = [
     path: "/dashboard",
   },
   {
-    name: "Postagens",
+    name: "Noticias",
     icon: ListIcon,
     path: "/postagens",
     children: [
       {
-        name: "Artigo",
-        icon: Dot,
-        path: "/postagens/artigos/criar",
-      },
-      {
         name: "Tags",
         icon: Dot,
-        path: "/postagens/tags/criar",
+        path: "/postagens/tags",
       },
       {
         name: "Categorias",
         icon: Dot,
-        path: "/postagens/categorias/criar",
+        path: "/postagens/categorias",
       },
     ],
   },

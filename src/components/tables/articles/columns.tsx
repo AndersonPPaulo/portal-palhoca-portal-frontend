@@ -2,19 +2,20 @@
 
 import { DialogDelete } from "@/components/dialog/delete";
 import {
+  Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ResponsePromise } from "@/providers/article";
-import { Tooltip, TooltipArrow, TooltipPortal } from "@radix-ui/react-tooltip";
+import { TooltipArrow, TooltipPortal } from "@radix-ui/react-tooltip";
+import { Article } from "@/providers/article";
 import { ColumnDef } from "@tanstack/react-table";
 import { Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React from "react";
 
 interface Props {
-  article: ResponsePromise;
+  article: Article;
 }
 
 const CellActions = ({ article }: Props) => {
@@ -24,15 +25,15 @@ const CellActions = ({ article }: Props) => {
     <div className="flex gap-6">
       <DialogDelete
         context="articles"
-        item_name={article.slug}
-        item_id={article.id}
+        item_name={article!.slug}
+        item_id={article!.id}
       />
 
       <TooltipProvider delayDuration={600}>
         <Tooltip>
           <TooltipTrigger asChild>
             <Edit
-              onClick={() => push(`/postagens/artigos/editar/${article.id}`)}
+              onClick={() => push(`/postagens/artigos/editar/${article!.id}`)}
               size={20}
               className="text-primary cursor-pointer"
             />
@@ -56,7 +57,7 @@ const CellActions = ({ article }: Props) => {
   );
 };
 
-export const columns: ColumnDef<ResponsePromise>[] = [
+export const columns: ColumnDef<Article>[] = [
   {
     accessorKey: "thumb",
     header: "",
@@ -65,8 +66,8 @@ export const columns: ColumnDef<ResponsePromise>[] = [
         <Tooltip>
           <TooltipTrigger asChild>
             <img
-              src={`http://localhost:5555/${row.original.thumbnail}`}
-              alt={"Thumbnail para o artigo:" + row.original.title}
+              src={`http://localhost:5555/${row?.original?.thumbnail}`}
+              alt={"Thumbnail para o artigo:" + row?.original?.title}
               className="rounded-full h-6 w-6 cursor-pointer mr-2"
             />
           </TooltipTrigger>
@@ -78,12 +79,12 @@ export const columns: ColumnDef<ResponsePromise>[] = [
               className="bg-transparent border border-gray-300/50 backdrop-blur-lg p-2 rounded-lg shadow-2xl"
             >
               <img
-                src={`http://localhost:5555/${row.original.thumbnail}`}
+                src={`http://localhost:5555/${row?.original?.thumbnail}`}
                 alt="Imagem ampliada"
                 className="w-56 h-56 object-cover rounded-lg"
               />
               <span className="font-semibold w-56 mt-2 text-body-g flex flex-wrap">
-                {row.original.title}
+                {row?.original?.title}
               </span>
             </TooltipContent>
           </TooltipPortal>
@@ -95,7 +96,7 @@ export const columns: ColumnDef<ResponsePromise>[] = [
     accessorKey: "title",
     header: () => <div>Título</div>,
     cell: ({ row }) => (
-      <div className="w-[200px] truncate">{row.original.title}</div>
+      <div className="w-[200px] truncate">{row?.original?.title}</div>
     ),
   },
   {
@@ -103,24 +104,7 @@ export const columns: ColumnDef<ResponsePromise>[] = [
     header: () => <div className="text-center w-[150px]">Criador</div>,
     cell: ({ row }) => (
       <div className="text-center w-[150px] truncate">
-        {row.original.creator}
-      </div>
-    ),
-  },
-  {
-    accessorKey: "status",
-    header: () => <div className="text-center w-[150px]">Status</div>,
-    cell: ({ row }) => (
-      <div className="flex justify-center text-center w-[150px] truncate text-white select-none">
-        <span
-          className={`${
-            row.original.status === true
-              ? "bg-green"
-              : row.original.status === false && "bg-red"
-          } px-3 py-1 rounded-full text-sm capitalize`}
-        >
-          {row.original.status ? "publicado" : "inativo"}
-        </span>
+        {row?.original?.creator.name}
       </div>
     ),
   },
@@ -128,7 +112,9 @@ export const columns: ColumnDef<ResponsePromise>[] = [
     accessorKey: "category",
     header: () => <div className="text-center w-[150px]">Categorias</div>,
     cell: ({ row }) => (
-      <div className="text-center w-[150px]">{row.original.category.name}</div>
+      <div className="text-center w-[150px]">
+        {row?.original?.category.name}
+      </div>
     ),
   },
   {
@@ -136,7 +122,7 @@ export const columns: ColumnDef<ResponsePromise>[] = [
     header: () => <div className="text-center">Tags</div>,
     cell: ({ row }) => (
       <div className="text-center truncate">
-        {row.original.tags.map((item) => item.name).join(" - ")}
+        {row?.original?.tags.map((item) => item.name).join(" - ")}
       </div>
     ),
   },
@@ -147,7 +133,7 @@ export const columns: ColumnDef<ResponsePromise>[] = [
     ),
     cell: ({ row }) => (
       <div className="text-center w-[150px] truncate flex items-center justify-center gap-2">
-        {row.original.clicks_view}
+        {row?.original?.clicks_view}
       </div>
     ),
   },
@@ -156,7 +142,7 @@ export const columns: ColumnDef<ResponsePromise>[] = [
     header: () => <div className="text-center w-[150px]">Destaque</div>,
     cell: ({ row }) => (
       <div className="flex justify-center w-[150px]">
-        {row.original.highlight ? (
+        {row?.original?.highlight ? (
           <span className="bg-green text-white px-3 py-1 rounded-full text-sm">
             Sim
           </span>
@@ -172,7 +158,7 @@ export const columns: ColumnDef<ResponsePromise>[] = [
     id: "actions",
     header: () => <div className="text-center">Ações</div>,
     cell: (article) => {
-      const articleRow = article.row.original;
+      const articleRow = article.row?.original;
       return (
         <div className="flex justify-center">
           <CellActions article={articleRow} />

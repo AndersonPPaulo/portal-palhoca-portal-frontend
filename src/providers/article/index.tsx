@@ -33,45 +33,76 @@ interface UpdateArticleProps {
   categoryId?: string;
   tagIds?: string[];
 }
+export interface ArticleResponse {
+  message: string;
+  data: Article[];
+  meta: Meta;
+}
 
-export type ResponsePromise = {
+export interface Article {
   id: string;
   title: string;
   slug: string;
-  creator: string;
   reading_time: number;
+  thumbnail: string;
   resume_content: string;
   content: string;
-  status: boolean;
+  clicks_view: string;
   highlight: boolean;
-  thumbnail: string;
-  clicks_view: number;
-  category: {
-    id: string;
-    name: string;
-    description: string;
-    status: boolean;
-    created_at: Date;
-    update_at: Date;
-  };
-  tags: {
-    id: string;
-    name: string;
-    description: string;
-    status: boolean;
-    created_at: Date;
-    update_at: Date;
-  }[];
-  created_at: Date;
-  update_at: Date;
-};
+  created_at: string;
+  updated_at: string;
+  creator: User;
+  chiefEditor: User;
+  category: Category;
+  tags: Tag[];
+  status_history: StatusHistory[];
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  description: string;
+  status: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Tag {
+  id: string;
+  name: string;
+  description: string;
+  status: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StatusHistory {
+  id: string;
+  status: "CHANGES_REQUESTED" | "PENDING_REVIEW" | "PUBLISHED" | "DRAFT";
+  change_request_description: string | null;
+  reason_reject: string | null;
+  changed_at: string;
+}
+
+export interface Meta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
 
 interface IArticleData {
-  CreateArticle(data: ArticleProps): Promise<ResponsePromise>;
-  SelfArticle(articleId: string): Promise<ResponsePromise>;
-  article: ResponsePromise | null;
-  ListArticles(): Promise<ResponsePromise[]>;
-  listArticles: ResponsePromise[];
+  CreateArticle(data: ArticleProps): Promise<Article>;
+  SelfArticle(articleId: string): Promise<Article>;
+  article: Article | null;
+  ListArticles(creatorId: string): Promise<ArticleResponse>;
+  listArticles: ArticleResponse | null;
   UpdateArticle(data: UpdateArticleProps, articleId: string): Promise<void>;
   DeleteArticle(articleId: string): Promise<void>;
 }
@@ -85,9 +116,7 @@ export const ArticleContext = createContext<IArticleData>({} as IArticleData);
 export const ArticleProvider = ({ children }: ICihldrenReact) => {
   const { back } = useRouter();
 
-  const CreateArticle = async (
-    data: ArticleProps
-  ): Promise<ResponsePromise> => {
+  const CreateArticle = async (data: ArticleProps): Promise<Article> => {
     const { "user:token": token } = parseCookies();
     const config = {
       headers: {
@@ -110,8 +139,8 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
     return response;
   };
 
-  const [article, setArticle] = useState<ResponsePromise | null>(null);
-  const SelfArticle = async (articleId: string): Promise<ResponsePromise> => {
+  const [article, setArticle] = useState<Article | null>(null);
+  const SelfArticle = async (articleId: string): Promise<Article> => {
     const { "user:token": token } = parseCookies();
     const config = {
       headers: { Authorization: `bearer ${token}` },
@@ -129,19 +158,21 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
     return response;
   };
 
-  const [listArticles, setListArticles] = useState<ResponsePromise[]>([]);
-  const ListArticles = async (): Promise<ResponsePromise[]> => {
+  const [listArticles, setListArticles] = useState<ArticleResponse | null>(
+    null
+  );
+  const ListArticles = async (creatorId: string): Promise<ArticleResponse> => {
     const { "user:token": token } = parseCookies();
     const config = {
       headers: { Authorization: `bearer ${token}` },
     };
     const response = await api
-      .get("/article", config)
+      .get(`/article-author/${creatorId}`, config)
       .then((res) => {
-        setListArticles(res.data.response);
+        setListArticles(res.data);
       })
       .catch((err) => {
-        toast.error(err.response.data.message);
+        toast.error(err.response);
         return err;
       });
 

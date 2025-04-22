@@ -11,6 +11,8 @@ interface TabConfig {
   description: string;
   component: React.ReactNode;
   path: string;
+  title: string;
+  name: string;
 }
 
 interface DynamicTabsProps {
@@ -47,9 +49,9 @@ export function DynamicTabs({ tabs }: DynamicTabsProps) {
       onValueChange={handleTabChange}
     >
       <Header
-        title={activeTab.label}
+        title={activeTab.title}
         description={activeTab.description}
-        text_button={`Adicionar ${activeTab.label}`}
+        text_button={`Adicionar ${activeTab.name}`}
         onClick={() => router.push(activeTab.path)}
       />
 

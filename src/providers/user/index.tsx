@@ -11,7 +11,7 @@ export interface UserProps {
   email: string;
   phone: string;
   password: string;
-  role: string;
+  role: { id: string; name: string; isDefault: boolean };
 }
 
 interface UpdateUserProps {
@@ -19,7 +19,7 @@ interface UpdateUserProps {
   name?: string;
   email?: string;
   phone?: string;
-  role?: string;
+  role?: { id: string; name: string; isDefault: boolean };
 }
 
 export interface ResponsePromise {
@@ -27,7 +27,7 @@ export interface ResponsePromise {
   name: string;
   email: string;
   phone: string;
-  role: string;
+  role: { id: string; name: string; isDefault: boolean };
   password?: string;
 }
 

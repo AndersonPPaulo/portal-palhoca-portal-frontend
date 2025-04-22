@@ -8,17 +8,16 @@ import { useRouter, useParams } from "next/navigation";
 import CustomInput from "@/components/input/custom-input";
 import { Button } from "@/components/ui/button";
 import ReturnPageButton from "@/components/button/returnPage";
-import { CategorysContext } from "@/providers/categorys";
+import { CompanyCategoryContext } from "@/providers/company-category/index.tsx";
 
-const categorySchema = z.object({
+const CompanycategorySchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
 });
 
-type CategoryFormData = z.infer<typeof categorySchema>;
+type CompanyCategoryFormData = z.infer<typeof CompanycategorySchema>;
 
-export default function FormUpdateCategory() {
-  const { UpdateCategory, category } =
-    useContext(CategorysContext);
+export default function FormUpdateCompanyCategory() {
+  const { UpdateCompanyCategory, SelfCompanyCategory, companyCategory } = useContext(CompanyCategoryContext);
   const { back } = useRouter();
   const params = useParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,34 +27,34 @@ export default function FormUpdateCategory() {
     handleSubmit,
     formState: { errors },
     setValue,
-  } = useForm<CategoryFormData>({
-    resolver: zodResolver(categorySchema),
+  } = useForm<CompanyCategoryFormData>({
+    resolver: zodResolver(CompanycategorySchema),
     defaultValues: {
       name: "",
     },
   });
 
   useEffect(() => {
-    setValue("name", category!.name);
-  }, [params?.id, setValue]);
+    setValue("name", companyCategory!.name)
+  }, [params?.categoryId, setValue]);
 
-  const onSubmit = async (data: CategoryFormData) => {
-    const id = params?.id as string;
-    if (!id) return;
+
+  const onSubmit = async (data: CompanyCategoryFormData) => {
+    if (!companyCategory?.id) alert('ID não encontrado.')
     setIsSubmitting(true);
     try {
-      await UpdateCategory(data, id);
+      await UpdateCompanyCategory(data, companyCategory!.id);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="w-full p-6 rounded-[24px] bg-white">
+    <div className=" bg-white p-6 rounded-3xl h-auto">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="w-full flex justify-between items-center">
           <ReturnPageButton />
-          <h2 className="text-xl font-semibold">Editar Categoria</h2>
+          <h2 className="text-xl font-semibold">Editar Categoria de comércio</h2>
         </div>
 
         <div className="grid grid-cols-2 gap-8">
@@ -64,7 +63,7 @@ export default function FormUpdateCategory() {
               id="name"
               label="Nome da categoria"
               {...register("name")}
-              placeholder="Digite o nome da categoria"
+              placeholder="Digite o nome da categorias"
             />
             {errors.name && (
               <span className="text-sm text-red-500">

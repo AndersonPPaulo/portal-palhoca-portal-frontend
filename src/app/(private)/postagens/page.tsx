@@ -3,7 +3,7 @@ import { tabPostConfigurations } from "@/components/tabs/configuration/tabPostCo
 
 export default function Postagens() {
   return (
-    <div className="h-full bg-primary-light">
+    <div className="bg-primary-light h-screen overflow-hidden">
       <DynamicTabs tabs={tabPostConfigurations} />
     </div>
   );

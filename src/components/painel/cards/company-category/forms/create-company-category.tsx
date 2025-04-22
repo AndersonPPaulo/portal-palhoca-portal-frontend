@@ -3,12 +3,13 @@
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useContext, useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useContext, useState } from "react";
 import CustomInput from "@/components/input/custom-input";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 import ReturnPageButton from "@/components/button/returnPage";
-import { CategorysContext } from "@/providers/categorys";
+import { CompanyCategoryContext } from "@/providers/company-category/index.tsx";
+import TransferList from "@/components/transferList";
 
 const categorySchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -16,18 +17,17 @@ const categorySchema = z.object({
 
 type CategoryFormData = z.infer<typeof categorySchema>;
 
-export default function FormUpdateCategory() {
-  const { UpdateCategory, category } =
-    useContext(CategorysContext);
+export default function FormCreateCompanyCategory() {
+  const { CreateCompanyCategory } = useContext(CompanyCategoryContext);
   const { back } = useRouter();
-  const params = useParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showTransferList, setShowTransferList] = useState(false);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-    setValue,
+    reset,
   } = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
     defaultValues: {
@@ -35,27 +35,29 @@ export default function FormUpdateCategory() {
     },
   });
 
-  useEffect(() => {
-    setValue("name", category!.name);
-  }, [params?.id, setValue]);
-
   const onSubmit = async (data: CategoryFormData) => {
-    const id = params?.id as string;
-    if (!id) return;
     setIsSubmitting(true);
     try {
-      await UpdateCategory(data, id);
-    } finally {
+      await CreateCompanyCategory(data);
+      setTimeout(() => {
+        setIsSubmitting(false);
+        reset();
+      }, 2000);
+    } catch (error) {
       setIsSubmitting(false);
+      alert("Erro ao criar categoria");
     }
   };
 
+  const toggleTransferList = () => {
+    setShowTransferList(!showTransferList);
+  };
+
   return (
-    <div className="w-full p-6 rounded-[24px] bg-white">
+    <div className=" bg-white p-6 rounded-3xl h-auto">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="w-full flex justify-between items-center">
           <ReturnPageButton />
-          <h2 className="text-xl font-semibold">Editar Categoria</h2>
         </div>
 
         <div className="grid grid-cols-2 gap-8">
@@ -73,6 +75,29 @@ export default function FormUpdateCategory() {
             )}
           </div>
         </div>
+        
+        <div className="mt-4">
+          <Button
+            type="button"
+            onClick={toggleTransferList}
+            className=" hover:bg-blue-700 text-white rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
+            
+          >
+            {showTransferList ? "Ocultar associação de comércios" : "Associar comércios a esta categoria"}
+          </Button>
+          {showTransferList && (
+          <div className="h-full mt-4">
+            <h3 className="text-lg font-medium mb-2">Associar comércios a esta categoria</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Selecione os comércios que deseja associar a esta categoria.
+            </p>
+            
+            <TransferList/>
+          </div>
+        )}
+        </div>
+        
+        
 
         <div className="flex w-full justify-end items-center">
           <div className="space-x-4">
@@ -89,7 +114,7 @@ export default function FormUpdateCategory() {
               className="rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
               disabled={isSubmitting}
             >
-              Atualizar Categoria
+              Criar Categoria
             </Button>
           </div>
         </div>

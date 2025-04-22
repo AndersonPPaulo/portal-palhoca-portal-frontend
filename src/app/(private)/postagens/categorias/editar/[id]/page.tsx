@@ -22,7 +22,7 @@ export default function EditCategoryPage({ params }: Props) {
   }, [params]);
 
   return (
-    <div className="h-full bg-primary-light">
+    <div className="bg-primary-light h-screen overflow-hidden">
       <Header
         title={`Editar categoria - ${category?.name}`}
         buttonHidden={true}
@@ -31,7 +31,7 @@ export default function EditCategoryPage({ params }: Props) {
         {loading || !category ? (
           <SkeletonTagForm />
         ) : (
-          <FormEditCategory categoryData={category} />
+          <FormEditCategory/>
         )}
       </div>
     </div>
