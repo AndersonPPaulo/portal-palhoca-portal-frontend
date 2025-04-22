@@ -25,11 +25,12 @@ interface FilterProps {
 
 const ArticleFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
   const { listArticles } = useContext(ArticleContext);
+  console.log("listArticles", listArticles?.data);
 
   const categories = [
-    ...new Set(listArticles.map((item) => item.category.name)),
+    ...new Set(listArticles?.data.map((item) => item.category.name)),
   ];
-  const creators = [...new Set(listArticles.map((item) => item.creator))];
+  // const creators = [...new Set(listArticles?.data.map((item) => item.creator))];
 
   const [filters, setFilters] = useState<FilterState>({
     categories: [],
@@ -167,12 +168,12 @@ const ArticleFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
           categories,
           categories.length === 0
         )}
-        {renderFilterButton(
+        {/* {renderFilterButton(
           "creators",
           "Criador",
           creators,
           creators.length === 0
-        )}
+        )} */}
 
         <Popover
           open={openPopovers.highlight}

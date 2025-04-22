@@ -16,11 +16,14 @@ export function Sidebar() {
   }, []);
 
   const contextProfile = (context?: string) => {
-    if (context?.toLocaleLowerCase() === "superuser") {
+    if (context?.toLocaleLowerCase() === "administrador") {
       return "Administrador";
     } else if (context?.toLocaleLowerCase() === "common") {
       return "Autor";
-    } else if (context?.toLocaleLowerCase() !== "common" && context?.toLocaleLowerCase() !== "superuser") {
+    } else if (
+      context?.toLocaleLowerCase() !== "common" &&
+      context?.toLocaleLowerCase() !== "superuser"
+    ) {
       return "Visitante";
     }
   };
@@ -29,7 +32,7 @@ export function Sidebar() {
     <>
       {/* Espaço vazio com a mesma largura da sidebar para empurrar o conteúdo */}
       <div className="w-[300px] flex-shrink-0"></div>
-      
+
       {/* Sidebar fixa */}
       <nav className="fixed top-0 left-0 flex flex-col items-start shadow-xl h-screen w-[300px] p-6 gap-16 overflow-y-auto bg-white z-10">
         <Image
@@ -47,7 +50,7 @@ export function Sidebar() {
           <div className="flex flex-col gap-1">
             <span className="text-header-xs">{profile?.name}</span>
             <span className="text-gray-30 capitalize">
-              {contextProfile(profile?.role)}
+              {contextProfile(profile?.role.name)}
             </span>
           </div>
         </div>

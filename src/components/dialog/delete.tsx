@@ -25,6 +25,7 @@ import { CategorysContext } from "@/providers/categorys";
 import { ArticleContext } from "@/providers/article";
 import { UserContext } from "@/providers/user";
 import { CompanyCategoryContext } from "@/providers/company-category/index.tsx";
+import { profile } from "console";
 
 interface Props {
   item_id: string;
@@ -36,7 +37,7 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
   const { DeleteTag, ListTags } = useContext(TagContext);
   const { DeleteCategory, ListCategorys } = useContext(CategorysContext);
   const { DeleteArticle, ListArticles } = useContext(ArticleContext);
-  const { DeleteUser } = useContext(UserContext);
+  const { DeleteUser, profile } = useContext(UserContext);
   const { DeleteCompanyCategory, ListCompanyCategory } = useContext(
     CompanyCategoryContext
   );
@@ -63,12 +64,12 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
         ListCategorys();
       } else if (context === "articles") {
         await DeleteArticle(item_id);
-        ListArticles();
+        ListArticles(profile!.id);
       } else if (context === "users") {
         DeleteUser(item_id);
       } else if (context === "companyCategory") {
         await DeleteCompanyCategory(item_id);
-        ListCompanyCategory()
+        ListCompanyCategory();
       }
       setError("");
       setInputValue("");
@@ -150,16 +151,16 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
       <DialogContent className="bg-white border-none outline-none !rounded-3xl">
         <DialogHeader className="mb-2">
           <DialogTitle className="text-header-s">
-          Deletar{" "}
-                {context === "tags"
-                  ? "tag"
-                  : context === "categories"
-                  ? "categoria"
-                  : context === "users"
-                  ? "usuário"
-                  : context === "companyCategory"
-                  ? "categoria de comércio"
-                  : "artigo"}
+            Deletar{" "}
+            {context === "tags"
+              ? "tag"
+              : context === "categories"
+              ? "categoria"
+              : context === "users"
+              ? "usuário"
+              : context === "companyCategory"
+              ? "categoria de comércio"
+              : "artigo"}
           </DialogTitle>
           <DialogDescription className="flex flex-col gap-4 pt-2">
             {getDialogDescription()}
