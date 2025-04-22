@@ -108,23 +108,6 @@ export const columns: ColumnDef<ResponsePromise>[] = [
     ),
   },
   {
-    accessorKey: "status",
-    header: () => <div className="text-center w-[150px]">Status</div>,
-    cell: ({ row }) => (
-      <div className="flex justify-center text-center w-[150px] truncate text-white select-none">
-        <span
-          className={`${
-            row.original.status === true
-              ? "bg-green"
-              : row.original.status === false && "bg-red"
-          } px-3 py-1 rounded-full text-sm capitalize`}
-        >
-          {row.original.status ? "publicado" : "inativo"}
-        </span>
-      </div>
-    ),
-  },
-  {
     accessorKey: "category",
     header: () => <div className="text-center w-[150px]">Categorias</div>,
     cell: ({ row }) => (
