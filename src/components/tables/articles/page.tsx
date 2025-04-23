@@ -2,13 +2,18 @@ import { useContext, useEffect, useState } from "react";
 import { columns } from "./columns";
 import { DataTable } from "./data-table";
 import { UserContext } from "@/providers/user";
-import { Article, ArticleContext, ArticleListParams } from "@/providers/article";
+import {
+  Article,
+  ArticleContext,
+  ArticleListParams,
+} from "@/providers/article";
 
 interface TableArticlesProps {
   filter: string;
   activeFilters: {
     categories: string[];
     highlight: boolean | null;
+    creators: string[];
   };
 }
 
@@ -27,11 +32,11 @@ export default function TableArticles({
         if (profile?.id) {
           const params: ArticleListParams = {
             limit: 20,
-            page: 1
+            page: 1,
           };
-          
+
           const roleName = profile.role.name.toLowerCase();
-          
+
           if (roleName === "chefe de redação") {
             params.chiefEditorId = profile.id;
             await ListAuthorArticles(undefined, params);
@@ -53,23 +58,31 @@ export default function TableArticles({
     }
   }, [profile]);
 
-  const filteredArticles = listArticles?.data?.filter((item: Article) => {
-    const search = filter.toLowerCase();
+  const filteredArticles =
+    listArticles?.data?.filter((item: Article) => {
+      const search = filter.toLowerCase();
 
-    const matchesSearch =
-      item.title.toLowerCase().includes(search) ||
-      item.tags.some((tag) => tag.name.toLowerCase().includes(search));
+      const matchesSearch =
+        item.title.toLowerCase().includes(search) ||
+        item.tags.some((tag) => tag.name.toLowerCase().includes(search));
 
-    const matchesCategory =
-      activeFilters.categories.length === 0 ||
-      activeFilters.categories.includes(item.category.name);
+      const matchesCategory =
+        activeFilters.categories.length === 0 ||
+        activeFilters.categories.includes(item.category.name);
 
-    const matchesHighlight =
-      activeFilters.highlight === null ||
-      item.highlight === activeFilters.highlight;
+      const matchesHighlight =
+        activeFilters.highlight === null ||
+        item.highlight === activeFilters.highlight;
 
-    return matchesSearch && matchesCategory && matchesHighlight;
-  }) || [];
+        const matchesCreator =
+        (activeFilters.creators?.length ?? 0) === 0 ||
+        activeFilters.creators?.includes(item.creator.name);
+      
+
+      return (
+        matchesSearch && matchesCategory && matchesHighlight && matchesCreator
+      );
+    }) || [];
 
   return <DataTable columns={columns} data={filteredArticles} />;
 }

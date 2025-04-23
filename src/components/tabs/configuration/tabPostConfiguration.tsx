@@ -9,7 +9,7 @@ export const tabPostConfigurations = [
     title: "Noticias",
     description: "As noticias publicadas em seu site.",
     component: <Articles />,
-    path: "/postagens",
+    path: "/postagens/artigos/criar",
   },
 
   {
