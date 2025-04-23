@@ -11,7 +11,7 @@ import CustomInput from "@/components/input/custom-input";
 import { ArticleContext } from "@/providers/article";
 
 interface FilterState {
-  status: boolean | null;
+  status: string
   categories: string[];
   creators: string[];
   highlight: boolean | null;
@@ -26,14 +26,11 @@ interface FilterProps {
 const ArticleFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
   const { listArticles } = useContext(ArticleContext);
 
-  // Get unique categories and creators from articles
   const [categories, setCategories] = useState<string[]>([]);
   const [creators, setCreators] = useState<string[]>([]);
 
-  // Update categories and creators lists when articles change
   useEffect(() => {
     if (listArticles?.data && listArticles.data.length > 0) {
-      // Extract unique category names
       const uniqueCategories = Array.from(
         new Set(
           listArticles.data
@@ -42,7 +39,6 @@ const ArticleFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
         )
       );
 
-      // Extract unique creator names
       const uniqueCreators = Array.from(
         new Set(
           listArticles.data
@@ -59,7 +55,7 @@ const ArticleFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
   const [filters, setFilters] = useState<FilterState>({
     categories: [],
     creators: [],
-    status: null,
+    status: '',
     highlight: null,
   });
 
@@ -84,7 +80,6 @@ const ArticleFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
       return;
     }
 
-    // For array filters (categories, creators)
     const newFilters = {
       ...filters,
       [type]: filters[type].includes(value as string)
@@ -175,10 +170,10 @@ const ArticleFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
     <div className="flex flex-col w-full gap-4">
       <div className="flex items-center gap-4">
         <div className="flex-grow">
-          <span className="text-body-g ms-4">Artigo:</span>
+          <span className="text-body-g ms-4">Pesquisar:</span>
           <CustomInput
             type="search"
-            placeholder="Digite o título do artigo ou uma tag..."
+            placeholder="Digite o título da noticia ou uma tag..."
             value={filter}
             icon={<Search />}
             onChange={(e) => setFilter(e.target.value)}

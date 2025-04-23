@@ -11,6 +11,7 @@ import {
 interface TableArticlesProps {
   filter: string;
   activeFilters: {
+    status: string;
     categories: string[];
     highlight: boolean | null;
     creators: string[];
@@ -25,6 +26,7 @@ export default function TableArticles({
   const { profile } = useContext(UserContext);
   const [loading, setLoading] = useState(true);
 
+  console.log("activeFilters", activeFilters);
   useEffect(() => {
     const fetchArticles = async () => {
       setLoading(true);
@@ -33,6 +35,7 @@ export default function TableArticles({
           const params: ArticleListParams = {
             limit: 20,
             page: 1,
+            status: activeFilters.status,
           };
 
           const roleName = profile.role.name.toLowerCase();
@@ -43,7 +46,7 @@ export default function TableArticles({
           } else if (roleName === "jornalista" || roleName === "colunista") {
             await ListAuthorArticles(profile.id, params);
           } else {
-            await ListAuthorArticles();
+            await ListAuthorArticles(undefined, params);
           }
         }
       } catch (error) {
@@ -74,10 +77,9 @@ export default function TableArticles({
         activeFilters.highlight === null ||
         item.highlight === activeFilters.highlight;
 
-        const matchesCreator =
+      const matchesCreator =
         (activeFilters.creators?.length ?? 0) === 0 ||
         activeFilters.creators?.includes(item.creator.name);
-      
 
       return (
         matchesSearch && matchesCategory && matchesHighlight && matchesCreator
