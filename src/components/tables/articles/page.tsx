@@ -1,17 +1,13 @@
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useState } from "react";
 import { columns } from "./columns";
 import { DataTable } from "./data-table";
-
-import { ArticleContext } from "@/providers/article";
-import { User } from "lucide-react";
 import { UserContext } from "@/providers/user";
+import { Article, ArticleContext, ArticleListParams } from "@/providers/article";
 
 interface TableArticlesProps {
   filter: string;
   activeFilters: {
-    // status: boolean | null;
     categories: string[];
-    // creators: string[];
     highlight: boolean | null;
   };
 }
@@ -20,22 +16,44 @@ export default function TableArticles({
   filter,
   activeFilters,
 }: TableArticlesProps) {
-  const { ListArticles, listArticles } = useContext(ArticleContext);
-  console.log("listArticles", listArticles?.data);
+  const { ListAuthorArticles, listArticles } = useContext(ArticleContext);
   const { profile } = useContext(UserContext);
-  console.log("profile", profile);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (profile === null) return;
-    if (profile.id) {
-      const fetch = async () => {
-        await ListArticles(profile!.id);
-      };
-      fetch();
+    const fetchArticles = async () => {
+      setLoading(true);
+      try {
+        if (profile?.id) {
+          const params: ArticleListParams = {
+            limit: 20,
+            page: 1
+          };
+          
+          const roleName = profile.role.name.toLowerCase();
+          
+          if (roleName === "chefe de redação") {
+            params.chiefEditorId = profile.id;
+            await ListAuthorArticles(undefined, params);
+          } else if (roleName === "jornalista" || roleName === "colunista") {
+            await ListAuthorArticles(profile.id, params);
+          } else {
+            await ListAuthorArticles();
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching articles:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (profile?.id) {
+      fetchArticles();
     }
   }, [profile]);
 
-  const filteredArticles = listArticles?.data.filter((item) => {
+  const filteredArticles = listArticles?.data?.filter((item: Article) => {
     const search = filter.toLowerCase();
 
     const matchesSearch =
@@ -46,25 +64,12 @@ export default function TableArticles({
       activeFilters.categories.length === 0 ||
       activeFilters.categories.includes(item.category.name);
 
-    // const matchesCreator =
-    //   activeFilters.creators.length === 0 ||
-    //   activeFilters.creators.includes(item.creator);
-
-    // const matchesStatus =
-    //   activeFilters.status === null || item.status !== activeFilters.status;
-
     const matchesHighlight =
       activeFilters.highlight === null ||
       item.highlight === activeFilters.highlight;
 
-    return (
-      matchesSearch &&
-      // matchesStatus &&
-      matchesCategory &&
-      // matchesCreator &&
-      matchesHighlight
-    );
-  });
+    return matchesSearch && matchesCategory && matchesHighlight;
+  }) || [];
 
-  return <DataTable columns={columns} data={filteredArticles ?? []} />;
+  return <DataTable columns={columns} data={filteredArticles} />;
 }
