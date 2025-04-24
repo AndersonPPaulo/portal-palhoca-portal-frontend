@@ -125,8 +125,8 @@ const TiptapEditor = ({
   };
 
   return (
-    <div className="border p-4 rounded-[32px] min-h-[300px] ">
-      <div className="mb-2 space-x-2 flex flex-wrap ">
+    <div className="w-full border p-4 rounded-[32px] min-h-[300px]">
+      <div className="mb-2 space-x-2 flex w-full overflow-x-auto pb-2">
         <span
           onClick={() => editor.chain().focus().toggleBold().run()}
           className={`px-2 py-1 border rounded ${
@@ -283,9 +283,11 @@ const TiptapEditor = ({
 
       <EditorContent
         onClick={() => editor?.chain().focus().run()}
-        className="p-4 border rounded-b-[24px] no-scrollbar max-h-[400px] min-h-[300px] overflow-y-auto overflow-x-hidden break-words"
+        className="p-4 border rounded-b-[24px] overflow-y-auto overflow-x-hidden max-h-[400px] min-h-[300px] w-full"
         editor={editor}
       />
+
+      
     </div>
   );
 };
