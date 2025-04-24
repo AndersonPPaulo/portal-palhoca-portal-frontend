@@ -31,7 +31,7 @@ export interface ResponsePromise {
   phone: string;
   role: { id: string; name: string; isDefault: boolean };
   password?: string;
-  chiefEditorId: string
+  chiefEditor: {id: string}
 }
 
 interface IUserData {

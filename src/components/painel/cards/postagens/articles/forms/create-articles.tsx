@@ -119,12 +119,12 @@ export default function FormCreateArticle() {
     
   }, [title, setValue]);
 
-  // Handle editor content changes with debounce
   const handleEditorChange = (content: string) => {
     setEditorContent(content);
-    // Update form value
+
     setValue("content", content, { shouldValidate: true });
   };
+
 
   const onSubmit = async (data: ArticleFormData) => {
     const pendingReview = "PENDING_REVIEW";
@@ -137,8 +137,9 @@ export default function FormCreateArticle() {
       }
       
       if(profile?.id) {
-        data.chiefEditorId = profile.chiefEditorId;
+        data.chiefEditorId = profile.chiefEditor.id;
       }
+      console.log('data', data)
       
       await CreateArticle(data);
       reset();
