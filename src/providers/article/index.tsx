@@ -13,11 +13,12 @@ export interface ArticleProps {
   reading_time: number;
   resume_content: string;
   content: string;
-  status: boolean;
+  initialStatus: string;
   highlight: boolean;
   thumbnail: string;
   categoryId: string;
   tagIds: string[];
+  chiefEditorId: string;
 }
 
 interface UpdateArticleProps {

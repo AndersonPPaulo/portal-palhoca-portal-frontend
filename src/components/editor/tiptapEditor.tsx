@@ -283,7 +283,7 @@ const TiptapEditor = ({
 
       <EditorContent
         onClick={() => editor?.chain().focus().run()}
-        className="p-4 border rounded-b-[24px] no-scrollbar max-h-[400px] min-h-[300px] overflow-auto"
+        className="p-4 border rounded-b-[24px] no-scrollbar max-h-[400px] min-h-[300px] overflow-y-auto overflow-x-hidden break-words"
         editor={editor}
       />
     </div>
