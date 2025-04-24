@@ -27,7 +27,7 @@ import { TagContext } from "@/providers/tags";
 const articleSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
   slug: z.string().min(1, "Slug é obrigatório"),
-  creator: z.string().min(1, "Criador é obrigatório"),
+  creator: z.string().min(1, "Criador é Obrigatório"),
   reading_time: z.preprocess(
     (val) => (val === "" ? undefined : Number(val)),
     z.number().min(1, "Tempo de leitura é obrigatório")
@@ -65,12 +65,12 @@ interface TagOption {
 export default function FormCreateArticle() {
   const { back } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { CreateArticle } = useContext(ArticleContext);
+  const { CreateArticle, ListAuthorArticles, listArticles } = useContext(ArticleContext);
   const { ListCategorys, listCategorys } = useContext(CategorysContext);
   const { ListTags, listTags } = useContext(TagContext);
 
   useEffect(() => {
-    Promise.all([ListTags(), ListCategorys()]);
+    Promise.all([ListTags(), ListCategorys(), ListAuthorArticles()]);
   }, []);
 
   const tagOptions: OptionType[] = listTags.map((tag) => ({
@@ -223,41 +223,7 @@ export default function FormCreateArticle() {
               )}
             </div>
 
-            <div className="basis-1/2">
-              <CustomInput
-                id="creator"
-                label="Criador"
-                {...register("creator")}
-                placeholder="Nome do criador"
-              />
-              {errors.creator && (
-                <span className="text-sm text-red-500 w-full">
-                  {errors.creator.message}
-                </span>
-              )}
-            </div>
-            <div className="basis-1/4">
-              <CustomInput
-                id="reading_time"
-                label="Tempo de leitura (min)"
-                type="number"
-                {...register("reading_time", {
-                  setValueAs: (value: string) => Number(value) || undefined,
-                })}
-                onChange={(e) => {
-                  Number(e.target.value);
-                }}
-              />
-              {errors.reading_time && (
-                <span className="text-sm text-red-500">
-                  {errors.reading_time.message}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex gap-6">
-            <div className="flex flex-col gap-1 w-full">
+            <div className="basis-1/2 ">
               <label className="px-6" htmlFor="tagIds">
                 Tag(s):
               </label>
@@ -321,9 +287,68 @@ export default function FormCreateArticle() {
               {errors.tagIds && (
                 <p className="text-red-500">{errors.tagIds.message}</p>
               )}
+            
+            </div>
+            <div className="basis-1/4 flex flex-col">
+              <CustomInput
+                id="reading_time"
+                label="Tempo de leitura"
+                type="number"
+                {...register("reading_time", {
+                  setValueAs: (value: string) => Number(value) || undefined,
+                })}
+                onChange={(e) => {
+                  Number(e.target.value);
+                }}
+              />
+              {errors.reading_time && (
+                <span className="text-sm text-red-500">
+                  {errors.reading_time.message}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex gap-6">
+            <div className="flex flex-col gap-1 w-full">
+              <label className="px-6" htmlFor="creator">
+                Criador
+              </label>
+              <CustomSelect
+                onValueChange={(value) => setValue("creator", value)}
+                defaultValue="placeholder"
+              >
+                <SelectTrigger className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light outline-none focus:border-blue-500 focus:ring-blue-500">
+                  <SelectValue placeholder="Selecione um criador" />
+                </SelectTrigger>
+                <SelectContent className="bg-white rounded-2xl">
+                  <SelectItem value="placeholder" disabled>
+                    Selecione um criador
+                  </SelectItem>
+                  {listArticles?.data && 
+                    Array.from(new Map(
+                      listArticles.data
+                        .filter(article => article.creator?.id)
+                        .map(article => [article.creator.id, article.creator])
+                    ).values()).map((creator) => (
+                      <SelectItem
+                        key={creator.id}
+                        value={creator.id}
+                        className="hover:bg-blue-500 hover:text-white"
+                      >
+                        {creator.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </CustomSelect>
+              {errors.creator && (
+                <span className="text-sm text-red-500">
+                  {errors.creator.message}
+                </span>
+              )}
             </div>
 
-            <div className="flex gap-6 w-full ">
+            <div className="flex gap-6 w-full">
               <div className="w-full">
                 <label
                   htmlFor="categoryId"
@@ -333,13 +358,13 @@ export default function FormCreateArticle() {
                 </label>
                 <CustomSelect
                   onValueChange={(value) => setValue("categoryId", value)}
-                  defaultValue=""
+                  defaultValue="placeholder"
                 >
                   <SelectTrigger className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light outline-none focus:border-blue-500 focus:ring-blue-500">
                     <SelectValue placeholder="Selecione uma categoria" />
                   </SelectTrigger>
                   <SelectContent className="bg-white rounded-2xl ">
-                    <SelectItem value="#" disabled>
+                    <SelectItem value="placeholder" disabled>
                       Selecione uma categoria
                     </SelectItem>
                     {listCategorys.map((category) => (
@@ -360,11 +385,6 @@ export default function FormCreateArticle() {
                 )}
               </div>
             </div>
-            {errors.categoryId && (
-              <span className="text-sm text-red-500">
-                {errors.categoryId.message}
-              </span>
-            )}
           </div>
 
           <CustomInput

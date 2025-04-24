@@ -1,5 +1,6 @@
 import React from "react";
 import { AlertCircle } from "lucide-react";
+import { TooltipProvider } from "@radix-ui/react-tooltip";
 
 interface CustomInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -23,7 +24,7 @@ const CustomInput: React.FC<CustomInputProps> = ({
   return (
     <div className={`w-full`}>
       {label && (
-        <label htmlFor={props.id} className="px-6 block text-black">
+        <label htmlFor={props.id} className="px-6 block text-black ">
           {label}
         </label>
       )}

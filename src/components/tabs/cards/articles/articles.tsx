@@ -13,7 +13,6 @@ export interface FilterState {
 }
 
 const Articles = ({ status }: { status: string }) => {
-  console.log("status", status);
   const [filter, setFilter] = useState("");
   const [activeFilters, setActiveFilters] = useState<FilterState>({
     status: status,
