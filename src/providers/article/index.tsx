@@ -58,6 +58,7 @@ export interface Article {
   category: Category;
   tags: Tag[];
   status_history: StatusHistory[];
+  status: string
 }
 
 export interface User {

@@ -10,9 +10,10 @@ import {
 import { TooltipArrow, TooltipPortal } from "@radix-ui/react-tooltip";
 import { Article } from "@/providers/article";
 import { ColumnDef } from "@tanstack/react-table";
-import { Edit } from "lucide-react";
+import { Edit, FolderSearch2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React from "react";
+import React, { useState } from "react";
+import { ArticleViewModal } from "@/components/reviewModal";
 
 interface Props {
   article: Article;
@@ -20,30 +21,37 @@ interface Props {
 
 const CellActions = ({ article }: Props) => {
   const { push } = useRouter();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const currentStatus =
+    article.status_history && article.status_history.length > 0
+      ? article.status_history[article.status_history.length - 1].status
+      : null;
 
   return (
     <div className="flex gap-6">
-      <DialogDelete
-        context="articles"
-        item_name={article!.slug}
-        item_id={article!.id}
-      />
-
+    <DialogDelete
+      context="articles"
+      item_name={article.slug}
+      item_id={article.id}
+    />
+  
+    {currentStatus === "DRAFT" ? (
       <TooltipProvider delayDuration={600}>
         <Tooltip>
           <TooltipTrigger asChild>
             <Edit
-              onClick={() => push(`/postagens/artigos/editar/${article!.id}`)}
+              onClick={() => push(`/postagens/artigos/editar/${article.id}`)}
               size={20}
               className="text-primary cursor-pointer"
             />
           </TooltipTrigger>
           <TooltipPortal>
             <TooltipContent
-              className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2  animate-fadeIn"
+              className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
               sideOffset={5}
             >
-              <span>Editar artigo</span>
+              <span>Editar rascunho</span>
               <TooltipArrow
                 className="fill-primary-light"
                 width={11}
@@ -53,7 +61,41 @@ const CellActions = ({ article }: Props) => {
           </TooltipPortal>
         </Tooltip>
       </TooltipProvider>
-    </div>
+    ) : currentStatus === "PENDING_REVIEW" ? (
+      <>
+          <TooltipProvider delayDuration={600}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FolderSearch2
+                  onClick={() => setIsModalOpen(true)}
+                  size={20}
+                  className="text-primary cursor-pointer"
+                />
+              </TooltipTrigger>
+              <TooltipPortal>
+                <TooltipContent
+                  className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
+                  sideOffset={5}
+                >
+                  <span>Revisar artigo</span>
+                  <TooltipArrow
+                    className="fill-primary-light"
+                    width={11}
+                    height={5}
+                  />
+                </TooltipContent>
+              </TooltipPortal>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <ArticleViewModal 
+            open={isModalOpen} 
+            onOpenChange={setIsModalOpen} 
+            article={article} 
+          />
+        </>
+    ) : null}
+  </div>
   );
 };
 
