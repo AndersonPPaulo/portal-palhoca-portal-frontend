@@ -45,7 +45,7 @@ const articleSchema = z.object({
   thumbnail: z.string(),
   categoryId: z.string().min(1, "Adicione uma categoria"),
   tagIds: z.array(z.string()).min(1, "Pelo menos uma tag é obrigatória"),
-  chiefEditorId: z.string()
+  chiefEditorId: z.string(),
 });
 
 type ArticleFormData = z.infer<typeof articleSchema>;
@@ -74,6 +74,8 @@ export default function FormCreateArticle() {
   const { ListCategorys, listCategorys } = useContext(CategorysContext);
   const { ListTags, listTags } = useContext(TagContext);
   const { profile } = useContext(UserContext);
+  const [draftStatus, setDraftStatus] = useState("DRAFT");
+  const [pendingReview, setPendingReview] = useState("PENDING_REVIEW");
 
   useEffect(() => {
     Promise.all([ListTags(), ListCategorys(), ListAuthorArticles()]);
@@ -105,7 +107,7 @@ export default function FormCreateArticle() {
       highlight: false,
       categoryId: "",
       tagIds: [],
-      chiefEditorId: ""
+      chiefEditorId: "",
     },
   });
 
@@ -116,7 +118,6 @@ export default function FormCreateArticle() {
     if (title) {
       setValue("slug", generateSlug(title), { shouldValidate: true });
     }
-    
   }, [title, setValue]);
 
   const handleEditorChange = (content: string) => {
@@ -125,27 +126,45 @@ export default function FormCreateArticle() {
     setValue("content", content, { shouldValidate: true });
   };
 
-
   const onSubmit = async (data: ArticleFormData) => {
-    const pendingReview = "PENDING_REVIEW";
-    
     try {
       setIsSubmitting(true);
-      
-      if(!data.initialStatus) {
+
+      if (!data.initialStatus) {
         data.initialStatus = pendingReview;
       }
-      
-      if(profile?.id) {
+
+      if (profile?.id) {
         data.chiefEditorId = profile.chiefEditor.id;
       }
-      console.log('data', data)
-      
+      console.log("data", data);
+
       await CreateArticle(data);
       reset();
-      
     } catch (error) {
       console.error("Error creating article:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDraftStatus = async (data: ArticleFormData) => {
+    try {
+      setIsSubmitting(true);
+
+      if (!data.initialStatus) {
+        data.initialStatus = draftStatus;
+      }
+
+      if (profile?.id) {
+        data.chiefEditorId = profile.chiefEditor.id;
+      }
+      console.log("data", data);
+
+      await CreateArticle(data);
+      reset();
+    } catch (error) {
+      console.error("Error creating draft:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -158,13 +177,13 @@ export default function FormCreateArticle() {
       const formData = new FormData();
       formData.append("thumbnail", file);
       const cookies = parseCookies();
-      const token = cookies['user:token']; 
-      
+      const token = cookies["user:token"];
+
       try {
         const response = await fetch("http://localhost:5555/upload", {
           method: "POST",
           headers: {
-            'Authorization': `Bearer ${token}`
+            Authorization: `Bearer ${token}`,
           },
           body: formData,
         });
@@ -409,6 +428,52 @@ export default function FormCreateArticle() {
                 )}
               </div>
             </div>
+            <div className="flex gap-6 w-full">
+              <div className="w-full">
+                <label
+                  htmlFor="cityId"
+                  className="block px-6 font-medium text-black"
+                >
+                  Portal
+                </label>
+                <CustomSelect
+                  // onValueChange={(value) => setValue("cityId", value)}
+                  defaultValue="placeholder"
+                >
+                  <SelectTrigger className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light outline-none focus:border-blue-500 focus:ring-blue-500">
+                    <SelectValue placeholder="Selecione uma cidade" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white rounded-2xl">
+                    <SelectItem value="placeholder" disabled>
+                      Selecione um Portal
+                    </SelectItem>
+                    <SelectItem
+                      value="palhoca"
+                      className="hover:bg-blue-500 hover:text-white"
+                    >
+                      Palhoça
+                    </SelectItem>
+                    <SelectItem
+                      value="florianopolis"
+                      className="hover:bg-blue-500 hover:text-white"
+                    >
+                      Florianópolis
+                    </SelectItem>
+                    <SelectItem
+                      value="sao-jose"
+                      className="hover:bg-blue-500 hover:text-white"
+                    >
+                      São José
+                    </SelectItem>
+                  </SelectContent>
+                </CustomSelect>
+                {/* {errors.cityId && (
+                  <span className="text-sm text-red-500">
+                    {errors.cityId.message}
+                  </span>
+                )} */}
+              </div>
+            </div>
           </div>
 
           <div className="w-full">
@@ -445,6 +510,14 @@ export default function FormCreateArticle() {
           </div>
 
           <div className="flex justify-end gap-4">
+            <Button
+              type="button"
+              onClick={handleSubmit(handleDraftStatus)}
+              className="bg-yellow-200 text-[#9c6232] hover:bg-yellow-100 rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
+              disabled={isSubmitting}
+            >
+              Rascunho
+            </Button>
             <Button
               type="button"
               onClick={back}
