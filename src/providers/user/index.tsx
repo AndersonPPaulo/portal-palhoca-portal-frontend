@@ -22,6 +22,8 @@ interface UpdateUserProps {
   role?: { id: string; name: string; isDefault: boolean };
 }
 
+
+
 export interface ResponsePromise {
   id: string;
   name: string;
@@ -29,6 +31,7 @@ export interface ResponsePromise {
   phone: string;
   role: { id: string; name: string; isDefault: boolean };
   password?: string;
+  chiefEditor: {id: string}
 }
 
 interface IUserData {
@@ -108,6 +111,7 @@ export const UserProvider = ({ children }: ICihldrenReact) => {
       .get("/profile", config)
       .then((res) => {
         setProfile(res.data.response);
+        console.log('res', res.data.response)
       })
       .catch((err) => {
         toast.error(err.response.data.message);

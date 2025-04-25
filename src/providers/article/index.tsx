@@ -13,11 +13,12 @@ export interface ArticleProps {
   reading_time: number;
   resume_content: string;
   content: string;
-  status: boolean;
+  initialStatus: string;
   highlight: boolean;
   thumbnail: string;
   categoryId: string;
   tagIds: string[];
+  chiefEditorId: string;
 }
 
 interface UpdateArticleProps {
@@ -33,6 +34,7 @@ interface UpdateArticleProps {
   categoryId?: string;
   tagIds?: string[];
 }
+
 export interface ArticleResponse {
   message: string;
   data: Article[];
@@ -97,14 +99,24 @@ export interface Meta {
   totalPages: number;
 }
 
+export interface ArticleListParams {
+  page?: number;
+  limit?: number;
+  status?: string;
+  chiefEditorId?: string;
+}
+
 interface IArticleData {
   CreateArticle(data: ArticleProps): Promise<Article>;
   SelfArticle(articleId: string): Promise<Article>;
   article: Article | null;
-  ListArticles(creatorId: string): Promise<ArticleResponse>;
+  ListAuthorArticles(creatorId?: string, params?: ArticleListParams): Promise<ArticleResponse>;
   listArticles: ArticleResponse | null;
   UpdateArticle(data: UpdateArticleProps, articleId: string): Promise<void>;
   DeleteArticle(articleId: string): Promise<void>;
+  uploadThumbnail(file: File): Promise<string>;
+  GetPublishedArticles(page?: number, limit?: number): Promise<ArticleResponse>;
+  publishedArticles: ArticleResponse | null;
 }
 
 interface ICihldrenReact {
@@ -115,6 +127,9 @@ export const ArticleContext = createContext<IArticleData>({} as IArticleData);
 
 export const ArticleProvider = ({ children }: ICihldrenReact) => {
   const { back } = useRouter();
+  const [article, setArticle] = useState<Article | null>(null);
+  const [listArticles, setListArticles] = useState<ArticleResponse | null>(null);
+  const [publishedArticles, setPublishedArticles] = useState<ArticleResponse | null>(null);
 
   const CreateArticle = async (data: ArticleProps): Promise<Article> => {
     const { "user:token": token } = parseCookies();
@@ -125,21 +140,21 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
     };
     const response = await api
       .post("/article", data, config)
-      .then(() => {
+      .then((res) => {
         toast.success(`Artigo criado com sucesso!`);
         setTimeout(() => {
           back();
         }, 1800);
+        return res.data.response;
       })
       .catch((err) => {
         toast.error(err.response.data.message);
-        return err;
+        throw err;
       });
 
     return response;
   };
 
-  const [article, setArticle] = useState<Article | null>(null);
   const SelfArticle = async (articleId: string): Promise<Article> => {
     const { "user:token": token } = parseCookies();
     const config = {
@@ -149,34 +164,41 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
       .get(`/article/${articleId}`, config)
       .then((res) => {
         setArticle(res.data.response);
+        return res.data.response;
       })
       .catch((err) => {
         toast.error(err.response.data.message);
-        return err;
+        throw err;
       });
 
     return response;
   };
 
-  const [listArticles, setListArticles] = useState<ArticleResponse | null>(
-    null
-  );
-  const ListArticles = async (creatorId: string): Promise<ArticleResponse> => {
+  const ListAuthorArticles = async (
+    creatorId?: string, 
+    params: ArticleListParams = {}
+  ): Promise<ArticleResponse> => {
+    const { page = 1, limit = 10, status, chiefEditorId } = params;
     const { "user:token": token } = parseCookies();
     const config = {
       headers: { Authorization: `bearer ${token}` },
+      params: { page, limit, status, chiefEditorId }
     };
-    const response = await api
-      .get(`/article-author/${creatorId}`, config)
-      .then((res) => {
-        setListArticles(res.data);
-      })
-      .catch((err) => {
-        toast.error(err.response);
-        return err;
-      });
 
-    return response;
+    let url = "/article-author";
+    if (creatorId) {
+      url = `${url}/${creatorId}`;
+    }
+
+    try {
+      const response = await api.get(url, config);
+      console.log('response', response)
+      setListArticles(response.data);
+      return response.data;
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro ao listar artigos");
+      throw err;
+    }
   };
 
   const DeleteArticle = async (articleId: string): Promise<void> => {
@@ -185,17 +207,14 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
       headers: { Authorization: `bearer ${token}` },
       params: { articleId },
     };
-    const response = await api
-      .delete("/article", config)
-      .then(() => {
-        toast.success("Artigo deletado com sucesso!");
-      })
-      .catch((err) => {
-        toast.error(err.response.data.message);
-        return err;
-      });
-
-    return response;
+    
+    try {
+      await api.delete("/article", config);
+      toast.success("Artigo deletado com sucesso!");
+    } catch (err: any) {
+      toast.error(err.response.data.message);
+      throw err;
+    }
   };
 
   const UpdateArticle = async (
@@ -207,17 +226,51 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
       headers: { Authorization: `bearer ${token}` },
       params: { articleId },
     };
-    const response = await api
-      .patch("/article", data, config)
-      .then(() => {
-        toast.success("Artigo atualizado com sucesso!");
-      })
-      .catch((err) => {
-        toast.error(err.response.data.message);
-        return err;
-      });
+    
+    try {
+      await api.patch("/article", data, config);
+      toast.success("Artigo atualizado com sucesso!");
+    } catch (err: any) {
+      toast.error(err.response.data.message);
+      throw err;
+    }
+  };
 
-    return response;
+  const uploadThumbnail = async (file: File): Promise<string> => {
+    const { "user:token": token } = parseCookies();
+    const formData = new FormData();
+    formData.append("thumbnail", file);
+    
+    const config = {
+      headers: {
+        Authorization: `bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      },
+    };
+    
+    try {
+      const response = await api.post("/upload", formData, config);
+      return response.data.url;
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro ao fazer upload da imagem");
+      throw err;
+    }
+  };
+
+  const GetPublishedArticles = async (
+    page = 1, 
+    limit = 10
+  ): Promise<ArticleResponse> => {
+    try {
+      const response = await api.get("/article-published", {
+        params: { page, limit }
+      });
+      setPublishedArticles(response.data);
+      return response.data;
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro ao listar artigos publicados");
+      throw err;
+    }
   };
 
   return (
@@ -227,9 +280,12 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
         article,
         SelfArticle,
         listArticles,
-        ListArticles,
+        ListAuthorArticles,
         DeleteArticle,
         UpdateArticle,
+        uploadThumbnail,
+        GetPublishedArticles,
+        publishedArticles,
       }}
     >
       {children}

@@ -32,7 +32,7 @@ export const AuthProvider = ({ children }: ICihldrenReact) => {
           maxAge: 60 * 60 * 24 * 2,
           path: "/",
         });
-        push("/painel");
+        push("/dashboard");
       })
       .catch((err) => {
         toast.error(err.response.data.message);

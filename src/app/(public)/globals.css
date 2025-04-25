@@ -84,3 +84,31 @@ li {
 .checkbox-thick [data-state="checked"] svg {
   stroke-width: 3;
 }
+
+.ProseMirror {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  width: 100%;
+  max-width: 100%;
+}
+
+.ProseMirror p,
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror pre {
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+}
+
+.ProseMirror code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}

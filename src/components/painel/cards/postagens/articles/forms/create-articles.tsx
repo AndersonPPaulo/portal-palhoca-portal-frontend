@@ -23,11 +23,13 @@ import ReactSelect from "react-select";
 import { MultiValue } from "react-select";
 
 import { TagContext } from "@/providers/tags";
+import { parseCookies } from "nookies";
+import { UserContext } from "@/providers/user";
 
 const articleSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
   slug: z.string().min(1, "Slug é obrigatório"),
-  creator: z.string().min(1, "Criador é obrigatório"),
+  creator: z.string().min(1, "Criador é Obrigatório"),
   reading_time: z.preprocess(
     (val) => (val === "" ? undefined : Number(val)),
     z.number().min(1, "Tempo de leitura é obrigatório")
@@ -38,11 +40,12 @@ const articleSchema = z.object({
   content: z
     .string()
     .min(300, "Conteudo é obrigatório minimo de 300 caracteres"),
-  status: z.boolean().default(true),
+  initialStatus: z.string(),
   highlight: z.boolean().default(false),
   thumbnail: z.string(),
   categoryId: z.string().min(1, "Adicione uma categoria"),
   tagIds: z.array(z.string()).min(1, "Pelo menos uma tag é obrigatória"),
+  chiefEditorId: z.string()
 });
 
 type ArticleFormData = z.infer<typeof articleSchema>;
@@ -65,12 +68,15 @@ interface TagOption {
 export default function FormCreateArticle() {
   const { back } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { CreateArticle } = useContext(ArticleContext);
+  const [editorContent, setEditorContent] = useState("");
+  const { CreateArticle, ListAuthorArticles, listArticles } =
+    useContext(ArticleContext);
   const { ListCategorys, listCategorys } = useContext(CategorysContext);
   const { ListTags, listTags } = useContext(TagContext);
+  const { profile } = useContext(UserContext);
 
   useEffect(() => {
-    Promise.all([ListTags(), ListCategorys()]);
+    Promise.all([ListTags(), ListCategorys(), ListAuthorArticles()]);
   }, []);
 
   const tagOptions: OptionType[] = listTags.map((tag) => ({
@@ -95,29 +101,51 @@ export default function FormCreateArticle() {
       thumbnail: "",
       resume_content: "",
       content: "",
-      status: true,
+      initialStatus: "",
       highlight: false,
       categoryId: "",
       tagIds: [],
+      chiefEditorId: ""
     },
   });
 
   const title = watch("title");
-  const status = watch("status");
   const highlight = watch("highlight");
 
   useEffect(() => {
     if (title) {
       setValue("slug", generateSlug(title), { shouldValidate: true });
     }
+    
   }, [title, setValue]);
 
+  const handleEditorChange = (content: string) => {
+    setEditorContent(content);
+
+    setValue("content", content, { shouldValidate: true });
+  };
+
+
   const onSubmit = async (data: ArticleFormData) => {
+    const pendingReview = "PENDING_REVIEW";
+    
     try {
       setIsSubmitting(true);
+      
+      if(!data.initialStatus) {
+        data.initialStatus = pendingReview;
+      }
+      
+      if(profile?.id) {
+        data.chiefEditorId = profile.chiefEditor.id;
+      }
+      console.log('data', data)
+      
       await CreateArticle(data);
-
       reset();
+      
+    } catch (error) {
+      console.error("Error creating article:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -129,10 +157,15 @@ export default function FormCreateArticle() {
 
       const formData = new FormData();
       formData.append("thumbnail", file);
-
+      const cookies = parseCookies();
+      const token = cookies['user:token']; 
+      
       try {
         const response = await fetch("http://localhost:5555/upload", {
           method: "POST",
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
           body: formData,
         });
 
@@ -152,24 +185,12 @@ export default function FormCreateArticle() {
 
   return (
     <div className="w-full h-full flex flex-col bg-white rounded-[24px]">
-      <div className="flex-1 overflow-y-auto no-scrollbar">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-6">
           <div className="flex justify-between items-center -mb-4">
             <ReturnPageButton />
 
             <div className="flex items-center justify-end gap-6 rounded-lg p-4">
-              <div className="flex items-center gap-2">
-                <label htmlFor="status" className="text-gray-40">
-                  {status ? "Ativo" : "Inativado"}
-                </label>
-                <Switch
-                  value={status}
-                  onChange={(checked) =>
-                    setValue("status", checked, { shouldValidate: true })
-                  }
-                />
-              </div>
-
               <div className="flex items-center gap-2">
                 <label htmlFor="highlight" className="text-gray-40">
                   Destaque
@@ -183,7 +204,6 @@ export default function FormCreateArticle() {
               </div>
             </div>
           </div>
-
           <div className="flex gap-6">
             <CustomInput
               id="title"
@@ -223,41 +243,7 @@ export default function FormCreateArticle() {
               )}
             </div>
 
-            <div className="basis-1/2">
-              <CustomInput
-                id="creator"
-                label="Criador"
-                {...register("creator")}
-                placeholder="Nome do criador"
-              />
-              {errors.creator && (
-                <span className="text-sm text-red-500 w-full">
-                  {errors.creator.message}
-                </span>
-              )}
-            </div>
-            <div className="basis-1/4">
-              <CustomInput
-                id="reading_time"
-                label="Tempo de leitura (min)"
-                type="number"
-                {...register("reading_time", {
-                  setValueAs: (value: string) => Number(value) || undefined,
-                })}
-                onChange={(e) => {
-                  Number(e.target.value);
-                }}
-              />
-              {errors.reading_time && (
-                <span className="text-sm text-red-500">
-                  {errors.reading_time.message}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex gap-6">
-            <div className="flex flex-col gap-1 w-full">
+            <div className="basis-1/2 ">
               <label className="px-6" htmlFor="tagIds">
                 Tag(s):
               </label>
@@ -322,8 +308,71 @@ export default function FormCreateArticle() {
                 <p className="text-red-500">{errors.tagIds.message}</p>
               )}
             </div>
+            <div className="basis-1/4 flex flex-col">
+              <CustomInput
+                id="reading_time"
+                label="Tempo de leitura"
+                type="number"
+                {...register("reading_time", {
+                  setValueAs: (value: string) => Number(value) || undefined,
+                })}
+                onChange={(e) => {
+                  setValue("reading_time", Number(e.target.value));
+                }}
+              />
+              {errors.reading_time && (
+                <span className="text-sm text-red-500">
+                  {errors.reading_time.message}
+                </span>
+              )}
+            </div>
+          </div>
 
-            <div className="flex gap-6 w-full ">
+          <div className="flex gap-6">
+            <div className="flex flex-col gap-1 w-full">
+              <label className="px-6" htmlFor="creator">
+                Criador
+              </label>
+              <CustomSelect
+                onValueChange={(value) => setValue("creator", value)}
+                defaultValue="placeholder"
+              >
+                <SelectTrigger className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light outline-none focus:border-blue-500 focus:ring-blue-500">
+                  <SelectValue placeholder="Selecione um criador" />
+                </SelectTrigger>
+                <SelectContent className="bg-white rounded-2xl">
+                  <SelectItem value="placeholder" disabled>
+                    Selecione um criador
+                  </SelectItem>
+                  {listArticles?.data &&
+                    Array.from(
+                      new Map(
+                        listArticles.data
+                          .filter((article) => article.creator?.id)
+                          .map((article) => [
+                            article.creator.id,
+                            article.creator,
+                          ])
+                      ).values()
+                    ).map((creator) => (
+                      <SelectItem
+                        key={creator.id}
+                        value={creator.id}
+                        className="hover:bg-blue-500 hover:text-white"
+                      >
+                        {creator.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </CustomSelect>
+              {errors.creator && (
+                <span className="text-sm text-red-500">
+                  {errors.creator.message}
+                </span>
+              )}
+            </div>
+
+            <div className="flex gap-6 w-full">
               <div className="w-full">
                 <label
                   htmlFor="categoryId"
@@ -333,13 +382,13 @@ export default function FormCreateArticle() {
                 </label>
                 <CustomSelect
                   onValueChange={(value) => setValue("categoryId", value)}
-                  defaultValue=""
+                  defaultValue="placeholder"
                 >
                   <SelectTrigger className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light outline-none focus:border-blue-500 focus:ring-blue-500">
                     <SelectValue placeholder="Selecione uma categoria" />
                   </SelectTrigger>
                   <SelectContent className="bg-white rounded-2xl ">
-                    <SelectItem value="#" disabled>
+                    <SelectItem value="placeholder" disabled>
                       Selecione uma categoria
                     </SelectItem>
                     {listCategorys.map((category) => (
@@ -360,40 +409,40 @@ export default function FormCreateArticle() {
                 )}
               </div>
             </div>
-            {errors.categoryId && (
+          </div>
+
+          <div className="w-full">
+            <CustomInput
+              id="resume_content"
+              label="Resumo"
+              textareaInput
+              className="min-h-32"
+              {...register("resume_content")}
+              placeholder="Digite o resumo"
+            />
+            {errors.resume_content && (
               <span className="text-sm text-red-500">
-                {errors.categoryId.message}
+                {errors.resume_content.message}
               </span>
             )}
           </div>
 
-          <CustomInput
-            id="resume_content"
-            label="Resumo"
-            textareaInput
-            {...register("resume_content")}
-            placeholder="Digite o resumo"
-          />
-          {errors.resume_content && (
-            <span className="text-sm text-red-500">
-              {errors.resume_content.message}
-            </span>
-          )}
-
-          <h1 className="text-xl font-bold text-primary ml-6 pt-4">
-            Adicionar conteudo de texto
-          </h1>
-          <TiptapEditor
-            value={watch("content") || ""}
-            onChange={(content: string) =>
-              setValue("content", content, { shouldValidate: true })
-            }
-          />
-          {errors.content && (
-            <span className="text-sm text-red-500">
-              {errors.content.message}
-            </span>
-          )}
+          <div className=" w-full ">
+            <h1 className="text-xl font-bold text-primary ml-6 pt-4">
+              Adicionar conteudo de texto
+            </h1>
+            <div className="w-full">
+              <TiptapEditor
+                value={editorContent}
+                onChange={handleEditorChange}
+              />
+              {errors.content && (
+                <span className="text-sm text-red-500 ml-6">
+                  {errors.content.message}
+                </span>
+              )}
+            </div>
+          </div>
 
           <div className="flex justify-end gap-4">
             <Button

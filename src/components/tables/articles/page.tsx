@@ -1,18 +1,20 @@
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useState } from "react";
 import { columns } from "./columns";
 import { DataTable } from "./data-table";
-
-import { ArticleContext } from "@/providers/article";
-import { User } from "lucide-react";
 import { UserContext } from "@/providers/user";
+import {
+  Article,
+  ArticleContext,
+  ArticleListParams,
+} from "@/providers/article";
 
 interface TableArticlesProps {
   filter: string;
   activeFilters: {
-    // status: boolean | null;
+    status: string;
     categories: string[];
-    // creators: string[];
     highlight: boolean | null;
+    creators: string[];
   };
 }
 
@@ -20,51 +22,69 @@ export default function TableArticles({
   filter,
   activeFilters,
 }: TableArticlesProps) {
-  const { ListArticles, listArticles } = useContext(ArticleContext);
-  console.log("listArticles", listArticles?.data);
+  const { ListAuthorArticles, listArticles } = useContext(ArticleContext);
   const { profile } = useContext(UserContext);
-  console.log("profile", profile);
+  const [loading, setLoading] = useState(true);
 
+  console.log("activeFilters", activeFilters);
   useEffect(() => {
-    if (profile === null) return;
-    if (profile.id) {
-      const fetch = async () => {
-        await ListArticles(profile!.id);
-      };
-      fetch();
+    const fetchArticles = async () => {
+      setLoading(true);
+      try {
+        if (profile?.id) {
+          const params: ArticleListParams = {
+            limit: 20,
+            page: 1,
+            status: activeFilters.status,
+          };
+
+          const roleName = profile.role.name.toLowerCase();
+
+          if (roleName === "chefe de redação") {
+            params.chiefEditorId = profile.id;
+            await ListAuthorArticles(undefined, params);
+          } else if (roleName === "jornalista" || roleName === "colunista") {
+            await ListAuthorArticles(profile.id, params);
+          } else {
+            await ListAuthorArticles(undefined, params);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching articles:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (profile?.id) {
+      fetchArticles();
     }
   }, [profile]);
 
-  const filteredArticles = listArticles?.data.filter((item) => {
-    const search = filter.toLowerCase();
+  const filteredArticles =
+    listArticles?.data?.filter((item: Article) => {
+      const search = filter.toLowerCase();
 
-    const matchesSearch =
-      item.title.toLowerCase().includes(search) ||
-      item.tags.some((tag) => tag.name.toLowerCase().includes(search));
+      const matchesSearch =
+        item.title.toLowerCase().includes(search) ||
+        item.tags.some((tag) => tag.name.toLowerCase().includes(search));
 
-    const matchesCategory =
-      activeFilters.categories.length === 0 ||
-      activeFilters.categories.includes(item.category.name);
+      const matchesCategory =
+        activeFilters.categories.length === 0 ||
+        activeFilters.categories.includes(item.category.name);
 
-    // const matchesCreator =
-    //   activeFilters.creators.length === 0 ||
-    //   activeFilters.creators.includes(item.creator);
+      const matchesHighlight =
+        activeFilters.highlight === null ||
+        item.highlight === activeFilters.highlight;
 
-    // const matchesStatus =
-    //   activeFilters.status === null || item.status !== activeFilters.status;
+      const matchesCreator =
+        (activeFilters.creators?.length ?? 0) === 0 ||
+        activeFilters.creators?.includes(item.creator.name);
 
-    const matchesHighlight =
-      activeFilters.highlight === null ||
-      item.highlight === activeFilters.highlight;
+      return (
+        matchesSearch && matchesCategory && matchesHighlight && matchesCreator
+      );
+    }) || [];
 
-    return (
-      matchesSearch &&
-      // matchesStatus &&
-      matchesCategory &&
-      // matchesCreator &&
-      matchesHighlight
-    );
-  });
-
-  return <DataTable columns={columns} data={filteredArticles ?? []} />;
+  return <DataTable columns={columns} data={filteredArticles} />;
 }

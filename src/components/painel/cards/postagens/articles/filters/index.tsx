@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { Check, ChevronDown, ChevronUp, Search } from "lucide-react";
 import {
   Popover,
@@ -11,7 +11,7 @@ import CustomInput from "@/components/input/custom-input";
 import { ArticleContext } from "@/providers/article";
 
 interface FilterState {
-  status: boolean | null;
+  status: string
   categories: string[];
   creators: string[];
   highlight: boolean | null;
@@ -25,17 +25,37 @@ interface FilterProps {
 
 const ArticleFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
   const { listArticles } = useContext(ArticleContext);
-  console.log("listArticles", listArticles?.data);
 
-  const categories = [
-    ...new Set(listArticles?.data.map((item) => item.category.name)),
-  ];
-  // const creators = [...new Set(listArticles?.data.map((item) => item.creator))];
+  const [categories, setCategories] = useState<string[]>([]);
+  const [creators, setCreators] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (listArticles?.data && listArticles.data.length > 0) {
+      const uniqueCategories = Array.from(
+        new Set(
+          listArticles.data
+            .filter((item) => item.category && item.category.name)
+            .map((item) => item.category.name)
+        )
+      );
+
+      const uniqueCreators = Array.from(
+        new Set(
+          listArticles.data
+            .filter((item) => item.creator && item.creator.name)
+            .map((item) => item.creator.name)
+        )
+      );
+
+      setCategories(uniqueCategories);
+      setCreators(uniqueCreators);
+    }
+  }, [listArticles]);
 
   const [filters, setFilters] = useState<FilterState>({
     categories: [],
     creators: [],
-    status: null,
+    status: '',
     highlight: null,
   });
 
@@ -50,18 +70,10 @@ const ArticleFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
     type: keyof FilterState,
     value: string | boolean
   ) => {
-    if (type === "highlight") {
+    if (type === "highlight" || type === "status") {
       const newFilters = {
         ...filters,
-        highlight: filters.highlight === value ? null : (value as boolean),
-      };
-      setFilters(newFilters);
-      onFilterChange(newFilters);
-      return;
-    } else if (type === "status") {
-      const newFilters = {
-        ...filters,
-        status: filters.status === value ? null : (value as boolean),
+        [type]: filters[type] === value ? null : (value as boolean),
       };
       setFilters(newFilters);
       onFilterChange(newFilters);
@@ -72,7 +84,7 @@ const ArticleFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
       ...filters,
       [type]: filters[type].includes(value as string)
         ? filters[type].filter((item) => item !== value)
-        : [...filters[type], value],
+        : [...filters[type], value as string],
     };
     setFilters(newFilters);
     onFilterChange(newFilters);
@@ -132,7 +144,7 @@ const ArticleFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
           className="w-56 bg-white rounded-2xl shadow-2xl border-none"
           sideOffset={20}
         >
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-60 overflow-y-auto">
             {items.map((item) => (
               <div key={item} className="flex items-center space-x-2">
                 <Checkbox
@@ -140,7 +152,12 @@ const ArticleFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
                   checked={filters[type].includes(item)}
                   onCheckedChange={() => handleFilterChange(type, item)}
                 />
-                <label className="ms-4">{item}</label>
+                <label
+                  className="ms-4 cursor-pointer text-wrap"
+                  onClick={() => handleFilterChange(type, item)}
+                >
+                  {item}
+                </label>
               </div>
             ))}
           </div>
@@ -153,10 +170,10 @@ const ArticleFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
     <div className="flex flex-col w-full gap-4">
       <div className="flex items-center gap-4">
         <div className="flex-grow">
-          <span className="text-body-g ms-4">Artigo:</span>
+          <span className="text-body-g ms-4">Pesquisar:</span>
           <CustomInput
             type="search"
-            placeholder="Digite o título do artigo ou uma tag..."
+            placeholder="Digite o título da noticia ou uma tag..."
             value={filter}
             icon={<Search />}
             onChange={(e) => setFilter(e.target.value)}
@@ -168,12 +185,13 @@ const ArticleFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
           categories,
           categories.length === 0
         )}
-        {/* {renderFilterButton(
+
+        {renderFilterButton(
           "creators",
           "Criador",
           creators,
           creators.length === 0
-        )} */}
+        )}
 
         <Popover
           open={openPopovers.highlight}
@@ -219,7 +237,12 @@ const ArticleFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
                   className="text-white rounded checkbox-thick"
                   onCheckedChange={() => handleFilterChange("highlight", true)}
                 />
-                <label className="ms-4">Em destaque</label>
+                <label
+                  className="ms-4 cursor-pointer"
+                  onClick={() => handleFilterChange("highlight", true)}
+                >
+                  Em destaque
+                </label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -227,7 +250,12 @@ const ArticleFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
                   className="text-white rounded checkbox-thick"
                   onCheckedChange={() => handleFilterChange("highlight", false)}
                 />
-                <label className="ms-4">Sem destaque</label>
+                <label
+                  className="ms-4 cursor-pointer"
+                  onClick={() => handleFilterChange("highlight", false)}
+                >
+                  Sem destaque
+                </label>
               </div>
             </div>
           </PopoverContent>

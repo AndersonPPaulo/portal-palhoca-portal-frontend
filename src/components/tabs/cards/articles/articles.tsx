@@ -6,16 +6,16 @@ import { Card } from "@/components/ui/card";
 import { useState } from "react";
 
 export interface FilterState {
-  status: boolean | null;
+  status: string;
   categories: string[];
   creators: string[];
   highlight: boolean | null;
 }
 
-const Articles = () => {
+const Articles = ({ status }: { status: string }) => {
   const [filter, setFilter] = useState("");
   const [activeFilters, setActiveFilters] = useState<FilterState>({
-    status: null,
+    status: status,
     categories: [],
     creators: [],
     highlight: null,
