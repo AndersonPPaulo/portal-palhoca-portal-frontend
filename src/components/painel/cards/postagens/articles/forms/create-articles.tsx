@@ -69,8 +69,7 @@ export default function FormCreateArticle() {
   const { back } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editorContent, setEditorContent] = useState("");
-  const { CreateArticle, ListAuthorArticles, listArticles } =
-    useContext(ArticleContext);
+  const { CreateArticle, ListAuthorArticles, listArticles } = useContext(ArticleContext);
   const { ListCategorys, listCategorys } = useContext(CategorysContext);
   const { ListTags, listTags } = useContext(TagContext);
   const { profile } = useContext(UserContext);
@@ -132,6 +131,8 @@ export default function FormCreateArticle() {
 
       if (!data.initialStatus) {
         data.initialStatus = pendingReview;
+        console.log('pendingReview', pendingReview)
+        console.log('data.initialStatus', data.initialStatus)
       }
 
       if (profile?.id) {
@@ -140,6 +141,9 @@ export default function FormCreateArticle() {
       console.log("data", data);
 
       await CreateArticle(data);
+
+      data.initialStatus = "PUBLISHED"
+      console.log('data.initialStatus', data.initialStatus)
       reset();
     } catch (error) {
       console.error("Error creating article:", error);
@@ -162,6 +166,7 @@ export default function FormCreateArticle() {
       console.log("data", data);
 
       await CreateArticle(data);
+      data.initialStatus = "DRAFT"
       reset();
     } catch (error) {
       console.error("Error creating draft:", error);
@@ -327,7 +332,7 @@ export default function FormCreateArticle() {
                 <p className="text-red-500">{errors.tagIds.message}</p>
               )}
             </div>
-            <div className="basis-1/4 flex flex-col">
+            <div className="basis-1/2 gap-1 flex flex-col">
               <CustomInput
                 id="reading_time"
                 label="Tempo de leitura"

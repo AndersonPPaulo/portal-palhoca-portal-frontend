@@ -19,15 +19,16 @@ interface Props {
   article: Article;
 }
 
+
 const CellActions = ({ article }: Props) => {
   const { push } = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const currentStatus =
-    article.status_history && article.status_history.length > 0
-      ? article.status_history[article.status_history.length - 1].status
-      : null;
-
+  article.status_history && article.status_history.length > 0
+  ? article.status_history[article.status_history.length - 1].status
+  : null;
+  
   return (
     <div className="flex gap-6">
     <DialogDelete

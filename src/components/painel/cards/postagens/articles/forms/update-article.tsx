@@ -11,6 +11,19 @@ import { useRouter } from "next/navigation";
 import TiptapEditor from "@/components/editor/tiptapEditor";
 import ReturnPageButton from "@/components/button/returnPage";
 import { ArticleContext, ResponsePromise } from "@/providers/article";
+import { CategorysContext } from "@/providers/categorys";
+import { TagContext } from "@/providers/tags";
+import {
+  Select as CustomSelect,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import ReactSelect from "react-select";
+import { MultiValue } from "react-select";
+import { parseCookies } from "nookies";
+import { UserContext } from "@/providers/user";
 
 const articleSchema = z.object({
   id: z.string().optional(),
@@ -32,6 +45,7 @@ const articleSchema = z.object({
   thumbnail: z.string(),
   categoryId: z.string().min(1, "Adicione uma categoria"),
   tagIds: z.array(z.string()).min(1, "Pelo menos uma tag é obrigatória"),
+  chiefEditorId: z.string().optional(),
 });
 
 type ArticleFormData = z.infer<typeof articleSchema>;
@@ -44,13 +58,34 @@ const generateSlug = (text: string) => {
     .replace(/[^\w-]+/g, "");
 };
 
+type OptionType = { value: string; label: string };
+
+interface TagOption {
+  value: string;
+  label: string;
+}
+
 interface FormEditArticleProps {
   article: ResponsePromise;
 }
+
 export default function FormEditArticle({ article }: FormEditArticleProps) {
   const { back } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { UpdateArticle } = useContext(ArticleContext);
+  const [editorContent, setEditorContent] = useState(article.content || "");
+  const { UpdateArticle, ListAuthorArticles, listArticles } = useContext(ArticleContext);
+  const { ListCategorys, listCategorys } = useContext(CategorysContext);
+  const { ListTags, listTags } = useContext(TagContext);
+  const { profile } = useContext(UserContext);
+
+  useEffect(() => {
+    Promise.all([ListTags(), ListCategorys(), ListAuthorArticles()]);
+  }, []);
+
+  const tagOptions: OptionType[] = listTags.map((tag) => ({
+    value: tag.id,
+    label: tag.name,
+  }));
 
   const {
     register,
@@ -62,35 +97,42 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   } = useForm<ArticleFormData>({
     resolver: zodResolver(articleSchema),
     defaultValues: {
+      id: article.id,
       title: article.title,
       slug: article.slug,
-      creator: article.creator,
+      creator: article.creator?.id || article.creator,
       reading_time: Number(article.reading_time),
       thumbnail: article.thumbnail,
       resume_content: article.resume_content,
       content: article.content,
       status: article.status as boolean,
       highlight: article.highlight as boolean,
-      categoryId: article.category.id,
-      tagIds: article.tags.map((tag) => tag.id),
+      categoryId: article.category?.id,
+      tagIds: article.tags?.map((tag) => tag.id) || [],
+      chiefEditorId: profile?.chiefEditor?.id,
     },
   });
 
   useEffect(() => {
-    reset({
-      title: article.title,
-      slug: article.slug,
-      creator: article.creator,
-      reading_time: Number(article.reading_time),
-      thumbnail: article.thumbnail,
-      resume_content: article.resume_content,
-      content: article.content,
-      status: article.status as boolean,
-      highlight: article.highlight as boolean,
-      categoryId: article.category.id,
-      tagIds: article.tags.map((tag) => tag.id),
-    });
-  }, [article, reset]);
+    if (article) {
+      reset({
+        id: article.id,
+        title: article.title,
+        slug: article.slug,
+        creator: article.creator?.id || article.creator,
+        reading_time: Number(article.reading_time),
+        thumbnail: article.thumbnail,
+        resume_content: article.resume_content,
+        content: article.content,
+        status: article.status as boolean,
+        highlight: article.highlight as boolean,
+        categoryId: article.category?.id,
+        tagIds: article.tags?.map((tag) => tag.id) || [],
+        chiefEditorId: profile?.chiefEditor?.id,
+      });
+      setEditorContent(article.content || "");
+    }
+  }, [article, reset, profile]);
 
   const title = watch("title");
   const status = watch("status");
@@ -102,6 +144,11 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     }
   }, [title, setValue]);
 
+  const handleEditorChange = (content: string) => {
+    setEditorContent(content);
+    setValue("content", content, { shouldValidate: true });
+  };
+
   const onSubmit = async (data: ArticleFormData) => {
     try {
       setIsSubmitting(true);
@@ -110,7 +157,12 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         thumbnail: data.thumbnail || article.thumbnail,
       };
 
+      if (profile?.chiefEditor?.id) {
+        finalData.chiefEditorId = profile.chiefEditor.id;
+      }
+
       await UpdateArticle(finalData, article.id);
+      // No need to reset form after update
     } catch (error) {
       console.error("Erro ao salvar artigo:", error);
     } finally {
@@ -124,10 +176,15 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
       const formData = new FormData();
       formData.append("thumbnail", file);
+      const cookies = parseCookies();
+      const token = cookies["user:token"];
 
       try {
         const response = await fetch("http://localhost:5555/upload", {
           method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
           body: formData,
         });
 
@@ -147,7 +204,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
   return (
     <div className="w-full h-full flex flex-col bg-white rounded-[24px]">
-      <div className="flex-1 overflow-y-auto no-scrollbar">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-6">
           <div className="flex justify-between items-center -mb-4">
             <ReturnPageButton />
@@ -201,7 +258,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
           <div className="flex gap-6">
             <div className="flex flex-col gap-1 w-full">
-              <label className="ml-6">Adicionar Nova Thumbnail (capa)</label>
+              <label className="ml-6">Adicionar Thumbnail (capa)</label>
               <div className="border h-full border-blue-500/30 rounded-[34px] flex items-center justify-center max-h-[54px]">
                 <input
                   id="thumbnail"
@@ -219,28 +276,80 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
             </div>
 
             <div className="basis-1/2">
-              <CustomInput
-                id="creator"
-                label="Criador"
-                {...register("creator")}
-                placeholder="Nome do criador"
+              <label className="px-6" htmlFor="tagIds">
+                Tag(s):
+              </label>
+              <ReactSelect
+                id="tagIds"
+                isMulti
+                className="basic-multi-select w-full"
+                classNamePrefix="select"
+                value={tagOptions.filter((tag) =>
+                  watch("tagIds").includes(tag.value)
+                )}
+                onChange={(selectedOptions: MultiValue<TagOption>) => {
+                  setValue(
+                    "tagIds",
+                    selectedOptions
+                      ? selectedOptions.map((option) => option.value)
+                      : []
+                  );
+                }}
+                options={tagOptions}
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    borderRadius: "24px",
+                    padding: "0rem 24px",
+                    minHeight: "56px",
+                    marginTop: "6px",
+                    borderWidth: "2px",
+                    borderColor: "#DFEAF6",
+                    "&:hover": {
+                      borderColor: "#DFEAF695",
+                    },
+                  }),
+                  multiValue: (base) => ({
+                    ...base,
+                    backgroundColor: "#3b82f6",
+                    padding: "0.25rem 0.5rem",
+                  }),
+                  multiValueLabel: (base) => ({
+                    ...base,
+                    color: "white",
+                  }),
+                  multiValueRemove: (base) => ({
+                    ...base,
+                    color: "white",
+                    ":hover": {
+                      backgroundColor: "#2563eb",
+                      color: "white",
+                    },
+                  }),
+                  menu: (base) => ({
+                    ...base,
+                    borderRadius: "24px",
+                  }),
+                  menuList: (base) => ({
+                    ...base,
+                    borderRadius: "20px",
+                  }),
+                }}
               />
-              {errors.creator && (
-                <span className="text-sm text-red-500 w-full">
-                  {errors.creator.message}
-                </span>
+              {errors.tagIds && (
+                <p className="text-red-500">{errors.tagIds.message}</p>
               )}
             </div>
-            <div className="basis-1/4">
+            <div className="basis-1/4 flex flex-col">
               <CustomInput
                 id="reading_time"
-                label="Tempo de leitura (min)"
+                label="Tempo de leitura"
                 type="number"
                 {...register("reading_time", {
                   setValueAs: (value: string) => Number(value) || undefined,
                 })}
                 onChange={(e) => {
-                  Number(e.target.value);
+                  setValue("reading_time", Number(e.target.value));
                 }}
               />
               {errors.reading_time && (
@@ -251,33 +360,160 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
             </div>
           </div>
 
-          <CustomInput
-            id="resume_content"
-            label="Resumo"
-            textareaInput
-            {...register("resume_content")}
-            placeholder="Digite o resumo"
-          />
-          <TiptapEditor
-            value={watch("content") || ""}
-            onChange={(content) =>
-              setValue("content", content, { shouldValidate: true })
-            }
-          />
-
           <div className="flex gap-6">
+            <div className="flex flex-col gap-1 w-full">
+              <label className="px-6" htmlFor="creator">
+                Criador
+              </label>
+              <CustomSelect
+                onValueChange={(value) => setValue("creator", value)}
+                defaultValue={article.creator?.id || article.creator || "placeholder"}
+              >
+                <SelectTrigger className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light outline-none focus:border-blue-500 focus:ring-blue-500">
+                  <SelectValue placeholder="Selecione um criador" />
+                </SelectTrigger>
+                <SelectContent className="bg-white rounded-2xl">
+                  <SelectItem value="placeholder" disabled>
+                    Selecione um criador
+                  </SelectItem>
+                  {listArticles?.data &&
+                    Array.from(
+                      new Map(
+                        listArticles.data
+                          .filter((article) => article.creator?.id)
+                          .map((article) => [
+                            article.creator.id,
+                            article.creator,
+                          ])
+                      ).values()
+                    ).map((creator) => (
+                      <SelectItem
+                        key={creator.id}
+                        value={creator.id}
+                        className="hover:bg-blue-500 hover:text-white"
+                      >
+                        {creator.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </CustomSelect>
+              {errors.creator && (
+                <span className="text-sm text-red-500">
+                  {errors.creator.message}
+                </span>
+              )}
+            </div>
+
+            <div className="flex gap-6 w-full">
+              <div className="w-full">
+                <label
+                  htmlFor="categoryId"
+                  className="block px-6 font-medium text-black"
+                >
+                  Categoria
+                </label>
+                <CustomSelect
+                  onValueChange={(value) => setValue("categoryId", value)}
+                  defaultValue={article.category?.id || "placeholder"}
+                >
+                  <SelectTrigger className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light outline-none focus:border-blue-500 focus:ring-blue-500">
+                    <SelectValue placeholder="Selecione uma categoria" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white rounded-2xl">
+                    <SelectItem value="placeholder" disabled>
+                      Selecione uma categoria
+                    </SelectItem>
+                    {listCategorys.map((category) => (
+                      <SelectItem
+                        key={category.id}
+                        value={category.id}
+                        className="hover:bg-blue-500 hover:text-white"
+                      >
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </CustomSelect>
+                {errors.categoryId && (
+                  <span className="text-sm text-red-500">
+                    {errors.categoryId.message}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-6 w-full">
+              <div className="w-full">
+                <label
+                  htmlFor="cityId"
+                  className="block px-6 font-medium text-black"
+                >
+                  Portal
+                </label>
+                <CustomSelect
+                  defaultValue={article.city?.id || "placeholder"}
+                >
+                  <SelectTrigger className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light outline-none focus:border-blue-500 focus:ring-blue-500">
+                    <SelectValue placeholder="Selecione uma cidade" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white rounded-2xl">
+                    <SelectItem value="placeholder" disabled>
+                      Selecione um Portal
+                    </SelectItem>
+                    <SelectItem
+                      value="palhoca"
+                      className="hover:bg-blue-500 hover:text-white"
+                    >
+                      Palhoça
+                    </SelectItem>
+                    <SelectItem
+                      value="florianopolis"
+                      className="hover:bg-blue-500 hover:text-white"
+                    >
+                      Florianópolis
+                    </SelectItem>
+                    <SelectItem
+                      value="sao-jose"
+                      className="hover:bg-blue-500 hover:text-white"
+                    >
+                      São José
+                    </SelectItem>
+                  </SelectContent>
+                </CustomSelect>
+              </div>
+            </div>
+          </div>
+
+          <div className="w-full">
             <CustomInput
-              id="tagIds"
-              label="Tags"
-              {...register("tagIds")}
-              placeholder="Separe as tags por vírgula"
+              id="resume_content"
+              label="Resumo"
+              textareaInput
+              className="min-h-32"
+              {...register("resume_content")}
+              placeholder="Digite o resumo"
             />
-            <CustomInput
-              id="categoryId"
-              label="Categoria"
-              {...register("categoryId")}
-              placeholder="Digite a categoria"
-            />
+            {errors.resume_content && (
+              <span className="text-sm text-red-500">
+                {errors.resume_content.message}
+              </span>
+            )}
+          </div>
+
+          <div className="w-full">
+            <h1 className="text-xl font-bold text-primary ml-6 pt-4">
+              Editar conteúdo de texto
+            </h1>
+            <div className="w-full">
+              <TiptapEditor
+                value={editorContent}
+                onChange={handleEditorChange}
+              />
+              {errors.content && (
+                <span className="text-sm text-red-500 ml-6">
+                  {errors.content.message}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="flex justify-end gap-4">
@@ -291,7 +527,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
             </Button>
             <Button
               type="submit"
-              className="rounded-3xl min-h-[48px]"
+              className="rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
               disabled={isSubmitting}
             >
               {!isSubmitting ? "Salvar Alterações" : "Salvando..."}

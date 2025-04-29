@@ -58,7 +58,7 @@ export interface Article {
   category: Category;
   tags: Tag[];
   status_history: StatusHistory[];
-  status: string
+  status: string;
 }
 
 export interface User {
@@ -111,7 +111,10 @@ interface IArticleData {
   CreateArticle(data: ArticleProps): Promise<Article>;
   SelfArticle(articleId: string): Promise<Article>;
   article: Article | null;
-  ListAuthorArticles(creatorId?: string, params?: ArticleListParams): Promise<ArticleResponse>;
+  ListAuthorArticles(
+    creatorId?: string,
+    params?: ArticleListParams
+  ): Promise<ArticleResponse>;
   listArticles: ArticleResponse | null;
   UpdateArticle(data: UpdateArticleProps, articleId: string): Promise<void>;
   DeleteArticle(articleId: string): Promise<void>;
@@ -129,8 +132,11 @@ export const ArticleContext = createContext<IArticleData>({} as IArticleData);
 export const ArticleProvider = ({ children }: ICihldrenReact) => {
   const { back } = useRouter();
   const [article, setArticle] = useState<Article | null>(null);
-  const [listArticles, setListArticles] = useState<ArticleResponse | null>(null);
-  const [publishedArticles, setPublishedArticles] = useState<ArticleResponse | null>(null);
+  const [listArticles, setListArticles] = useState<ArticleResponse | null>(
+    null
+  );
+  const [publishedArticles, setPublishedArticles] =
+    useState<ArticleResponse | null>(null);
 
   const CreateArticle = async (data: ArticleProps): Promise<Article> => {
     const { "user:token": token } = parseCookies();
@@ -176,14 +182,14 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
   };
 
   const ListAuthorArticles = async (
-    creatorId?: string, 
+    creatorId?: string,
     params: ArticleListParams = {}
   ): Promise<ArticleResponse> => {
     const { page = 1, limit = 10, status, chiefEditorId } = params;
     const { "user:token": token } = parseCookies();
     const config = {
       headers: { Authorization: `bearer ${token}` },
-      params: { page, limit, status, chiefEditorId }
+      params: { page, limit, status, chiefEditorId },
     };
 
     let url = "/article-author";
@@ -193,7 +199,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
 
     try {
       const response = await api.get(url, config);
-      console.log('response', response)
+      console.log("response", response);
       setListArticles(response.data);
       return response.data;
     } catch (err: any) {
@@ -208,7 +214,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
       headers: { Authorization: `bearer ${token}` },
       params: { articleId },
     };
-    
+
     try {
       await api.delete("/article", config);
       toast.success("Artigo deletado com sucesso!");
@@ -227,7 +233,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
       headers: { Authorization: `bearer ${token}` },
       params: { articleId },
     };
-    
+
     try {
       await api.patch("/article", data, config);
       toast.success("Artigo atualizado com sucesso!");
@@ -241,35 +247,39 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
     const { "user:token": token } = parseCookies();
     const formData = new FormData();
     formData.append("thumbnail", file);
-    
+
     const config = {
       headers: {
         Authorization: `bearer ${token}`,
         "Content-Type": "multipart/form-data",
       },
     };
-    
+
     try {
       const response = await api.post("/upload", formData, config);
       return response.data.url;
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Erro ao fazer upload da imagem");
+      toast.error(
+        err.response?.data?.message || "Erro ao fazer upload da imagem"
+      );
       throw err;
     }
   };
 
   const GetPublishedArticles = async (
-    page = 1, 
+    page = 1,
     limit = 10
   ): Promise<ArticleResponse> => {
     try {
       const response = await api.get("/article-published", {
-        params: { page, limit }
+        params: { page, limit },
       });
       setPublishedArticles(response.data);
       return response.data;
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Erro ao listar artigos publicados");
+      toast.error(
+        err.response?.data?.message || "Erro ao listar artigos publicados"
+      );
       throw err;
     }
   };
