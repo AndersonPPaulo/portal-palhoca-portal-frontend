@@ -45,7 +45,7 @@ export function DynamicTabs({ tabs }: DynamicTabsProps) {
     <Tabs
       defaultValue={activeTab.value}
       value={activeTab.value}
-      className="w-full h-full overflow-y-auto"
+      className="w-full h-full "
       onValueChange={handleTabChange}
     >
       <Header

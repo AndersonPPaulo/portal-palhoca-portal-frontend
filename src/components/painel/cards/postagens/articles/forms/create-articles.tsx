@@ -142,7 +142,6 @@ export default function FormCreateArticle() {
 
       await CreateArticle(data);
 
-      data.initialStatus = "PUBLISHED"
       console.log('data.initialStatus', data.initialStatus)
       reset();
     } catch (error) {

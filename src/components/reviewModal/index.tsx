@@ -20,7 +20,7 @@ interface ArticleViewModalProps {
 }
 
 export function ArticleViewModal({ open, onOpenChange, article }: ArticleViewModalProps) {
-  const { ListAuthorArticles } = useContext(ArticleContext)
+  const { ListAuthorArticles, SelfArticle } = useContext(ArticleContext)
   const { profile } = useContext(UserContext)
   
   const [showRejectForm, setShowRejectForm] = useState(false)
@@ -79,7 +79,8 @@ export function ArticleViewModal({ open, onOpenChange, article }: ArticleViewMod
     (article.status_history && article.status_history.length > 0 
       ? article.status_history[article.status_history.length - 1].status 
       : undefined);
-
+      
+      console.log('article.status_history', article.status_history)
   const updateArticleStatus = async (
     newStatus: "PUBLISHED" | "REJECTED" | "CHANGES_REQUESTED" | "DRAFT", 
     options?: { reason_reject?: string, change_request_description?: string }
@@ -96,6 +97,7 @@ export function ArticleViewModal({ open, onOpenChange, article }: ArticleViewMod
         reviewerId: profile?.id 
       };
       
+      // Add optional parameters if provided
       if (newStatus === "REJECTED" && options?.reason_reject) {
         payload.reason_reject = options.reason_reject;
       }
@@ -105,6 +107,7 @@ export function ArticleViewModal({ open, onOpenChange, article }: ArticleViewMod
         payload.newStatus = "DRAFT";
       }
       
+      // Fazer a chamada à API para atualizar o status
       await api.patch(
         `/article-status-review/${article.id}`, 
         payload,
@@ -122,6 +125,8 @@ export function ArticleViewModal({ open, onOpenChange, article }: ArticleViewMod
       const messageStatus = newStatus === "CHANGES_REQUESTED" ? "CHANGES_REQUESTED" : payload.newStatus;
       toast.success(successMessage[messageStatus]);
       
+      // Atualize apenas o artigo atual, sem recarregar todos os artigos
+      // Isso evita que artigos já publicados sejam afetados
       await ListAuthorArticles();
       
       // Fechar o modal

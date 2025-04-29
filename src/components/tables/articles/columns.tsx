@@ -19,51 +19,61 @@ interface Props {
   article: Article;
 }
 
-
 const CellActions = ({ article }: Props) => {
   const { push } = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const currentStatus =
-  article.status_history && article.status_history.length > 0
-  ? article.status_history[article.status_history.length - 1].status
-  : null;
-  
+  // Obter o status mais recente ordenando pelo changed_at
+  const currentStatus = React.useMemo(() => {
+    if (!article.status_history || article.status_history.length === 0) {
+      return null;
+    }
+
+    // Ordenar o histórico de status pela data (do mais recente para o mais antigo)
+    const sortedHistory = [...article.status_history].sort(
+      (a, b) =>
+        new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
+    );
+
+    // Retornar o status do primeiro item (o mais recente)
+    return sortedHistory[0].status;
+  }, [article.status_history]);
+
   return (
     <div className="flex gap-6">
-    <DialogDelete
-      context="articles"
-      item_name={article.slug}
-      item_id={article.id}
-    />
-  
-    {currentStatus === "DRAFT" ? (
-      <TooltipProvider delayDuration={600}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Edit
-              onClick={() => push(`/postagens/artigos/editar/${article.id}`)}
-              size={20}
-              className="text-primary cursor-pointer"
-            />
-          </TooltipTrigger>
-          <TooltipPortal>
-            <TooltipContent
-              className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
-              sideOffset={5}
-            >
-              <span>Editar rascunho</span>
-              <TooltipArrow
-                className="fill-primary-light"
-                width={11}
-                height={5}
+      <DialogDelete
+        context="articles"
+        item_name={article.slug}
+        item_id={article.id}
+      />
+
+      {currentStatus === "DRAFT" ? (
+        <TooltipProvider delayDuration={600}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Edit
+                onClick={() => push(`/postagens/artigos/editar/${article.id}`)}
+                size={20}
+                className="text-primary cursor-pointer"
               />
-            </TooltipContent>
-          </TooltipPortal>
-        </Tooltip>
-      </TooltipProvider>
-    ) : currentStatus === "PENDING_REVIEW" ? (
-      <>
+            </TooltipTrigger>
+            <TooltipPortal>
+              <TooltipContent
+                className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
+                sideOffset={5}
+              >
+                <span>Editar rascunho</span>
+                <TooltipArrow
+                  className="fill-primary-light"
+                  width={11}
+                  height={5}
+                />
+              </TooltipContent>
+            </TooltipPortal>
+          </Tooltip>
+        </TooltipProvider>
+      ) : currentStatus === "PENDING_REVIEW" ? (
+        <>
           <TooltipProvider delayDuration={600}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -88,15 +98,15 @@ const CellActions = ({ article }: Props) => {
               </TooltipPortal>
             </Tooltip>
           </TooltipProvider>
-          
-          <ArticleViewModal 
-            open={isModalOpen} 
-            onOpenChange={setIsModalOpen} 
-            article={article} 
+
+          <ArticleViewModal
+            open={isModalOpen}
+            onOpenChange={setIsModalOpen}
+            article={article}
           />
         </>
-    ) : null}
-  </div>
+      ) : null}
+    </div>
   );
 };
 
