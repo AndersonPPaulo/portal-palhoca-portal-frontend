@@ -22,7 +22,7 @@ const Articles = ({ status }: { status: string }) => {
   });
 
   return (
-    <div className="flex flex-col gap-4 h-full">
+    <div className="flex flex-col gap-4 h-screen">
       <Card className="rounded-3xl min-h-[140px] bg-white flex items-center gap-4 p-4">
         <ArticleFilter
           filter={filter}
