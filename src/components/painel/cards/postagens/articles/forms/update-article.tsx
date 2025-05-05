@@ -128,7 +128,6 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       ListTags(),
       ListCategorys(),
       ListAuthorArticles(),
-      SelfArticle(article.id),
     ]).then(() => {
       // Verificar se as tags do artigo existem na lista de tags após o carregamento
       if (article.tags && article.tags.length > 0 && listTags.length > 0) {
@@ -640,6 +639,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
                 textareaInput
                 className="min-h-32"
                 value={changeMessage}
+                disabled
               />
               {errors.resume_content && (
                 <span className="text-sm text-red-500">
