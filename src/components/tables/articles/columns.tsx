@@ -26,7 +26,7 @@ const CellActions = ({ article }: Props) => {
   // Obter o status mais recente ordenando pelo changed_at
   const currentStatus = React.useMemo(() => {
     if (!article.status_history || article.status_history.length === 0) {
-      return null;
+      return "";
     }
 
     // Ordenar o histórico de status pela data (do mais recente para o mais antigo)
@@ -47,7 +47,7 @@ const CellActions = ({ article }: Props) => {
         item_id={article.id}
       />
 
-      {currentStatus === "DRAFT" ? (
+      {["DRAFT", "CHANGES_REQUESTED"].includes(currentStatus) ? (
         <TooltipProvider delayDuration={600}>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -62,7 +62,7 @@ const CellActions = ({ article }: Props) => {
                 className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
                 sideOffset={5}
               >
-                <span>Editar rascunho</span>
+                <span>Editar artigo</span>
                 <TooltipArrow
                   className="fill-primary-light"
                   width={11}

@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ChangeEvent, useContext, useEffect, useState } from "react";
+import React, { ChangeEvent, useContext, useEffect, useState } from "react";
 import CustomInput from "@/components/input/custom-input";
 import { Button } from "@/components/ui/button";
 import Switch from "@/components/switch";
@@ -77,25 +77,55 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   const { back, push } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editorContent, setEditorContent] = useState(article.content || "");
-  const [isDraft, setIsDraft] = useState(article.status_history?.some(status => status.status === "DRAFT") || false);
-  const { UpdateArticle, ListAuthorArticles, listArticles, uploadThumbnail } = useContext(ArticleContext);
+  const [isDraft, setIsDraft] = useState(
+    article.status_history?.some((status) => status.status === "DRAFT") || false
+  );
+  const { UpdateArticle, ListAuthorArticles, listArticles, uploadThumbnail } =
+    useContext(ArticleContext);
   const { ListCategorys, listCategorys } = useContext(CategorysContext);
   const { ListTags, listTags } = useContext(TagContext);
   const { profile } = useContext(UserContext);
+  
+
+   
 
   useEffect(() => {
-    Promise.all([ListTags(), ListCategorys(), ListAuthorArticles()]).then(() => {
-      // Verificar se as tags do artigo existem na lista de tags após o carregamento
-      if (article.tags && article.tags.length > 0 && listTags.length > 0) {
-        // Filtra as tags do artigo para garantir que existam na lista atual de tags
-        const validTagIds = article.tags
-          .filter(tag => listTags.some(listTag => listTag.id === tag.id))
-          .map(tag => tag.id);
-        
-        setValue("tagIds", validTagIds);
+    Promise.all([ListTags(), ListCategorys(), ListAuthorArticles()]).then(
+      () => {
+        // Verificar se as tags do artigo existem na lista de tags após o carregamento
+        if (article.tags && article.tags.length > 0 && listTags.length > 0) {
+          // Filtra as tags do artigo para garantir que existam na lista atual de tags
+          const validTagIds = article.tags
+            .filter((tag) => listTags.some((listTag) => listTag.id === tag.id))
+            .map((tag) => tag.id);
+
+          setValue("tagIds", validTagIds);
+        }
       }
-    });
+    );
   }, []);
+
+  // Obter o status mais recente ordenando pelo changed_at
+  const currentStatus = React.useMemo(() => {
+    if (!article.status_history || article.status_history.length === 0) {
+      return null;
+    }
+    
+    // Ordenar o histórico de status pela data (do mais recente para o mais antigo)
+    const sortedHistory = [...article.status_history].sort(
+      (a, b) =>
+        new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
+    );
+    
+    // Retornar o status do primeiro item (o mais recente)
+    return sortedHistory[0].status;
+  }, [article.status_history]);
+  console.log('currentStatus', currentStatus)
+
+  const handleEditorChange = (content: string) => {
+    setEditorContent(content);
+    setValue("content", content, { shouldValidate: true });
+  };
 
   const tagOptions: OptionType[] = listTags.map((tag: Tag) => ({
     value: tag.id,
@@ -123,10 +153,10 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       highlight: article.highlight === true,
       categoryId: article.category?.id,
       tagIds: article.tags?.map((tag) => tag.id) || [],
-      chiefEditorId: profile?.chiefEditor?.id,
     },
   });
-
+  console.log('article.status_history', article.status_history)
+  
   useEffect(() => {
     if (article) {
       reset({
@@ -142,11 +172,16 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         categoryId: article.category?.id,
         tagIds: article.tags?.map((tag) => tag.id) || [],
         chiefEditorId: profile?.chiefEditor?.id,
+        // cityId: article.city?.id,
       });
-      setIsDraft(article.status_history?.some(status => status.status === "DRAFT") || false);
+      setIsDraft(
+        article.status_history?.some((status) => status.status === "DRAFT") ||
+        false
+      );
       setEditorContent(article.content || "");
     }
   }, [article, reset, profile]);
+  console.log("article", article);
 
   const title = watch("title");
   const highlight = watch("highlight");
@@ -157,25 +192,24 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     }
   }, [title, setValue]);
 
-  const handleEditorChange = (content: string) => {
-    setEditorContent(content);
-    setValue("content", content, { shouldValidate: true });
-  };
+  
 
   // Validar se as tags selecionadas existem na lista de tags disponíveis
   const validateTagSelection = (selectedTags: string[]) => {
     // Verificar se cada tag selecionada existe na lista de tags disponíveis
-    const validTags = selectedTags.filter(tagId => 
-      tagOptions.some(option => option.value === tagId)
+    const validTags = selectedTags.filter((tagId) =>
+      tagOptions.some((option) => option.value === tagId)
     );
-    
+
     // Se o número de tags válidas for diferente do número de tags selecionadas,
     // algumas tags não foram encontradas
     if (validTags.length !== selectedTags.length) {
-      toast.error("Uma ou mais tags selecionadas não foram encontradas. Por favor, selecione apenas tags válidas.");
+      toast.error(
+        "Uma ou mais tags selecionadas não foram encontradas. Por favor, selecione apenas tags válidas."
+      );
       return validTags; // Retorna apenas as tags válidas
     }
-    
+
     return selectedTags;
   };
 
@@ -183,13 +217,13 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     try {
       // Validar as tags antes de enviar
       const validatedTags = validateTagSelection(data.tagIds);
-      
+
       // Se houver diferença, atualiza os valores do formulário
       if (validatedTags.length !== data.tagIds.length) {
         setValue("tagIds", validatedTags);
         return; // Não prossegue com a submissão
       }
-      
+
       setIsSubmitting(true);
       const finalData = {
         title: data.title,
@@ -202,7 +236,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         categoryId: data.categoryId,
         tagIds: data.tagIds,
         setToDraft: setToDraft, // Definido com base no botão clicado
-        chiefEditorId: profile?.chiefEditor?.id
+        chiefEditorId: profile?.chiefEditor?.id,
       };
 
       await UpdateArticle(finalData, article.id);
@@ -231,7 +265,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   const handleThumbnailChange = async (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      
+
       try {
         // Usar o método do provider para upload
         const imageUrl = await uploadThumbnail(file);
@@ -316,10 +350,10 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
               {article.thumbnail && (
                 <div className="ml-6 mt-2">
                   <p className="text-sm text-gray-500">Thumbnail atual:</p>
-                  <img 
-                    src={article.thumbnail} 
-                    alt="Thumbnail atual" 
-                    className="h-16 w-auto object-cover rounded-md mt-1" 
+                  <img
+                    src={article.thumbnail}
+                    alt="Thumbnail atual"
+                    className="h-16 w-auto object-cover rounded-md mt-1"
                   />
                 </div>
               )}
@@ -346,18 +380,20 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
                   const selectedTagIds = selectedOptions
                     ? selectedOptions.map((option) => option.value)
                     : [];
-                  
+
                   // Verifica se todas as tags selecionadas existem na lista de tags disponíveis
-                  const validTags = selectedTagIds.filter(tagId =>
-                    tagOptions.some(option => option.value === tagId)
+                  const validTags = selectedTagIds.filter((tagId) =>
+                    tagOptions.some((option) => option.value === tagId)
                   );
-                  
+
                   // Se o número de tags válidas for diferente do número de tags selecionadas,
                   // algumas tags não existem mais
                   if (validTags.length !== selectedTagIds.length) {
-                    toast.warning("Algumas tags selecionadas não foram encontradas e foram removidas.");
+                    toast.warning(
+                      "Algumas tags selecionadas não foram encontradas e foram removidas."
+                    );
                   }
-                  
+
                   setValue("tagIds", validTags);
                 }}
                 options={tagOptions}
@@ -432,7 +468,10 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
               </label>
               <CustomSelect
                 onValueChange={(value) => setValue("creator", value)}
-                defaultValue={article.creator?.id || article.creator || "placeholder"}
+                defaultValue={
+                  article.creator?.id || article.creator || "placeholder"
+                }
+                disabled
               >
                 <SelectTrigger className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light outline-none focus:border-blue-500 focus:ring-blue-500">
                   <SelectValue placeholder="Selecione um criador" />
@@ -514,9 +553,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
                 >
                   Portal
                 </label>
-                <CustomSelect
-                  defaultValue={article.city?.id || "placeholder"}
-                >
+                <CustomSelect defaultValue={article.city?.id || "placeholder"}>
                   <SelectTrigger className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light outline-none focus:border-blue-500 focus:ring-blue-500">
                     <SelectValue placeholder="Selecione uma cidade" />
                   </SelectTrigger>
@@ -580,7 +617,23 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
               )}
             </div>
           </div>
-
+          { currentStatus === "CHANGES_REQUESTED" ?
+            <div className="w-full">
+              <CustomInput
+                id="changes_requested"
+                label="Mudanças necessárias"
+                textareaInput
+                className="min-h-32"
+                placeholder="Digite o resumo"
+              />
+              {errors.resume_content && (
+                <span className="text-sm text-red-500">
+                  {errors.resume_content.message}
+                </span>
+              )}
+            </div> : null
+          } 
+      
           <div className="flex justify-end gap-4">
             <Button
               type="button"
