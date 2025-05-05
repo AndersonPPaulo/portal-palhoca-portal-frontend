@@ -10,10 +10,12 @@ import {
 import { TooltipArrow, TooltipPortal } from "@radix-ui/react-tooltip";
 import { Article } from "@/providers/article";
 import { ColumnDef } from "@tanstack/react-table";
-import { Edit, FolderSearch2 } from "lucide-react";
+import { Edit, Eye, FolderSearch2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { ArticleViewModal } from "@/components/reviewModal";
+import { RejectedModal } from "@/components/rejectedModal";
+import { set } from "date-fns";
 
 interface Props {
   article: Article;
@@ -22,6 +24,8 @@ interface Props {
 const CellActions = ({ article }: Props) => {
   const { push } = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [rejected, setRejected] = useState('');
 
   // Obter o status mais recente ordenando pelo changed_at
   const currentStatus = React.useMemo(() => {
@@ -38,6 +42,12 @@ const CellActions = ({ article }: Props) => {
     // Retornar o status do primeiro item (o mais recente)
     return sortedHistory[0].status;
   }, [article.status_history]);
+  
+  const rejectedMessage = React.useEffect(() => {
+    if (currentStatus === "REJECTED") {
+      setRejected(article.status_history[0].reason_reject)
+    }
+  })
 
   return (
     <div className="flex gap-6">
@@ -105,7 +115,42 @@ const CellActions = ({ article }: Props) => {
             article={article}
           />
         </>
+      ) : currentStatus === "REJECTED" ? (
+        <>
+          <TooltipProvider delayDuration={600}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Eye
+                onClick={() => setOpen(true)}
+                  size={20}
+                  className="text-primary cursor-pointer"
+                />
+              </TooltipTrigger>
+              <TooltipPortal>
+                <TooltipContent
+                  className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
+                  sideOffset={5}
+                >
+                  <span>Motivo Rejeição</span>
+                  <TooltipArrow
+                    className="fill-primary-light"
+                    width={11}
+                    height={5}
+                  />
+                </TooltipContent>
+              </TooltipPortal>
+            </Tooltip>
+          </TooltipProvider>
+
+          <RejectedModal
+            open={open}
+            onOpenChange={setOpen}
+            titulo="Motivo de Rejeição"
+            motivo={rejected}
+          />
+        </>
       ) : null}
+      
     </div>
   );
 };

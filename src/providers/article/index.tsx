@@ -87,9 +87,9 @@ export interface Tag {
 
 export interface StatusHistory {
   id: string;
-  status: "CHANGES_REQUESTED" | "PENDING_REVIEW" | "PUBLISHED" | "DRAFT";
-  change_request_description: string | null;
-  reason_reject: string | null;
+  status: "CHANGES_REQUESTED" | "PENDING_REVIEW" | "PUBLISHED" | "DRAFT" | "REJECTED";
+  change_request_description: string 
+  reason_reject: string 
   changed_at: string;
 }
 
