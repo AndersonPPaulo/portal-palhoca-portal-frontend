@@ -171,6 +171,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
       .get(`/article/${articleId}`, config)
       .then((res) => {
         setArticle(res.data.response);
+        console.log('res.data.response', res.data.response)
         return res.data.response;
       })
       .catch((err) => {
@@ -199,8 +200,8 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
 
     try {
       const response = await api.get(url, config);
-      console.log("response", response);
       setListArticles(response.data);
+      console.log('response.data', response.data)
       return response.data;
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Erro ao listar artigos");

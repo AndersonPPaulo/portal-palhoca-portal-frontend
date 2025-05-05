@@ -7,7 +7,7 @@ import React, { ChangeEvent, useContext, useEffect, useState } from "react";
 import CustomInput from "@/components/input/custom-input";
 import { Button } from "@/components/ui/button";
 import Switch from "@/components/switch";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import TiptapEditor from "@/components/editor/tiptapEditor";
 import ReturnPageButton from "@/components/button/returnPage";
 import { ArticleContext, Article } from "@/providers/article";
@@ -24,6 +24,7 @@ import ReactSelect from "react-select";
 import { MultiValue } from "react-select";
 import { toast } from "sonner";
 import { UserContext } from "@/providers/user";
+import { set } from "date-fns";
 
 const articleSchema = z.object({
   id: z.string().optional(),
@@ -74,53 +75,72 @@ interface FormEditArticleProps {
 }
 
 export default function FormEditArticle({ article }: FormEditArticleProps) {
+  const parameter = useParams();
+  console.log("parameter", parameter);
   const { back, push } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editorContent, setEditorContent] = useState(article.content || "");
   const [isDraft, setIsDraft] = useState(
     article.status_history?.some((status) => status.status === "DRAFT") || false
   );
-  const { UpdateArticle, ListAuthorArticles, listArticles, uploadThumbnail } =
-    useContext(ArticleContext);
+  const {
+    UpdateArticle,
+    ListAuthorArticles,
+    listArticles,
+    uploadThumbnail,
+    SelfArticle,
+  } = useContext(ArticleContext);
   const { ListCategorys, listCategorys } = useContext(CategorysContext);
   const { ListTags, listTags } = useContext(TagContext);
   const { profile } = useContext(UserContext);
+  const [changeStatus, setChangeStatus] = useState('')
+  const [changeMessage, setChangeMessage] = useState('')
+
+  const findArticle = listArticles?.data?.find(
+    (item) => item.id === parameter.id
+  );
+  const currentStatus = React.useEffect(() => {
+    const statusHistory = () => {
+      if (
+        !findArticle?.status_history ||
+        findArticle.status_history.length === 1
+      ) {
+        return "";
+      }
+      // Ordenar o histórico de status pela data (do mais recente para o mais antigo)
+      const sortedHistory = [...findArticle.status_history].sort(
+        (a, b) =>
+          new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
+      );
+      
+      // Retornar o status do primeiro item (o mais recente)
+  
+      setChangeStatus(sortedHistory[0].status)
+      setChangeMessage(sortedHistory[0].change_request_description)
+    };
+    statusHistory();
+  }, [findArticle?.status_history]);
+  console.log('findArticle?.status_history', findArticle?.status_history)
   
 
-   
-
   useEffect(() => {
-    Promise.all([ListTags(), ListCategorys(), ListAuthorArticles()]).then(
-      () => {
-        // Verificar se as tags do artigo existem na lista de tags após o carregamento
-        if (article.tags && article.tags.length > 0 && listTags.length > 0) {
-          // Filtra as tags do artigo para garantir que existam na lista atual de tags
-          const validTagIds = article.tags
-            .filter((tag) => listTags.some((listTag) => listTag.id === tag.id))
-            .map((tag) => tag.id);
+    Promise.all([
+      ListTags(),
+      ListCategorys(),
+      ListAuthorArticles(),
+      SelfArticle(article.id),
+    ]).then(() => {
+      // Verificar se as tags do artigo existem na lista de tags após o carregamento
+      if (article.tags && article.tags.length > 0 && listTags.length > 0) {
+        // Filtra as tags do artigo para garantir que existam na lista atual de tags
+        const validTagIds = article.tags
+          .filter((tag) => listTags.some((listTag) => listTag.id === tag.id))
+          .map((tag) => tag.id);
 
-          setValue("tagIds", validTagIds);
-        }
+        setValue("tagIds", validTagIds);
       }
-    );
+    });
   }, []);
-
-  // Obter o status mais recente ordenando pelo changed_at
-  const currentStatus = React.useMemo(() => {
-    if (!article.status_history || article.status_history.length === 0) {
-      return null;
-    }
-    
-    // Ordenar o histórico de status pela data (do mais recente para o mais antigo)
-    const sortedHistory = [...article.status_history].sort(
-      (a, b) =>
-        new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
-    );
-    
-    // Retornar o status do primeiro item (o mais recente)
-    return sortedHistory[0].status;
-  }, [article.status_history]);
-  console.log('currentStatus', currentStatus)
 
   const handleEditorChange = (content: string) => {
     setEditorContent(content);
@@ -155,8 +175,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       tagIds: article.tags?.map((tag) => tag.id) || [],
     },
   });
-  console.log('article.status_history', article.status_history)
-  
+
   useEffect(() => {
     if (article) {
       reset({
@@ -172,16 +191,14 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         categoryId: article.category?.id,
         tagIds: article.tags?.map((tag) => tag.id) || [],
         chiefEditorId: profile?.chiefEditor?.id,
-        // cityId: article.city?.id,
       });
       setIsDraft(
         article.status_history?.some((status) => status.status === "DRAFT") ||
-        false
+          false
       );
       setEditorContent(article.content || "");
     }
   }, [article, reset, profile]);
-  console.log("article", article);
 
   const title = watch("title");
   const highlight = watch("highlight");
@@ -191,8 +208,6 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       setValue("slug", generateSlug(title), { shouldValidate: true });
     }
   }, [title, setValue]);
-
-  
 
   // Validar se as tags selecionadas existem na lista de tags disponíveis
   const validateTagSelection = (selectedTags: string[]) => {
@@ -617,23 +632,22 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
               )}
             </div>
           </div>
-          { currentStatus === "CHANGES_REQUESTED" ?
+          {changeStatus === "CHANGES_REQUESTED" ? (
             <div className="w-full">
               <CustomInput
                 id="changes_requested"
                 label="Mudanças necessárias"
                 textareaInput
                 className="min-h-32"
-                placeholder="Digite o resumo"
+                value={changeMessage}
               />
               {errors.resume_content && (
                 <span className="text-sm text-red-500">
                   {errors.resume_content.message}
                 </span>
               )}
-            </div> : null
-          } 
-      
+            </div>
+          ) : null}
           <div className="flex justify-end gap-4">
             <Button
               type="button"
