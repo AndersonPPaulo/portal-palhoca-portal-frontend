@@ -26,7 +26,6 @@ export default function TableArticles({
   const { profile } = useContext(UserContext);
   const [loading, setLoading] = useState(true);
 
-  console.log("activeFilters", activeFilters);
   useEffect(() => {
     const fetchArticles = async () => {
       setLoading(true);
