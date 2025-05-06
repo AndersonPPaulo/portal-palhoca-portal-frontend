@@ -25,7 +25,7 @@ const CellActions = ({ article }: Props) => {
   const { push } = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [open, setOpen] = useState(false);
-  const [rejected, setRejected] = useState('');
+  const [rejected, setRejected] = useState("");
 
   // Obter o status mais recente ordenando pelo changed_at
   const currentStatus = React.useMemo(() => {
@@ -42,12 +42,12 @@ const CellActions = ({ article }: Props) => {
     // Retornar o status do primeiro item (o mais recente)
     return sortedHistory[0].status;
   }, [article.status_history]);
-  
+
   const rejectedMessage = React.useEffect(() => {
     if (currentStatus === "REJECTED") {
-      setRejected(article.status_history[0].reason_reject)
+      setRejected(article.status_history[0].reason_reject);
     }
-  })
+  });
 
   return (
     <div className="flex gap-6">
@@ -121,7 +121,7 @@ const CellActions = ({ article }: Props) => {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Eye
-                onClick={() => setOpen(true)}
+                  onClick={() => setOpen(true)}
                   size={20}
                   className="text-primary cursor-pointer"
                 />
@@ -145,12 +145,10 @@ const CellActions = ({ article }: Props) => {
           <RejectedModal
             open={open}
             onOpenChange={setOpen}
-            titulo="Motivo de Rejeição"
-            motivo={rejected}
+            articleId={article.id}
           />
         </>
       ) : null}
-      
     </div>
   );
 };

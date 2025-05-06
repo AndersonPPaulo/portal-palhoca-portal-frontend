@@ -17,7 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { useState, useContext, useEffect } from "react";
+import { useState, useContext, useEffect} from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ArticleContext, Article } from "@/providers/article";
@@ -171,6 +171,7 @@ export function ArticleViewModal({
       }
       updateArticleStatus("CHANGES_REQUESTED", {
         change_request_description: changeRequest,
+        
       });
     } else {
       setShowChangesForm(true);
