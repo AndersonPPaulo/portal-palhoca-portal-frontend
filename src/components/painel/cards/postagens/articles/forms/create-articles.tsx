@@ -21,15 +21,13 @@ import {
 } from "@/components/ui/select";
 import ReactSelect from "react-select";
 import { MultiValue } from "react-select";
-
+import { toast } from "sonner";
 import { TagContext } from "@/providers/tags";
-import { parseCookies } from "nookies";
 import { UserContext } from "@/providers/user";
 
 const articleSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
   slug: z.string().min(1, "Slug é obrigatório"),
-  creator: z.string().min(1, "Criador é Obrigatório"),
   reading_time: z.preprocess(
     (val) => (val === "" ? undefined : Number(val)),
     z.number().min(1, "Tempo de leitura é obrigatório")
@@ -45,7 +43,7 @@ const articleSchema = z.object({
   thumbnail: z.string(),
   categoryId: z.string().min(1, "Adicione uma categoria"),
   tagIds: z.array(z.string()).min(1, "Pelo menos uma tag é obrigatória"),
-  chiefEditorId: z.string()
+  chiefEditorId: z.string().optional(),
 });
 
 type ArticleFormData = z.infer<typeof articleSchema>;
@@ -66,14 +64,15 @@ interface TagOption {
 }
 
 export default function FormCreateArticle() {
-  const { back } = useRouter();
+  const { push , back } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editorContent, setEditorContent] = useState("");
-  const { CreateArticle, ListAuthorArticles, listArticles } =
-    useContext(ArticleContext);
+  const { CreateArticle, ListAuthorArticles, uploadThumbnail } = useContext(ArticleContext);
   const { ListCategorys, listCategorys } = useContext(CategorysContext);
   const { ListTags, listTags } = useContext(TagContext);
   const { profile } = useContext(UserContext);
+  const [draftStatus, setDraftStatus] = useState("DRAFT");
+  const [pendingReview, setPendingReview] = useState("PENDING_REVIEW");
 
   useEffect(() => {
     Promise.all([ListTags(), ListCategorys(), ListAuthorArticles()]);
@@ -96,7 +95,6 @@ export default function FormCreateArticle() {
     defaultValues: {
       title: "",
       slug: "",
-      creator: "",
       reading_time: 0,
       thumbnail: "",
       resume_content: "",
@@ -105,7 +103,7 @@ export default function FormCreateArticle() {
       highlight: false,
       categoryId: "",
       tagIds: [],
-      chiefEditorId: ""
+      chiefEditorId: profile?.chiefEditor?.id || "",
     },
   });
 
@@ -116,36 +114,66 @@ export default function FormCreateArticle() {
     if (title) {
       setValue("slug", generateSlug(title), { shouldValidate: true });
     }
-    
   }, [title, setValue]);
 
   const handleEditorChange = (content: string) => {
     setEditorContent(content);
-
     setValue("content", content, { shouldValidate: true });
   };
 
-
   const onSubmit = async (data: ArticleFormData) => {
-    const pendingReview = "PENDING_REVIEW";
-    
     try {
       setIsSubmitting(true);
-      
-      if(!data.initialStatus) {
-        data.initialStatus = pendingReview;
+
+      if (!profile?.id) {
+        toast.error("Seu perfil não está completamente carregado. Recarregue a página.");
+        return;
       }
-      
-      if(profile?.id) {
-        data.chiefEditorId = profile.chiefEditor.id;
-      }
-      console.log('data', data)
-      
-      await CreateArticle(data);
+
+      const formData = {
+        ...data,
+        initialStatus: pendingReview,
+        chiefEditorId: profile.chiefEditor?.id || "",
+        creator: profile.id  // Usar o ID do usuário logado como criador
+      };
+
+      await CreateArticle(formData);
+      toast.success("Artigo enviado para revisão com sucesso!");
       reset();
-      
+      setTimeout(() => {
+        push("/postagens");
+      }, 1800);
     } catch (error) {
       console.error("Error creating article:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDraftStatus = async (data: ArticleFormData) => {
+    try {
+      setIsSubmitting(true);
+
+      if (!profile?.id) {
+        toast.error("Seu perfil não está completamente carregado. Recarregue a página.");
+        return;
+      }
+
+      const formData = {
+        ...data,
+        initialStatus: draftStatus,
+        chiefEditorId: profile.chiefEditor?.id || "",
+        creator: profile.id  // Usar o ID do usuário logado como criador
+      };
+
+      await CreateArticle(formData);
+      toast.success("Rascunho salvo com sucesso!");
+      reset();
+      setTimeout(() => {
+        push("/postagens");
+      }, 1800);
+    } catch (error) {
+      console.error("Error creating draft:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -154,34 +182,23 @@ export default function FormCreateArticle() {
   const handleThumbnailChange = async (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-
-      const formData = new FormData();
-      formData.append("thumbnail", file);
-      const cookies = parseCookies();
-      const token = cookies['user:token']; 
       
       try {
-        const response = await fetch("http://localhost:5555/upload", {
-          method: "POST",
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData,
-        });
-
-        if (!response.ok) {
-          throw new Error("Erro no upload da imagem");
-        }
-
-        const data = await response.json();
-        const imageUrl = data.url;
-
-        setValue("thumbnail", imageUrl);
+        const imageUrl = await uploadThumbnail(file);
+        setValue("thumbnail", imageUrl, { shouldValidate: true });
       } catch (error) {
-        alert(`Erro no upload da imagem: ${error}`);
+        toast.error(`Erro no upload da imagem: ${error}`);
       }
     }
   };
+
+  if (!profile?.id) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-white rounded-[24px] p-6">
+        <p className="text-lg">Carregando informações do usuário...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full flex flex-col bg-white rounded-[24px]">
@@ -308,7 +325,7 @@ export default function FormCreateArticle() {
                 <p className="text-red-500">{errors.tagIds.message}</p>
               )}
             </div>
-            <div className="basis-1/4 flex flex-col">
+            <div className="basis-1/2 gap-1 flex flex-col">
               <CustomInput
                 id="reading_time"
                 label="Tempo de leitura"
@@ -333,43 +350,9 @@ export default function FormCreateArticle() {
               <label className="px-6" htmlFor="creator">
                 Criador
               </label>
-              <CustomSelect
-                onValueChange={(value) => setValue("creator", value)}
-                defaultValue="placeholder"
-              >
-                <SelectTrigger className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light outline-none focus:border-blue-500 focus:ring-blue-500">
-                  <SelectValue placeholder="Selecione um criador" />
-                </SelectTrigger>
-                <SelectContent className="bg-white rounded-2xl">
-                  <SelectItem value="placeholder" disabled>
-                    Selecione um criador
-                  </SelectItem>
-                  {listArticles?.data &&
-                    Array.from(
-                      new Map(
-                        listArticles.data
-                          .filter((article) => article.creator?.id)
-                          .map((article) => [
-                            article.creator.id,
-                            article.creator,
-                          ])
-                      ).values()
-                    ).map((creator) => (
-                      <SelectItem
-                        key={creator.id}
-                        value={creator.id}
-                        className="hover:bg-blue-500 hover:text-white"
-                      >
-                        {creator.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </CustomSelect>
-              {errors.creator && (
-                <span className="text-sm text-red-500">
-                  {errors.creator.message}
-                </span>
-              )}
+              <div className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light flex items-center">
+                <span className="text-gray-700">{profile.name || profile.email}</span>
+              </div>
             </div>
 
             <div className="flex gap-6 w-full">
@@ -409,6 +392,46 @@ export default function FormCreateArticle() {
                 )}
               </div>
             </div>
+            <div className="flex gap-6 w-full">
+              <div className="w-full">
+                <label
+                  htmlFor="cityId"
+                  className="block px-6 font-medium text-black"
+                >
+                  Portal
+                </label>
+                <CustomSelect
+                  defaultValue="placeholder"
+                >
+                  <SelectTrigger className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light outline-none focus:border-blue-500 focus:ring-blue-500">
+                    <SelectValue placeholder="Selecione uma cidade" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white rounded-2xl">
+                    <SelectItem value="placeholder" disabled>
+                      Selecione um Portal
+                    </SelectItem>
+                    <SelectItem
+                      value="palhoca"
+                      className="hover:bg-blue-500 hover:text-white"
+                    >
+                      Palhoça
+                    </SelectItem>
+                    <SelectItem
+                      value="florianopolis"
+                      className="hover:bg-blue-500 hover:text-white"
+                    >
+                      Florianópolis
+                    </SelectItem>
+                    <SelectItem
+                      value="sao-jose"
+                      className="hover:bg-blue-500 hover:text-white"
+                    >
+                      São José
+                    </SelectItem>
+                  </SelectContent>
+                </CustomSelect>
+              </div>
+            </div>
           </div>
 
           <div className="w-full">
@@ -445,6 +468,14 @@ export default function FormCreateArticle() {
           </div>
 
           <div className="flex justify-end gap-4">
+            <Button
+              type="button"
+              onClick={handleSubmit(handleDraftStatus)}
+              className="bg-yellow-200 text-[#9c6232] hover:bg-yellow-100 rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
+              disabled={isSubmitting}
+            >
+              Rascunho
+            </Button>
             <Button
               type="button"
               onClick={back}

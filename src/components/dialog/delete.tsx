@@ -36,7 +36,7 @@ interface Props {
 export function DialogDelete({ item_id, item_name, context }: Props) {
   const { DeleteTag, ListTags } = useContext(TagContext);
   const { DeleteCategory, ListCategorys } = useContext(CategorysContext);
-  const { DeleteArticle, ListArticles } = useContext(ArticleContext);
+  const { DeleteArticle, ListAuthorArticles } = useContext(ArticleContext);
   const { DeleteUser, profile } = useContext(UserContext);
   const { DeleteCompanyCategory, ListCompanyCategory } = useContext(
     CompanyCategoryContext
@@ -64,7 +64,7 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
         ListCategorys();
       } else if (context === "articles") {
         await DeleteArticle(item_id);
-        ListArticles(profile!.id);
+        ListAuthorArticles(profile!.id);
       } else if (context === "users") {
         DeleteUser(item_id);
       } else if (context === "companyCategory") {

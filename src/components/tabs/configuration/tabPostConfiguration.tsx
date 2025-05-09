@@ -38,5 +38,16 @@ export const tabPostConfigurations = [
     description: "Noticias rejeitadas e não publicadas.",
     component: <Articles status="REJECTED" />,
     path: "/postagens/artigos/criar",
+    
+  },
+  {
+    value: "CHANGES_REQUESTED",
+    label: "Mudanças necessárias",
+    title: "Noticias",
+    name: "Noticias",
+    description: "Noticias rejeitadas e não publicadas.",
+    component: <Articles status="CHANGES_REQUESTED" />,
+    path: "/postagens/artigos/criar",
+    
   },
 ];

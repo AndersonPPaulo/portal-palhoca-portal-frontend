@@ -10,9 +10,12 @@ import {
 import { TooltipArrow, TooltipPortal } from "@radix-ui/react-tooltip";
 import { Article } from "@/providers/article";
 import { ColumnDef } from "@tanstack/react-table";
-import { Edit } from "lucide-react";
+import { Edit, Eye, FolderSearch2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React from "react";
+import React, { useState } from "react";
+import { ArticleViewModal } from "@/components/reviewModal";
+import { RejectedModal } from "@/components/rejectedModal";
+import { set } from "date-fns";
 
 interface Props {
   article: Article;
@@ -20,39 +23,132 @@ interface Props {
 
 const CellActions = ({ article }: Props) => {
   const { push } = useRouter();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [rejected, setRejected] = useState("");
+
+  // Obter o status mais recente ordenando pelo changed_at
+  const currentStatus = React.useMemo(() => {
+    if (!article.status_history || article.status_history.length === 0) {
+      return "";
+    }
+
+    // Ordenar o histórico de status pela data (do mais recente para o mais antigo)
+    const sortedHistory = [...article.status_history].sort(
+      (a, b) =>
+        new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
+    );
+
+    // Retornar o status do primeiro item (o mais recente)
+    return sortedHistory[0].status;
+  }, [article.status_history]);
+
+  const rejectedMessage = React.useEffect(() => {
+    if (currentStatus === "REJECTED") {
+      setRejected(article.status_history[0].reason_reject);
+    }
+  });
 
   return (
     <div className="flex gap-6">
       <DialogDelete
         context="articles"
-        item_name={article!.slug}
-        item_id={article!.id}
+        item_name={article.slug}
+        item_id={article.id}
       />
 
-      <TooltipProvider delayDuration={600}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Edit
-              onClick={() => push(`/postagens/artigos/editar/${article!.id}`)}
-              size={20}
-              className="text-primary cursor-pointer"
-            />
-          </TooltipTrigger>
-          <TooltipPortal>
-            <TooltipContent
-              className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2  animate-fadeIn"
-              sideOffset={5}
-            >
-              <span>Editar artigo</span>
-              <TooltipArrow
-                className="fill-primary-light"
-                width={11}
-                height={5}
+      {["DRAFT", "CHANGES_REQUESTED"].includes(currentStatus) ? (
+        <TooltipProvider delayDuration={600}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Edit
+                onClick={() => push(`/postagens/artigos/editar/${article.id}`)}
+                size={20}
+                className="text-primary cursor-pointer"
               />
-            </TooltipContent>
-          </TooltipPortal>
-        </Tooltip>
-      </TooltipProvider>
+            </TooltipTrigger>
+            <TooltipPortal>
+              <TooltipContent
+                className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
+                sideOffset={5}
+              >
+                <span>Editar artigo</span>
+                <TooltipArrow
+                  className="fill-primary-light"
+                  width={11}
+                  height={5}
+                />
+              </TooltipContent>
+            </TooltipPortal>
+          </Tooltip>
+        </TooltipProvider>
+      ) : currentStatus === "PENDING_REVIEW" ? (
+        <>
+          <TooltipProvider delayDuration={600}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FolderSearch2
+                  onClick={() => setIsModalOpen(true)}
+                  size={20}
+                  className="text-primary cursor-pointer"
+                />
+              </TooltipTrigger>
+              <TooltipPortal>
+                <TooltipContent
+                  className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
+                  sideOffset={5}
+                >
+                  <span>Revisar artigo</span>
+                  <TooltipArrow
+                    className="fill-primary-light"
+                    width={11}
+                    height={5}
+                  />
+                </TooltipContent>
+              </TooltipPortal>
+            </Tooltip>
+          </TooltipProvider>
+
+          <ArticleViewModal
+            open={isModalOpen}
+            onOpenChange={setIsModalOpen}
+            article={article}
+          />
+        </>
+      ) : currentStatus === "REJECTED" ? (
+        <>
+          <TooltipProvider delayDuration={600}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Eye
+                  onClick={() => setOpen(true)}
+                  size={20}
+                  className="text-primary cursor-pointer"
+                />
+              </TooltipTrigger>
+              <TooltipPortal>
+                <TooltipContent
+                  className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
+                  sideOffset={5}
+                >
+                  <span>Motivo Rejeição</span>
+                  <TooltipArrow
+                    className="fill-primary-light"
+                    width={11}
+                    height={5}
+                  />
+                </TooltipContent>
+              </TooltipPortal>
+            </Tooltip>
+          </TooltipProvider>
+
+          <RejectedModal
+            open={open}
+            onOpenChange={setOpen}
+            articleId={article.id}
+          />
+        </>
+      ) : null}
     </div>
   );
 };

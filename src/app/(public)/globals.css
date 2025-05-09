@@ -112,3 +112,26 @@ li {
   white-space: pre-wrap;
   word-break: break-word;
 }
+.article-review-modal-content {
+  overflow-y: auto !important;
+  height: calc(90vh - 180px) !important;
+  max-height: calc(90vh - 180px) !important;
+}
+
+.article-review-modal .dialog-content {
+  overflow: hidden !important;
+}
+
+.article-review-modal-header,
+.article-review-modal-footer {
+  position: sticky !important;
+  z-index: 10 !important;
+}
+
+.article-review-modal-header {
+  top: 0 !important;
+}
+
+.article-review-modal-footer {
+  bottom: 0 !important;
+}
