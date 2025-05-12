@@ -1,6 +1,6 @@
 "use client";
 
-import { api } from "@/service/api";
+import { api, api_cep } from "@/service/api";
 import { useRouter } from "next/navigation";
 import { parseCookies } from "nookies";
 import { createContext, ReactNode, useState } from "react";
@@ -62,6 +62,19 @@ interface ICompanyData {
   listCompany: CompanyProps | null;
   SelfCompany(companyId: string): Promise<CompanyProps>;
   company: ICompanyProps | null;
+}
+
+interface GetCEPProps {
+  cep: string;
+  logradouro: string;
+  complemento: string;
+  bairro: string;
+  localidade: string;
+  uf: string;
+  ibge: string;
+  gia: string;
+  ddd: string;
+  siafi: string;
 }
 
 interface IChildrenReact {
@@ -142,6 +155,21 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
     }
   };
 
+  // API CEP
+  const [apiCep, setApiCep] = useState<GetCEPProps | null>(null);
+  const GetByZipcode = async (cep: string) => {
+    const response = await api_cep
+      .get(`/${cep}/json`)
+      .then((res) => {
+        setApiCep(res.data);
+      })
+      .catch((err) => {
+        return err;
+      });
+
+    return response;
+  };
+
   const [company, setCompany] = useState<ICompanyProps | null>(null);
   const SelfCompany = async (companyId: string): Promise<CompanyProps> => {
     const response = await api
@@ -171,6 +199,8 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
         listCompany,
         SelfCompany,
         company,
+        apiCep,
+        setApiCep,
       }}
     >
       {children}
