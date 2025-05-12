@@ -100,7 +100,7 @@ export default function FormCreateCompany() {
 
   // Observar o CEP para buscar dados quando alterado
   const cep = watch("cep");
-  
+
   // Observar os campos de endereço para atualizar o endereço completo
   const street = watch("street");
   const number = watch("number");
@@ -112,38 +112,37 @@ export default function FormCreateCompany() {
   // Função para buscar dados do CEP
   const GetByZipcode = async (cep: string) => {
     if (cep.length < 8) return;
-    
+
     // Formatando o CEP removendo caracteres especiais
     const cepFormatted = cep.replace(/\D/g, "");
-    
+
     if (cepFormatted.length !== 8) return;
-    
+
     setLoadingCep(true);
-    
+
     try {
       const response = await api_cep.get(`/${cepFormatted}/json`);
       const data = response.data;
-      
+
       if (data.erro) {
         toast.error("CEP não encontrado");
         setApiCep(null);
         return;
       }
-      
+
       setApiCep(data);
-      
+
       // Atualizar os campos com os dados do CEP
       setValue("street", data.logradouro || "");
       setValue("district", data.bairro || "");
       setValue("city", data.localidade || "");
       setValue("state", data.uf || "");
-      
+
       // Focar no campo número após preencher os dados
       const numberInput = document.getElementById("number");
       if (numberInput) {
         numberInput.focus();
       }
-      
     } catch (error) {
       console.error("Erro ao buscar CEP:", error);
       toast.error("Erro ao buscar CEP. Tente novamente.");
@@ -156,19 +155,19 @@ export default function FormCreateCompany() {
   useEffect(() => {
     if (street && number) {
       let fullAddress = `${street}, ${number}`;
-      
+
       if (complement) {
         fullAddress += `, ${complement}`;
       }
-      
+
       if (district) {
         fullAddress += ` - ${district}`;
       }
-      
+
       if (city && state) {
         fullAddress += ` - ${city}/${state}`;
       }
-      
+
       setValue("address", fullAddress);
     }
   }, [street, number, complement, district, city, state, setValue]);
@@ -187,7 +186,7 @@ export default function FormCreateCompany() {
   const onSubmit = async (data: CompanyFormData) => {
     try {
       setIsSubmitting(true);
-      
+
       // Preparar os dados para envio
       const companyData = {
         name: data.name,
@@ -202,7 +201,7 @@ export default function FormCreateCompany() {
         district: data.district, // Adicionando o bairro para filtros
         status: data.status,
       };
-      
+
       await CreateCompany(companyData);
       toast.success("Empresa criada com sucesso!");
       reset(); // Limpar o formulário após o envio bem-sucedido
@@ -218,40 +217,40 @@ export default function FormCreateCompany() {
   // Formatar o CEP enquanto o usuário digita
   const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
-    
+
     // Remover caracteres não numéricos
     value = value.replace(/\D/g, "");
-    
+
     // Formatar como 00000-000
     if (value.length > 5) {
       value = value.replace(/^(\d{5})(\d)/, "$1-$2");
     }
-    
+
     // Limitar a 9 caracteres (00000-000)
     value = value.substring(0, 9);
-    
+
     setValue("cep", value);
   };
 
   // Formatar número de telefone enquanto o usuário digita
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
-    
+
     // Remover caracteres não numéricos
     value = value.replace(/\D/g, "");
-    
+
     // Formatar como (00) 00000-0000
     if (value.length > 2) {
       value = `(${value.substring(0, 2)}) ${value.substring(2)}`;
     }
-    
+
     if (value.length > 10) {
       value = value.replace(/^(\(\d{2}\)) (\d{5})(\d)/, "$1 $2-$3");
     }
-    
+
     // Limitar a 15 caracteres ((00) 00000-0000)
     value = value.substring(0, 15);
-    
+
     setValue("phone", value);
   };
 
@@ -292,7 +291,9 @@ export default function FormCreateCompany() {
                 placeholder="Digite o nome"
               />
               {errors.name && (
-                <span className="text-red-500 text-sm">{errors.name.message}</span>
+                <span className="text-red-500 text-sm">
+                  {errors.name.message}
+                </span>
               )}
             </div>
 
@@ -305,7 +306,9 @@ export default function FormCreateCompany() {
                 onChange={handlePhoneChange}
               />
               {errors.phone && (
-                <span className="text-red-500 text-sm">{errors.phone.message}</span>
+                <span className="text-red-500 text-sm">
+                  {errors.phone.message}
+                </span>
               )}
             </div>
 
@@ -340,7 +343,9 @@ export default function FormCreateCompany() {
                 )}
               </div>
               {errors.cep && (
-                <span className="text-red-500 text-sm">{errors.cep.message}</span>
+                <span className="text-red-500 text-sm">
+                  {errors.cep.message}
+                </span>
               )}
             </div>
 
@@ -353,7 +358,9 @@ export default function FormCreateCompany() {
                 placeholder="Nome da rua"
               />
               {errors.street && (
-                <span className="text-red-500 text-sm">{errors.street.message}</span>
+                <span className="text-red-500 text-sm">
+                  {errors.street.message}
+                </span>
               )}
             </div>
 
@@ -365,7 +372,9 @@ export default function FormCreateCompany() {
                 placeholder="Número"
               />
               {errors.number && (
-                <span className="text-red-500 text-sm">{errors.number.message}</span>
+                <span className="text-red-500 text-sm">
+                  {errors.number.message}
+                </span>
               )}
             </div>
 
@@ -386,7 +395,9 @@ export default function FormCreateCompany() {
                 placeholder="Bairro"
               />
               {errors.district && (
-                <span className="text-red-500 text-sm">{errors.district.message}</span>
+                <span className="text-red-500 text-sm">
+                  {errors.district.message}
+                </span>
               )}
             </div>
 
@@ -398,7 +409,9 @@ export default function FormCreateCompany() {
                 placeholder="Cidade"
               />
               {errors.city && (
-                <span className="text-red-500 text-sm">{errors.city.message}</span>
+                <span className="text-red-500 text-sm">
+                  {errors.city.message}
+                </span>
               )}
             </div>
 
@@ -410,13 +423,16 @@ export default function FormCreateCompany() {
                 placeholder="UF"
               />
               {errors.state && (
-                <span className="text-red-500 text-sm">{errors.state.message}</span>
+                <span className="text-red-500 text-sm">
+                  {errors.state.message}
+                </span>
               )}
             </div>
 
             {/* Campo de endereço completo (preenchido automaticamente) */}
             <div className="xl:col-span-2">
               <CustomInput
+                className="cursor-not-allowed"
                 id="address"
                 label="Endereço completo"
                 {...register("address")}
@@ -424,7 +440,9 @@ export default function FormCreateCompany() {
                 readOnly
               />
               {errors.address && (
-                <span className="text-red-500 text-sm">{errors.address.message}</span>
+                <span className="text-red-500 text-sm">
+                  {errors.address.message}
+                </span>
               )}
             </div>
 
@@ -436,7 +454,9 @@ export default function FormCreateCompany() {
                 placeholder="https://maps.google.com/..."
               />
               {errors.linkLocationMaps && (
-                <span className="text-red-500 text-sm">{errors.linkLocationMaps.message}</span>
+                <span className="text-red-500 text-sm">
+                  {errors.linkLocationMaps.message}
+                </span>
               )}
             </div>
 
@@ -448,7 +468,9 @@ export default function FormCreateCompany() {
                 placeholder="https://waze.com/..."
               />
               {errors.linkLocationWaze && (
-                <span className="text-red-500 text-sm">{errors.linkLocationWaze.message}</span>
+                <span className="text-red-500 text-sm">
+                  {errors.linkLocationWaze.message}
+                </span>
               )}
             </div>
 
@@ -460,7 +482,9 @@ export default function FormCreateCompany() {
                 placeholder="https://instagram.com/..."
               />
               {errors.linkInstagram && (
-                <span className="text-red-500 text-sm">{errors.linkInstagram.message}</span>
+                <span className="text-red-500 text-sm">
+                  {errors.linkInstagram.message}
+                </span>
               )}
             </div>
 
@@ -472,7 +496,9 @@ export default function FormCreateCompany() {
                 placeholder="https://wa.me/..."
               />
               {errors.linkWhatsapp && (
-                <span className="text-red-500 text-sm">{errors.linkWhatsapp.message}</span>
+                <span className="text-red-500 text-sm">
+                  {errors.linkWhatsapp.message}
+                </span>
               )}
             </div>
           </div>
@@ -486,7 +512,9 @@ export default function FormCreateCompany() {
               placeholder="Descreva a empresa, produtos ou serviços"
             />
             {errors.description && (
-              <span className="text-red-500 text-sm">{errors.description.message}</span>
+              <span className="text-red-500 text-sm">
+                {errors.description.message}
+              </span>
             )}
           </div>
 

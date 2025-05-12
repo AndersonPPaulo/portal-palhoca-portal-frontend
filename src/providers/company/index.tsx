@@ -58,6 +58,8 @@ export type CompanyProps = {
 interface ICompanyData {
   ListCompany(limit?: number, page?: number): Promise<CompanyProps>;
   CreateCompany(data: UpdateCompanyProps): Promise<void>;
+  apiCep: GetCEPProps | null;
+  setApiCep: React.Dispatch<React.SetStateAction<GetCEPProps | null>>;
   UpdateCompany(data: UpdateCompanyProps, id: string): Promise<void>;
   listCompany: CompanyProps | null;
   SelfCompany(companyId: string): Promise<CompanyProps>;
