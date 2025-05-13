@@ -15,7 +15,6 @@ import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { ArticleViewModal } from "@/components/reviewModal";
 import { RejectedModal } from "@/components/rejectedModal";
-import { set } from "date-fns";
 
 interface Props {
   article: Article;

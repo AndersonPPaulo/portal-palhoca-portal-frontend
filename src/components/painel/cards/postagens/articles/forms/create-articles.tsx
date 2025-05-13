@@ -129,28 +129,28 @@ export default function FormCreateArticle() {
       return ListTags();
     }
     return Promise.resolve([]);
-  }, [ListTags]);
+  }, []);
 
   const loadCategories = useCallback(() => {
     if (typeof ListCategorys === "function") {
       return ListCategorys();
     }
     return Promise.resolve([]);
-  }, [ListCategorys]);
+  }, []);
 
   const loadArticles = useCallback(() => {
     if (typeof ListAuthorArticles === "function") {
       return ListAuthorArticles();
     }
     return Promise.resolve([]);
-  }, [ListAuthorArticles]);
+  }, []);
 
   const loadPortals = useCallback(() => {
     if (typeof ListPortals === "function") {
       return ListPortals();
     }
     return Promise.resolve([]);
-  }, [ListPortals]);
+  }, []);
 
   // Carregar dados iniciais
   useEffect(() => {
