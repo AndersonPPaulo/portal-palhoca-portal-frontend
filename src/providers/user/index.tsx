@@ -23,7 +23,6 @@ interface UpdateUserProps {
 }
 
 
-
 export interface ResponsePromise {
   id: string;
   name: string;

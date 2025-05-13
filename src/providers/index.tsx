@@ -8,6 +8,8 @@ import { UserProvider } from "./user";
 import { CompanyProvider } from "./company";
 import { CompanyCategoryProvider } from "./company-category/index.tsx";
 import { CompanyTransferProvider } from "./CompanyTransfer";
+import { Portal } from "@radix-ui/react-tooltip";
+import { PortalProvider } from "./portal";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -18,7 +20,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <CategorysProvider>
               <CompanyCategoryProvider>
                 <CompanyTransferProvider>
-                <TagProvider>{children}</TagProvider>
+                  <TagProvider>
+                    <PortalProvider>{children}</PortalProvider>
+                  </TagProvider>
                 </CompanyTransferProvider>
               </CompanyCategoryProvider>
             </CategorysProvider>
