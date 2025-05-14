@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import React, { ChangeEvent, useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import CustomInput from "@/components/input/custom-input";
 import { Button } from "@/components/ui/button";
 import Switch from "@/components/switch";
@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { UserContext } from "@/providers/user";
 import CustomSelect, { OptionType } from "@/components/select/custom-select";
 import { PortalContext } from "@/providers/portal";
+import ThumbnailUploader from "@/components/thumbnail";
 
 const articleSchema = z.object({
   id: z.string().optional(),
@@ -35,9 +36,11 @@ const articleSchema = z.object({
     .min(300, "Conteúdo é obrigatório mínimo de 300 caracteres"),
   highlight: z.boolean().default(false),
   thumbnail: z.string(),
+  thumbnailDescription: z.string().optional().default(""),
   categoryId: z.string().min(1, "Adicione uma categoria"),
   tagIds: z.array(z.string()).min(1, "Pelo menos uma tag é obrigatória"),
   chiefEditorId: z.string().optional(),
+  portalIds: z.array(z.string()).optional(),
 });
 
 type ArticleFormData = z.infer<typeof articleSchema>;
@@ -50,10 +53,31 @@ const generateSlug = (text: string) => {
     .replace(/[^\w-]+/g, "");
 };
 
-interface Tag {
-  id: string;
-  name: string;
-}
+// const uploadThumbnailToServer = async (
+//   file: File,
+//   description: string,
+//   articleId: string
+// ): Promise<string> => {
+//   const { "user:token": token } = parseCookies();
+//   const formData = new FormData();
+//   formData.append("description", description);
+//   formData.append("thumbnail", file);
+//   const config = {
+//     headers: {
+//       Authorization: `bearer ${token}`,
+//       "Content-Type": "multipart/form-data",
+//     },
+//   };
+//   try {
+//     const response = await api.post(`/upload-thumbnail/${articleId}`, formData, config);
+//     return response.data.thumbnailUrl || "";
+//   } catch (err) {
+//     console.error("Erro no upload da imagem:", err);
+//     throw err;
+//   }
+// };
+
+
 
 interface FormEditArticleProps {
   article: Article;
@@ -75,18 +99,41 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   const { ListPortals, listPortals } = useContext(PortalContext);
   const [changeStatus, setChangeStatus] = useState("");
   const [changeMessage, setChangeMessage] = useState("");
+  const [selectedImage, setSelectedImage] = useState<{
+    file: File;
+    preview: string;
+    description: string;
+  } | null>(null);
 
   const findArticle = listArticles?.data?.find(
     (item) => item.id === parameter.id
   );
 
-  const getInitialPortalIds = () => {
-    if (Array.isArray(article.portalIds)) {
-      return article.portalIds.map((c: any) => c.id);
+  const getInitialPortals = () => {
+    if (!article.portals) {
+      return [];
     }
-    if (article.portalIds? article.portalIds : null) {
-      return [article.portalIds];
+
+    if (
+      Array.isArray(article.portals) &&
+      article.portals.length > 0 &&
+      typeof article.portals[0] === "object"
+    ) {
+      return article.portals.map((portal) => portal.id);
     }
+
+    if (
+      typeof article.portals === "object" &&
+      article.portals !== null &&
+      !Array.isArray(article.portals)
+    ) {
+      return [article.portals];
+    }
+
+    if (Array.isArray(article.portals)) {
+      return article.portals;
+    }
+
     return [];
   };
 
@@ -116,6 +163,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       ListAuthorArticles(),
       ListPortals && ListPortals(),
     ]).then(() => {
+      // Lógica para as tags
       if (article.tags && article.tags.length > 0 && listTags.length > 0) {
         const validTagIds = article.tags
           .filter((tag) => listTags.some((listTag) => listTag.id === tag.id))
@@ -123,8 +171,70 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
         setValue("tagIds", validTagIds);
       }
+
+      // Lógica para os portais (similar às tags)
+      // if (
+      //   article.portals &&
+      //   Array.isArray(listPortals) &&
+      //   listPortals.length > 0
+      // ) {
+        // Para portals como array de objetos
+    //     if (
+    //       Array.isArray(article.portals) &&
+    //       article.portals.length > 0 &&
+    //       typeof article.portals[0] === "object"
+    //     ) {
+    //       const validPortalIds = article.portals
+    //         .filter((portal) =>
+    //           listPortals.some((listPortal) => listPortal.id === portal.id)
+    //         )
+    //         .map((portal) => portal.id);
+
+    //       setValue("portalIds", validPortalIds);
+    //     }
+    //     // Para portal como objeto único
+    //     else if (
+    //       typeof article.portals === "object" &&
+    //       article.portals !== null &&
+    //       !Array.isArray(article.portals)
+    //     ) {
+    //       const portalId = article.portals.id;
+    //       if (listPortals.some((listPortal) => listPortal.id === portalId)) {
+    //         setValue("portalIds", [portalId]);
+    //       }
+    //     }
+    //     // Para portals como array de strings (IDs)
+    //     else if (Array.isArray(article.portals)) {
+    //       const validPortalIds = article.portals.filter((portalId) =>
+    //         listPortals.some((listPortal) => listPortal.id === portalId)
+    //       );
+
+    //       setValue("portalIds", validPortalIds);
+    //     }
+    //   }
     });
   }, []);
+
+  // Inicializar a imagem da thumbnail se existir
+
+  useEffect(() => {
+    if (article.thumbnail) {
+      let thumbnailUrl = "";
+      if (typeof article.thumbnail === "string") {
+        thumbnailUrl = article.thumbnail;
+      } else if (article.thumbnail?.url) {
+        thumbnailUrl = article.thumbnail.url;
+      }
+
+      if (thumbnailUrl) {
+        setSelectedImage({
+          file: null as any, // Não temos o arquivo original, só a URL
+          preview: thumbnailUrl,
+          description: article.thumbnail.description || "",
+        });
+      }
+    }
+  }, [article]);
 
   const tagOptions: OptionType[] = Array.isArray(listTags)
     ? listTags.map((tag: any) => ({ value: tag.id, label: tag.name }))
@@ -156,7 +266,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
   const {
     register,
-    handleSubmit,
+    // handleSubmit,
     formState: { errors },
     reset,
     watch,
@@ -167,15 +277,14 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       id: article.id,
       title: article.title,
       slug: article.slug,
-      creator: article.creator?.id || article.creator,
+      creator: article.creator.id,
       reading_time: Number(article.reading_time),
-      thumbnail: article.thumbnail,
       resume_content: article.resume_content,
       content: article.content,
       highlight: article.highlight === true,
       categoryId: article.category?.id,
       tagIds: article.tags?.map((tag) => tag.id) || [],
-      portalIds: getInitialPortalIds(),
+      portalIds: []
     },
   });
 
@@ -185,15 +294,15 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         id: article.id,
         title: article.title,
         slug: article.slug,
-        creator: article.creator?.id || article.creator,
+        creator: article.creator?.id || "",
         reading_time: Number(article.reading_time),
-        thumbnail: article.thumbnail,
         resume_content: article.resume_content,
         content: article.content,
         highlight: article.highlight === true,
         categoryId: article.category?.id,
         tagIds: article.tags?.map((tag) => tag.id) || [],
         chiefEditorId: profile?.chiefEditor?.id,
+        portalIds: []
       });
       setIsDraft(
         article.status_history?.some((status) => status.status === "DRAFT") ||
@@ -207,7 +316,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   const highlight = watch("highlight");
   const tagIds: string[] = watch("tagIds") || [];
   const categoryId: string = watch("categoryId") || "";
-  const portalIds: string[] = watch("portalIds") || getInitialPortalIds();
+  const portalIds: string[] = watch("portalIds") || [];
   const creator: string = watch("creator") || "";
 
   useEffect(() => {
@@ -231,16 +340,51 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     return selectedTags;
   };
 
+  // Função para validar portais selecionados (similar às tags)
+  const validatePortalSelection = (selectedPortals: string[]) => {
+    const validPortals = selectedPortals.filter((portalId) =>
+      portalOptions.some((option) => option.value === portalId)
+    );
+
+    if (validPortals.length !== selectedPortals.length) {
+      toast.error(
+        "Um ou mais portais selecionados não foram encontrados. Por favor, selecione apenas portais válidos."
+      );
+      return validPortals;
+    }
+
+    return selectedPortals;
+  };
+
+  const handleImageUpload = (
+    file: File,
+    previewUrl: string,
+    description: string
+  ) => {
+    setSelectedImage({ file, preview: previewUrl, description });
+    setValue("thumbnailDescription", description, { shouldValidate: true });
+    // Não definimos a URL da thumbnail aqui, pois será feito no envio do formulário
+  };
+
   const submitArticle = async (data: ArticleFormData, setToDraft: boolean) => {
     try {
       const validatedTags = validateTagSelection(data.tagIds);
+      const validatedPortals = data.portalIds
+        ? validatePortalSelection(data.portalIds)
+        : [];
 
       if (validatedTags.length !== data.tagIds.length) {
         setValue("tagIds", validatedTags);
         return;
       }
 
+      if (data.portalIds && validatedPortals.length !== data.portalIds.length) {
+        setValue("portalIds", validatedPortals);
+        return;
+      }
+
       setIsSubmitting(true);
+
       const finalData = {
         title: data.title,
         slug: data.slug,
@@ -248,14 +392,29 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         resume_content: data.resume_content,
         content: data.content,
         highlight: data.highlight,
-        thumbnail: data.thumbnail || article.thumbnail,
         categoryId: data.categoryId,
         tagIds: data.tagIds,
+        portalIds: ["0910e66d-af7a-4052-8594-805ec34ba830", "2e4bc219-389f-49cd-b7c5-30e6c738603a"],
         setToDraft: setToDraft,
         chiefEditorId: profile?.chiefEditor?.id,
       };
 
       await UpdateArticle(finalData, article.id);
+
+      // Se tem imagem nova selecionada, faz o upload
+      if (selectedImage && selectedImage.file) {
+        try {
+          await uploadThumbnail(
+            selectedImage.file,
+            selectedImage.description,
+            article.id
+          );
+        } catch (error) {
+          console.error("Erro no upload da thumbnail:", error);
+          // Continua com a thumbnail atual se falhar
+        }
+      }
+
       const statusMsg = setToDraft ? "Rascunho" : "Pendente de Revisão";
       toast.success(`Artigo atualizado com sucesso! Status: ${statusMsg}`);
       setTimeout(() => {
@@ -263,6 +422,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       }, 1800);
     } catch (error) {
       console.error("Erro ao atualizar artigo:", error);
+      toast.error("Erro ao atualizar artigo. Tente novamente.");
     } finally {
       setIsSubmitting(false);
     }
@@ -278,19 +438,6 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     await submitArticle(formData, false);
   };
 
-  const handleThumbnailChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-
-      try {
-        const imageUrl = await uploadThumbnail(file);
-        setValue("thumbnail", imageUrl, { shouldValidate: true });
-      } catch (error) {
-        console.error("Erro no upload da imagem:", error);
-      }
-    }
-  };
-
   const handleEditorChange = (content: string) => {
     setEditorContent(content);
     setValue("content", content, { shouldValidate: true });
@@ -304,11 +451,13 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       creator: watch("creator"),
       reading_time: watch("reading_time"),
       thumbnail: watch("thumbnail"),
+      thumbnailDescription: watch("thumbnailDescription"),
       resume_content: watch("resume_content"),
       content: watch("content"),
       highlight: watch("highlight"),
       categoryId: watch("categoryId"),
       tagIds: watch("tagIds"),
+      portals: watch("portalIds") || [],
       chiefEditorId: profile?.chiefEditor?.id || "",
     };
   };
@@ -357,31 +506,12 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
           <div className="flex gap-6">
             <div className="flex flex-col gap-1 w-full">
-              <label className="ml-6">Adicionar Thumbnail (capa)</label>
-              <div className="border h-full border-blue-500/30 rounded-[34px] flex items-center justify-center max-h-[54px]">
-                <input
-                  id="thumbnail"
-                  type="file"
-                  accept="image/*"
-                  className="w-full text-gray-30 py-2 px-8 rounded-md bg-transparent"
-                  onChange={handleThumbnailChange}
-                />
-              </div>
-              {article.thumbnail && (
-                <div className="ml-6 mt-2">
-                  <p className="text-sm text-gray-500">Thumbnail atual:</p>
-                  <img
-                    src={article.thumbnail}
-                    alt="Thumbnail atual"
-                    className="h-16 w-auto object-cover rounded-md mt-1"
-                  />
-                </div>
-              )}
-              {errors.thumbnail && (
-                <span className="text-sm text-red-500 w-full">
-                  {errors.thumbnail.message}
-                </span>
-              )}
+              <ThumbnailUploader
+                onImageUpload={handleImageUpload}
+                initialImage={selectedImage?.preview}
+              />
+              <input type="hidden" {...register("thumbnail")} />
+              <input type="hidden" {...register("thumbnailDescription")} />
             </div>
 
             <div className="basis-1/2">

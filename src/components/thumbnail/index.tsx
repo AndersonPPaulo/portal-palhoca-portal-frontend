@@ -10,13 +10,12 @@ import CustomInput from "../input/custom-input";
 interface ThumbnailUploaderProps {
   onImageUpload?: (imageFile: File, previewUrl: string, description: string) => void;
   initialImage?: string;
-  newsId?: string;
 }
+
 
 export default function ThumbnailUploader({
   onImageUpload,
   initialImage,
-  newsId,
 }: ThumbnailUploaderProps) {
   const [showModal, setShowModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -44,6 +43,38 @@ export default function ThumbnailUploader({
     setError(false);
   };
 
+  // const uploadThumbnail = async (
+  //   file: File,
+  //   description: string,
+  //   id?: string
+  // ): Promise<string> => {
+  //   const { "user:token": token } = parseCookies();
+
+  //   const formData = new FormData();
+  //   formData.append("description", description);
+  //   formData.append("thumbnail", file);
+
+  //   try {
+  //     const config = {
+  //       headers: {
+  //         Authorization: `bearer ${token}`,
+  //         "Content-Type": "multipart/form-data",
+  //       },
+  //     };
+
+  //     const response = await api.post(`/upload-thumbnail/${id}`, formData, config);
+
+  //     return response.data.thumbnailUrl;
+  //   } catch (error: any) {
+  //     console.error("Erro no upload de thumbnail:", error);
+  //     throw new Error(
+  //       error.response?.data?.message || "Erro ao fazer upload da imagem"
+  //     );
+  //   }
+  // };
+
+  
+  
   // Salvar a imagem apenas em cache (não faz upload)
   const saveImage = async () => {
     if (!selectedFile) {
@@ -115,16 +146,15 @@ export default function ThumbnailUploader({
         </label>
 
         <div
-          className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+          className="border-2 border-dashed  border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors"
           onClick={openModal}
         >
           {previewUrl ? (
-            <div className="relative w-full h-48 mb-2">
-              <Image
+            <div className="relative w-full h-48 mb-2 ">
+              <img
                 src={previewUrl}
                 alt="Thumbnail da notícia"
-                fill
-                className="object-cover rounded-md"
+                className="object-cover rounded-md h-full w-full"
               />
               {selectedFile && (
                 <div className="absolute bottom-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
@@ -188,10 +218,9 @@ export default function ThumbnailUploader({
             {previewUrl && (
               <div className="mb-4">
                 <div className="relative w-full h-48 rounded-md overflow-hidden">
-                  <Image
+                  <img
                     src={previewUrl}
                     alt="Preview"
-                    fill
                     className="object-cover"
                   />
                 </div>

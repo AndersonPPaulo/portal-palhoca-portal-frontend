@@ -39,8 +39,6 @@ const articleSchema = z.object({
     .min(300, "Conteudo é obrigatório minimo de 300 caracteres"),
   initialStatus: z.string().optional(),
   highlight: z.boolean().default(false),
-  thumbnail: z.string().optional().default(""),
-  thumbnailDescription: z.string().optional().default(""),
   categoryId: z.string().min(1, "Adicione uma categoria"),
   tagIds: z.array(z.string()).min(1, "Pelo menos uma tag é obrigatória"),
   chiefEditorId: z.string().optional(),
@@ -130,8 +128,6 @@ export default function FormCreateArticle() {
       title: "",
       slug: "",
       reading_time: 0,
-      thumbnail: "",
-      thumbnailDescription: "",
       resume_content: "",
       content: "",
       initialStatus: "",
@@ -164,7 +160,6 @@ export default function FormCreateArticle() {
     description: string
   ) => {
     setSelectedImage({ file, preview: previewUrl, description });
-    setValue("thumbnailDescription", description, { shouldValidate: true });
   };
 
   const submitWithStatus = async (data: ArticleFormData, status: string) => {
@@ -182,8 +177,9 @@ export default function FormCreateArticle() {
         initialStatus: status,
         chiefEditorId: profile.chiefEditor?.id || "",
         creator: profile.id,
+        portals: data.portalIds, // Map portalIds to portals
       };
-      const createdArticle = await CreateArticle(formData).then((res) => {console.log('res', res); return res;});
+      const createdArticle = await CreateArticle(formData);
       if (selectedImage && selectedImage.file && createdArticle?.id) {
         try {
           await uploadThumbnailToServer(
@@ -281,8 +277,8 @@ export default function FormCreateArticle() {
                 onImageUpload={handleImageUpload}
                 initialImage={selectedImage?.preview}
               />
-              <input type="hidden" {...register("thumbnail")} />
-              <input type="hidden" {...register("thumbnailDescription")} />
+              <input type="hidden" />
+              <input type="hidden"  />
             </div>
             <div className="basis-1/2">
               <CustomSelect
