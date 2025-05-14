@@ -13,18 +13,10 @@ import ReturnPageButton from "@/components/button/returnPage";
 import { ArticleContext, Article } from "@/providers/article";
 import { CategorysContext } from "@/providers/categorys";
 import { TagContext } from "@/providers/tags";
-import {
-  Select as CustomSelect,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import ReactSelect from "react-select";
-import { MultiValue } from "react-select";
 import { toast } from "sonner";
 import { UserContext } from "@/providers/user";
-import { set } from "date-fns";
+import CustomSelect, { OptionType } from "@/components/select/custom-select";
+import { PortalContext } from "@/providers/portal";
 
 const articleSchema = z.object({
   id: z.string().optional(),
@@ -58,13 +50,6 @@ const generateSlug = (text: string) => {
     .replace(/[^\w-]+/g, "");
 };
 
-type OptionType = { value: string; label: string };
-
-interface TagOption {
-  value: string;
-  label: string;
-}
-
 interface Tag {
   id: string;
   name: string;
@@ -76,30 +61,36 @@ interface FormEditArticleProps {
 
 export default function FormEditArticle({ article }: FormEditArticleProps) {
   const parameter = useParams();
-  console.log("parameter", parameter);
   const { back, push } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editorContent, setEditorContent] = useState(article.content || "");
   const [isDraft, setIsDraft] = useState(
     article.status_history?.some((status) => status.status === "DRAFT") || false
   );
-  const {
-    UpdateArticle,
-    ListAuthorArticles,
-    listArticles,
-    uploadThumbnail,
-    SelfArticle,
-  } = useContext(ArticleContext);
+  const { UpdateArticle, ListAuthorArticles, listArticles, uploadThumbnail } =
+    useContext(ArticleContext);
   const { ListCategorys, listCategorys } = useContext(CategorysContext);
   const { ListTags, listTags } = useContext(TagContext);
   const { profile } = useContext(UserContext);
-  const [changeStatus, setChangeStatus] = useState('')
-  const [changeMessage, setChangeMessage] = useState('')
+  const { ListPortals, listPortals } = useContext(PortalContext);
+  const [changeStatus, setChangeStatus] = useState("");
+  const [changeMessage, setChangeMessage] = useState("");
 
   const findArticle = listArticles?.data?.find(
     (item) => item.id === parameter.id
   );
-  const currentStatus = React.useEffect(() => {
+
+  const getInitialPortalIds = () => {
+    if (Array.isArray(article.city)) {
+      return article.city.map((c: any) => c.id);
+    }
+    if (article.city?.id) {
+      return [article.city.id];
+    }
+    return [];
+  };
+
+  useEffect(() => {
     const statusHistory = () => {
       if (
         !findArticle?.status_history ||
@@ -107,31 +98,25 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       ) {
         return "";
       }
-      // Ordenar o histórico de status pela data (do mais recente para o mais antigo)
       const sortedHistory = [...findArticle.status_history].sort(
         (a, b) =>
           new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
       );
-      
-      // Retornar o status do primeiro item (o mais recente)
-  
-      setChangeStatus(sortedHistory[0].status)
-      setChangeMessage(sortedHistory[0].change_request_description)
+
+      setChangeStatus(sortedHistory[0].status);
+      setChangeMessage(sortedHistory[0].change_request_description);
     };
     statusHistory();
   }, [findArticle?.status_history]);
-  console.log('findArticle?.status_history', findArticle?.status_history)
-  
 
   useEffect(() => {
     Promise.all([
       ListTags(),
       ListCategorys(),
       ListAuthorArticles(),
+      ListPortals && ListPortals(),
     ]).then(() => {
-      // Verificar se as tags do artigo existem na lista de tags após o carregamento
       if (article.tags && article.tags.length > 0 && listTags.length > 0) {
-        // Filtra as tags do artigo para garantir que existam na lista atual de tags
         const validTagIds = article.tags
           .filter((tag) => listTags.some((listTag) => listTag.id === tag.id))
           .map((tag) => tag.id);
@@ -141,15 +126,33 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     });
   }, []);
 
-  const handleEditorChange = (content: string) => {
-    setEditorContent(content);
-    setValue("content", content, { shouldValidate: true });
-  };
-
-  const tagOptions: OptionType[] = listTags.map((tag: Tag) => ({
-    value: tag.id,
-    label: tag.name,
-  }));
+  const tagOptions: OptionType[] = Array.isArray(listTags)
+    ? listTags.map((tag: any) => ({ value: tag.id, label: tag.name }))
+    : [];
+  const categoryOptions: OptionType[] = Array.isArray(listCategorys)
+    ? listCategorys.map((category: any) => ({
+        value: category.id,
+        label: category.name,
+      }))
+    : [];
+  const portalOptions: OptionType[] = Array.isArray(listPortals)
+    ? listPortals.map((portal: any) => ({
+        value: portal.id,
+        label: portal.name,
+      }))
+    : [];
+  const creatorOptions: OptionType[] = listArticles?.data
+    ? Array.from(
+        new Map(
+          listArticles.data
+            .filter((article) => article.creator?.id)
+            .map((article) => [
+              article.creator.id,
+              { value: article.creator.id, label: article.creator.name },
+            ])
+        ).values()
+      )
+    : [];
 
   const {
     register,
@@ -172,6 +175,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       highlight: article.highlight === true,
       categoryId: article.category?.id,
       tagIds: article.tags?.map((tag) => tag.id) || [],
+      portalIds: getInitialPortalIds(),
     },
   });
 
@@ -201,6 +205,10 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
   const title = watch("title");
   const highlight = watch("highlight");
+  const tagIds: string[] = watch("tagIds") || [];
+  const categoryId: string = watch("categoryId") || "";
+  const portalIds: string[] = watch("portalIds") || getInitialPortalIds();
+  const creator: string = watch("creator") || "";
 
   useEffect(() => {
     if (title) {
@@ -208,20 +216,16 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     }
   }, [title, setValue]);
 
-  // Validar se as tags selecionadas existem na lista de tags disponíveis
   const validateTagSelection = (selectedTags: string[]) => {
-    // Verificar se cada tag selecionada existe na lista de tags disponíveis
     const validTags = selectedTags.filter((tagId) =>
       tagOptions.some((option) => option.value === tagId)
     );
 
-    // Se o número de tags válidas for diferente do número de tags selecionadas,
-    // algumas tags não foram encontradas
     if (validTags.length !== selectedTags.length) {
       toast.error(
         "Uma ou mais tags selecionadas não foram encontradas. Por favor, selecione apenas tags válidas."
       );
-      return validTags; // Retorna apenas as tags válidas
+      return validTags;
     }
 
     return selectedTags;
@@ -229,13 +233,11 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
   const submitArticle = async (data: ArticleFormData, setToDraft: boolean) => {
     try {
-      // Validar as tags antes de enviar
       const validatedTags = validateTagSelection(data.tagIds);
 
-      // Se houver diferença, atualiza os valores do formulário
       if (validatedTags.length !== data.tagIds.length) {
         setValue("tagIds", validatedTags);
-        return; // Não prossegue com a submissão
+        return;
       }
 
       setIsSubmitting(true);
@@ -249,7 +251,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         thumbnail: data.thumbnail || article.thumbnail,
         categoryId: data.categoryId,
         tagIds: data.tagIds,
-        setToDraft: setToDraft, // Definido com base no botão clicado
+        setToDraft: setToDraft,
         chiefEditorId: profile?.chiefEditor?.id,
       };
 
@@ -281,13 +283,17 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       const file = e.target.files[0];
 
       try {
-        // Usar o método do provider para upload
         const imageUrl = await uploadThumbnail(file);
         setValue("thumbnail", imageUrl, { shouldValidate: true });
       } catch (error) {
         console.error("Erro no upload da imagem:", error);
       }
     }
+  };
+
+  const handleEditorChange = (content: string) => {
+    setEditorContent(content);
+    setValue("content", content, { shouldValidate: true });
   };
 
   const getValues = () => {
@@ -379,81 +385,21 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
             </div>
 
             <div className="basis-1/2">
-              <label className="px-6" htmlFor="tagIds">
-                Tag(s):
-              </label>
-              <ReactSelect
+              <CustomSelect
                 id="tagIds"
-                isMulti
-                className="basic-multi-select w-full"
-                classNamePrefix="select"
-                value={tagOptions.filter((tag) =>
-                  watch("tagIds").includes(tag.value)
-                )}
-                onChange={(selectedOptions: MultiValue<TagOption>) => {
-                  const selectedTagIds = selectedOptions
-                    ? selectedOptions.map((option) => option.value)
-                    : [];
-
-                  // Verifica se todas as tags selecionadas existem na lista de tags disponíveis
-                  const validTags = selectedTagIds.filter((tagId) =>
-                    tagOptions.some((option) => option.value === tagId)
-                  );
-
-                  // Se o número de tags válidas for diferente do número de tags selecionadas,
-                  // algumas tags não existem mais
-                  if (validTags.length !== selectedTagIds.length) {
-                    toast.warning(
-                      "Algumas tags selecionadas não foram encontradas e foram removidas."
-                    );
-                  }
-
-                  setValue("tagIds", validTags);
-                }}
+                label="Tag(s):"
+                placeholder="Selecione uma ou mais tags"
                 options={tagOptions}
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    borderRadius: "24px",
-                    padding: "0rem 24px",
-                    minHeight: "56px",
-                    marginTop: "6px",
-                    borderWidth: "2px",
-                    borderColor: "#DFEAF6",
-                    "&:hover": {
-                      borderColor: "#DFEAF695",
-                    },
-                  }),
-                  multiValue: (base) => ({
-                    ...base,
-                    backgroundColor: "#3b82f6",
-                    padding: "0.25rem 0.5rem",
-                  }),
-                  multiValueLabel: (base) => ({
-                    ...base,
-                    color: "white",
-                  }),
-                  multiValueRemove: (base) => ({
-                    ...base,
-                    color: "white",
-                    ":hover": {
-                      backgroundColor: "#2563eb",
-                      color: "white",
-                    },
-                  }),
-                  menu: (base) => ({
-                    ...base,
-                    borderRadius: "24px",
-                  }),
-                  menuList: (base) => ({
-                    ...base,
-                    borderRadius: "20px",
-                  }),
-                }}
+                value={tagIds}
+                onChange={(value) =>
+                  setValue("tagIds", value as string[], {
+                    shouldValidate: true,
+                  })
+                }
+                isMulti={true}
+                error={errors.tagIds?.message}
+                noOptionsMessage="Nenhuma tag disponível"
               />
-              {errors.tagIds && (
-                <p className="text-red-500">{errors.tagIds.message}</p>
-              )}
             </div>
             <div className="basis-1/4 flex flex-col">
               <CustomInput
@@ -477,125 +423,52 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
           <div className="flex gap-6">
             <div className="flex flex-col gap-1 w-full">
-              <label className="px-6" htmlFor="creator">
-                Criador
-              </label>
               <CustomSelect
-                onValueChange={(value) => setValue("creator", value)}
-                defaultValue={
-                  article.creator?.id || article.creator || "placeholder"
-                }
-                disabled
-              >
-                <SelectTrigger className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light outline-none focus:border-blue-500 focus:ring-blue-500">
-                  <SelectValue placeholder="Selecione um criador" />
-                </SelectTrigger>
-                <SelectContent className="bg-white rounded-2xl">
-                  <SelectItem value="placeholder" disabled>
-                    Selecione um criador
-                  </SelectItem>
-                  {listArticles?.data &&
-                    Array.from(
-                      new Map(
-                        listArticles.data
-                          .filter((article) => article.creator?.id)
-                          .map((article) => [
-                            article.creator.id,
-                            article.creator,
-                          ])
-                      ).values()
-                    ).map((creator) => (
-                      <SelectItem
-                        key={creator.id}
-                        value={creator.id}
-                        className="hover:bg-blue-500 hover:text-white"
-                      >
-                        {creator.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </CustomSelect>
-              {errors.creator && (
-                <span className="text-sm text-red-500">
-                  {errors.creator.message}
-                </span>
-              )}
+                id="creator"
+                label="Criador"
+                placeholder="Selecione um criador"
+                options={creatorOptions}
+                value={creator}
+                onChange={(value) => setValue("creator", value as string)}
+                isMulti={false}
+                error={errors.creator?.message}
+                noOptionsMessage="Nenhum criador disponível"
+              />
             </div>
 
             <div className="flex gap-6 w-full">
-              <div className="w-full">
-                <label
-                  htmlFor="categoryId"
-                  className="block px-6 font-medium text-black"
-                >
-                  Categoria
-                </label>
-                <CustomSelect
-                  onValueChange={(value) => setValue("categoryId", value)}
-                  defaultValue={article.category?.id || "placeholder"}
-                >
-                  <SelectTrigger className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light outline-none focus:border-blue-500 focus:ring-blue-500">
-                    <SelectValue placeholder="Selecione uma categoria" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white rounded-2xl">
-                    <SelectItem value="placeholder" disabled>
-                      Selecione uma categoria
-                    </SelectItem>
-                    {listCategorys.map((category) => (
-                      <SelectItem
-                        key={category.id}
-                        value={category.id}
-                        className="hover:bg-blue-500 hover:text-white"
-                      >
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </CustomSelect>
-                {errors.categoryId && (
-                  <span className="text-sm text-red-500">
-                    {errors.categoryId.message}
-                  </span>
-                )}
-              </div>
+              <CustomSelect
+                id="categoryId"
+                label="Categoria"
+                placeholder="Selecione uma categoria"
+                options={categoryOptions}
+                value={categoryId}
+                onChange={(value) =>
+                  setValue("categoryId", value as string, {
+                    shouldValidate: true,
+                  })
+                }
+                isMulti={false}
+                error={errors.categoryId?.message}
+                noOptionsMessage="Nenhuma categoria disponível"
+              />
             </div>
             <div className="flex gap-6 w-full">
-              <div className="w-full">
-                <label
-                  htmlFor="cityId"
-                  className="block px-6 font-medium text-black"
-                >
-                  Portal
-                </label>
-                <CustomSelect defaultValue={article.city?.id || "placeholder"}>
-                  <SelectTrigger className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light outline-none focus:border-blue-500 focus:ring-blue-500">
-                    <SelectValue placeholder="Selecione uma cidade" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white rounded-2xl">
-                    <SelectItem value="placeholder" disabled>
-                      Selecione um Portal
-                    </SelectItem>
-                    <SelectItem
-                      value="palhoca"
-                      className="hover:bg-blue-500 hover:text-white"
-                    >
-                      Palhoça
-                    </SelectItem>
-                    <SelectItem
-                      value="florianopolis"
-                      className="hover:bg-blue-500 hover:text-white"
-                    >
-                      Florianópolis
-                    </SelectItem>
-                    <SelectItem
-                      value="sao-jose"
-                      className="hover:bg-blue-500 hover:text-white"
-                    >
-                      São José
-                    </SelectItem>
-                  </SelectContent>
-                </CustomSelect>
-              </div>
+              <CustomSelect
+                id="portalIds"
+                label="Portal"
+                placeholder="Selecione um ou mais portais"
+                options={portalOptions}
+                value={portalIds}
+                onChange={(value) =>
+                  setValue("portalIds", value as string[], {
+                    shouldValidate: true,
+                  })
+                }
+                isMulti={true}
+                error={errors.portalIds?.message}
+                noOptionsMessage="Nenhum portal disponível"
+              />
             </div>
           </div>
 

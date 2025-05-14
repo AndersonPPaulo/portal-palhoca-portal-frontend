@@ -232,13 +232,13 @@ export function ArticleViewModal({
                   </div>
                 </div>
 
-                {/* Thumbnail se disponível */}
+                {/* Thumbnail se disponível
                 {article.thumbnail && (
                   <div className="rounded-md overflow-hidden">
                     <div className="relative w-full h-64">
                       <img
                         src={
-                          article.thumbnail.startsWith("http")
+                          article.thumbnail. startsWith("http")
                             ? article.thumbnail
                             : `http://localhost:5555/${article.thumbnail}`
                         }
@@ -247,7 +247,7 @@ export function ArticleViewModal({
                       />
                     </div>
                   </div>
-                )}
+                )} */}
 
                 {/* Resumo */}
                 <div className="bg-gray-100 p-4 rounded-md">

@@ -76,7 +76,6 @@ export const PortalProvider = ({ children }: ICihldrenReact) => {
     const response = await api
       .get("/portal", { headers: { Authorization: `bearer ${token}` } })
       .then((res) => {
-        console.log("res", res);
         setListPortals(res.data.response);
       })
       .catch((err) => {

@@ -137,7 +137,6 @@ export const CategorysProvider = ({ children }: ICihldrenReact) => {
       .get(`/category/${categoryId}`, config)
       .then((res) => {
         setCategory(res.data.response);
-        console.log("res.data.response", res.data.response);
       })
       .catch((err) => {
         toast.error(err.response.data.message);

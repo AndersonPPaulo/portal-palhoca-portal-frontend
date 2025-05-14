@@ -44,36 +44,6 @@ export default function ThumbnailUploader({
     setError(false);
   };
 
-  const uploadThumbnail = async (
-    file: File,
-    description: string,
-    id?: string
-  ): Promise<string> => {
-    const { "user:token": token } = parseCookies();
-
-    const formData = new FormData();
-    formData.append("description", description);
-    formData.append("thumbnail", file);
-
-    try {
-      const config = {
-        headers: {
-          Authorization: `bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      };
-
-      const response = await api.post(`/upload-thumbnail/${id}`, formData, config);
-
-      return response.data.thumbnailUrl;
-    } catch (error: any) {
-      console.error("Erro no upload de thumbnail:", error);
-      throw new Error(
-        error.response?.data?.message || "Erro ao fazer upload da imagem"
-      );
-    }
-  };
-
   // Salvar a imagem apenas em cache (não faz upload)
   const saveImage = async () => {
     if (!selectedFile) {

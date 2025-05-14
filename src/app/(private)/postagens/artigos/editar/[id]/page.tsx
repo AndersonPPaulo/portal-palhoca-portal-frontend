@@ -13,7 +13,6 @@ interface Props {
 export default function EditCategoryPage({ params }: Props) {
   const { SelfArticle, article } = useContext(ArticleContext);
   const [loading, setLoading] = useState(true);
-  console.log('article', article)
 
   useEffect(() => {
     params.then(({ id }) => {

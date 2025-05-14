@@ -110,7 +110,6 @@ export const UserProvider = ({ children }: ICihldrenReact) => {
       .get("/profile", config)
       .then((res) => {
         setProfile(res.data.response);
-        console.log('res', res.data.response)
       })
       .catch((err) => {
         toast.error(err.response.data.message);
