@@ -59,6 +59,7 @@ export interface Article {
   tags: Tag[];
   status_history: StatusHistory[];
   status: string;
+  portalIds: string[];
 }
 
 export interface User {
@@ -148,7 +149,6 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
     const response = await api
       .post("/article", data, config)
       .then((res) => {
-        console.log('res.data', res.data)
         toast.success(`Artigo criado com sucesso!`);
         setTimeout(() => {
           back();

@@ -78,8 +78,6 @@ const uploadThumbnailToServer = async (
       return err;
     });
 
-  console.log('response.data.thumbnailUrl', response.data.thumbnailUrl)
-  console.log('response', response)
   return response.data.thumbnailUrl || "";
 };
 
@@ -186,8 +184,6 @@ export default function FormCreateArticle() {
         creator: profile.id,
       };
       const createdArticle = await CreateArticle(formData).then((res) => {console.log('res', res); return res;});
-      console.log('selectedImage', selectedImage)
-      console.log('createdArticle', createdArticle)
       if (selectedImage && selectedImage.file && createdArticle?.id) {
         try {
           await uploadThumbnailToServer(

@@ -156,36 +156,60 @@ export const columns: ColumnDef<Article>[] = [
   {
     accessorKey: "thumb",
     header: "",
-    cell: ({ row }) => (
-      <TooltipProvider delayDuration={300}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <img
-              src={`http://localhost:5555/${row?.original?.thumbnail}`}
-              alt={"Thumbnail para o artigo:" + row?.original?.title}
-              className="rounded-full h-6 w-6 cursor-pointer mr-2"
-            />
-          </TooltipTrigger>
-          <TooltipPortal>
-            <TooltipContent
-              side="top"
-              align="center"
-              sideOffset={10}
-              className="bg-transparent border border-gray-300/50 backdrop-blur-lg p-2 rounded-lg shadow-2xl"
-            >
+    cell: ({ row }) => {
+      const article = row?.original;
+      
+      let thumbnailUrl = 'Sem foto' ;
+      
+      if (article?.thumbnail) {
+        if (typeof article.thumbnail === 'string') {
+          thumbnailUrl = article.thumbnail;
+        } else if (typeof article.thumbnail === 'object') {
+          const thumbnailObj = article.thumbnail as Record<string, any>;
+          if (thumbnailObj.url) {
+            thumbnailUrl = thumbnailObj.url;
+          } else if (thumbnailObj.key) {
+            thumbnailUrl = `http://localhost:5555/uploads/${thumbnailObj.key}`;
+          } else if (thumbnailObj.Location) {
+            thumbnailUrl = thumbnailObj.Location;
+          }
+        }
+      }
+ 
+      
+      return (
+        <TooltipProvider delayDuration={300}>
+          <Tooltip>
+            <TooltipTrigger asChild>
               <img
-                src={`http://localhost:5555/${row?.original?.thumbnail}`}
-                alt="Imagem ampliada"
-                className="w-56 h-56 object-cover rounded-lg"
+                src={thumbnailUrl }
+                alt={"Thumbnail para o artigo:" + article?.title}
+                className="rounded-full h-6 w-6 cursor-pointer mr-2 object-cover"
+              
               />
-              <span className="font-semibold w-56 mt-2 text-body-g flex flex-wrap">
-                {row?.original?.title}
-              </span>
-            </TooltipContent>
-          </TooltipPortal>
-        </Tooltip>
-      </TooltipProvider>
-    ),
+            </TooltipTrigger>
+            <TooltipPortal>
+              <TooltipContent
+                side="top"
+                align="center"
+                sideOffset={10}
+                className="bg-transparent border border-gray-300/50 backdrop-blur-lg p-2 rounded-lg shadow-2xl"
+              >
+                <img
+                  src={thumbnailUrl }
+                  alt="Imagem ampliada"
+                  className="w-56 h-56 object-cover rounded-lg"
+                 
+                />
+                <span className="font-semibold w-56 mt-2 text-body-g flex flex-wrap">
+                  {article?.title}
+                </span>
+              </TooltipContent>
+            </TooltipPortal>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    },
   },
   {
     accessorKey: "title",

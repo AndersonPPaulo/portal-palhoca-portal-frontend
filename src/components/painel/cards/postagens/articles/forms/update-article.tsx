@@ -81,11 +81,11 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   );
 
   const getInitialPortalIds = () => {
-    if (Array.isArray(article.city)) {
-      return article.city.map((c: any) => c.id);
+    if (Array.isArray(article.portalIds)) {
+      return article.portalIds.map((c: any) => c.id);
     }
-    if (article.city?.id) {
-      return [article.city.id];
+    if (article.portalIds? article.portalIds : null) {
+      return [article.portalIds];
     }
     return [];
   };
