@@ -418,7 +418,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
           </div>
 
           <div className="flex gap-6">
-            <div className="flex flex-col gap-1 w-full">
+            <div className="flex flex-col  w-full">
               <ThumbnailUploader
                 onImageUpload={handleImageUpload}
                 initialImage={selectedImage?.preview}
@@ -433,7 +433,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
               />
              {/* Campo para a descrição da thumbnail */}
              {thumbnailDescription && (
-                <span className="text-gray-700 mt-2 ml-2">
+                <span className="text-gray-700 ">
                   Descrição da Imagem: {thumbnailDescription}
                 </span>
               )}

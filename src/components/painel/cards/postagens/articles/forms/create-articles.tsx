@@ -252,7 +252,7 @@ export default function FormCreateArticle() {
           className="space-y-6 p-6"
         >
           <div className="flex justify-between items-center -mb-4">
-            <ReturnPageButton onClick={() => push("/postagens?tab=PUBLISHED")} />
+            <ReturnPageButton />
           </div>
           <div className="flex gap-6">
             <div className="w-full">
