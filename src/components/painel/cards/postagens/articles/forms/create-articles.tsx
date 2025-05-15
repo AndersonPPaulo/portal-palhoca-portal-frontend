@@ -11,7 +11,6 @@ import { parseCookies } from "nookies";
 import CustomInput from "@/components/input/custom-input";
 import CustomSelect, { OptionType } from "@/components/select/custom-select";
 import { Button } from "@/components/ui/button";
-import Switch from "@/components/switch";
 import TiptapEditor from "@/components/editor/tiptapEditor";
 import ReturnPageButton from "@/components/button/returnPage";
 import ThumbnailUploader from "@/components/thumbnail";
@@ -42,6 +41,7 @@ const articleSchema = z.object({
   tagIds: z.array(z.string()).min(1, "Pelo menos uma tag é obrigatória"),
   chiefEditorId: z.string().optional(),
   portalIds: z.array(z.string()).min(1, "Pelo menos um portal é obrigatório"),
+  thumbnailDescription: z.string().optional().default(""),
 });
 type ArticleFormData = z.infer<typeof articleSchema>;
 
@@ -59,23 +59,29 @@ const uploadThumbnailToServer = async (
 ): Promise<string> => {
   const { "user:token": token } = parseCookies();
   const formData = new FormData();
-  formData.append("description", description);
+
+  // Garantir que a descrição seja enviada, mesmo que vazia
+  formData.append("description", description || "");
   formData.append("thumbnail", file);
+
   const config = {
     headers: {
       Authorization: `bearer ${token}`,
       "Content-Type": "multipart/form-data",
     },
   };
-  const response = await api
-    .post(`/upload-thumbnail/${articleId}`, formData, config)
-    .then((res) => console.log(res))
-    .catch((err) => {
-      console.log(err);
-      return err;
-    });
 
-  return response.data.thumbnailUrl || "";
+  try {
+    const response = await api.post(
+      `/upload-thumbnail/${articleId}`,
+      formData,
+      config
+    );
+    return response.data?.thumbnailUrl || "";
+  } catch (err) {
+    console.error("Erro ao fazer upload da thumbnail:", err);
+    return "";
+  }
 };
 
 export default function FormCreateArticle() {
@@ -87,6 +93,7 @@ export default function FormCreateArticle() {
     preview: string;
     description: string;
   } | null>(null);
+  const [thumbnailDescription, setThumbnailDescription] = useState("");
 
   const { CreateArticle, ListAuthorArticles } = useContext(ArticleContext);
   const { ListCategorys, listCategorys } = useContext(CategorysContext);
@@ -99,7 +106,7 @@ export default function FormCreateArticle() {
     ListCategorys && ListCategorys();
     ListAuthorArticles && ListAuthorArticles();
     ListPortals && ListPortals();
-  }, []);
+  }, [ListTags, ListCategorys, ListAuthorArticles, ListPortals]);
 
   const tagOptions: OptionType[] = Array.isArray(listTags)
     ? listTags.map((tag) => ({ value: tag.id, label: tag.name }))
@@ -135,14 +142,20 @@ export default function FormCreateArticle() {
       tagIds: [],
       chiefEditorId: profile?.chiefEditor?.id || "",
       portalIds: [],
+      thumbnailDescription: "",
     },
   });
 
   const title = watch("title");
-  const highlight = watch("highlight");
   const categoryId = watch("categoryId");
   const tagIds = watch("tagIds");
   const portalIds = watch("portalIds");
+  const watchedThumbnailDescription = watch("thumbnailDescription");
+
+  // Sincronizar o estado local com o valor do formulário
+  useEffect(() => {
+    setThumbnailDescription(watchedThumbnailDescription || "");
+  }, []);
 
   useEffect(() => {
     if (title) setValue("slug", generateSlug(title), { shouldValidate: true });
@@ -159,6 +172,8 @@ export default function FormCreateArticle() {
     description: string
   ) => {
     setSelectedImage({ file, preview: previewUrl, description });
+    setValue("thumbnailDescription", description);
+    setThumbnailDescription(description);
   };
 
   const submitWithStatus = async (data: ArticleFormData, status: string) => {
@@ -170,6 +185,11 @@ export default function FormCreateArticle() {
         );
         return;
       }
+
+      // Garantir que a descrição da thumbnail esteja nos dados
+      data.thumbnailDescription = thumbnailDescription;
+      console.log(" data.thumbnailDescription", data.thumbnailDescription);
+
       const formData = {
         ...data,
         thumbnail: "",
@@ -184,7 +204,7 @@ export default function FormCreateArticle() {
         try {
           await uploadThumbnailToServer(
             selectedImage.file,
-            selectedImage.description,
+            thumbnailDescription,
             createdArticle.id
           );
         } catch (error: any) {
@@ -203,6 +223,7 @@ export default function FormCreateArticle() {
       reset();
       setSelectedImage(null);
       setEditorContent("");
+      setThumbnailDescription("");
       setTimeout(() => push("/postagens"), 1800);
     } catch (error: any) {
       toast.error(
@@ -233,7 +254,7 @@ export default function FormCreateArticle() {
           className="space-y-6 p-6"
         >
           <div className="flex justify-between items-center -mb-4">
-            <ReturnPageButton />
+            <ReturnPageButton onClick={() => push("/postagens?tab=PUBLISHED")} />
           </div>
           <div className="flex gap-6">
             <div className="w-full">
@@ -259,49 +280,54 @@ export default function FormCreateArticle() {
             </div>
           </div>
           <div className="flex gap-6">
-            <div className="flex flex-col  w-full">
+            <div className="flex flex-col w-full">
               <ThumbnailUploader
                 onImageUpload={handleImageUpload}
                 initialImage={selectedImage?.preview}
               />
-              <input type="hidden" />
-              <input type="hidden" />
-            </div>
-            <div className="basis-1/2">
-            <div className="mt-5">
-              <CustomSelect
-                id="tagIds"
-                label="Tag(s):"
-                placeholder="Selecione uma ou mais tags"
-                options={tagOptions}
-                value={tagIds}
-                onChange={(value) =>
-                  setValue("tagIds", value as string[], {
-                    shouldValidate: true,
-                  })
-                }
-                isMulti={true}
-                error={errors.tagIds?.message}
-                noOptionsMessage="Nenhuma tag disponível"
-              />
-              </div>
-              <div className="mt-10">
-              <CustomInput
-                id="reading_time"
-                label="Tempo de leitura"
-                type="number"
-                {...register("reading_time", {
-                  setValueAs: (value: string) => Number(value) || undefined,
-                })}
-                onChange={(e) =>
-                  setValue("reading_time", Number(e.target.value))
-                }
-              />
-              {errors.reading_time && (
-                <span className="text-sm text-red-500">
-                  {errors.reading_time.message}
+
+              {/* Campo para a descrição da thumbnail */}
+              {thumbnailDescription && (
+                <span className="text-gray-700 mt-2 ml-2">
+                  Descrição da Imagem: {thumbnailDescription}
                 </span>
               )}
+            </div>
+            <div className="basis-1/2">
+              <div className="mt-5">
+                <CustomSelect
+                  id="tagIds"
+                  label="Tag(s):"
+                  placeholder="Selecione uma ou mais tags"
+                  options={tagOptions}
+                  value={tagIds}
+                  onChange={(value) =>
+                    setValue("tagIds", value as string[], {
+                      shouldValidate: true,
+                    })
+                  }
+                  isMulti={true}
+                  error={errors.tagIds?.message}
+                  noOptionsMessage="Nenhuma tag disponível"
+                />
+              </div>
+              <div className="mt-10">
+                <CustomInput
+                  id="reading_time"
+                  label="Tempo de leitura"
+                  type="number"
+                  {...register("reading_time", {
+                    setValueAs: (value: string) => Number(value) || undefined,
+                  })}
+                  onChange={(e) =>
+                    setValue("reading_time", Number(e.target.value))
+                  }
+                />
+                {errors.reading_time && (
+                  <span className="text-sm text-red-500">
+                    {errors.reading_time.message}
+                  </span>
+                )}
               </div>
             </div>
           </div>

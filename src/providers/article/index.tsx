@@ -251,6 +251,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
 
     try {
       const response = await api.patch("/article", data, config);
+      console.log('response', response)
       toast.success("Artigo atualizado com sucesso!");
     } catch (err: any) {
       toast.error(err.response.data.message);

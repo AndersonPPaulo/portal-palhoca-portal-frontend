@@ -2,9 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { api } from "@/service/api";
-import { parseCookies } from "nookies";
-import Image from "next/image";
 import CustomInput from "../input/custom-input";
 
 interface ThumbnailUploaderProps {
@@ -59,8 +56,6 @@ export default function ThumbnailUploader({
         return;
       }
 
-      // Chamar o callback se estiver disponível
-      // Apenas passamos o arquivo e o preview temporário, sem fazer upload ainda
       if (onImageUpload) {
         onImageUpload(selectedFile, previewUrl!, description);
       }

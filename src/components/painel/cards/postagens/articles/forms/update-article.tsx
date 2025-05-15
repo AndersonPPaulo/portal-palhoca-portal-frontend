@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import React, { useContext, useEffect, useState } from "react";
 import CustomInput from "@/components/input/custom-input";
 import { Button } from "@/components/ui/button";
-import Switch from "@/components/switch";
 import { useParams, useRouter } from "next/navigation";
 import TiptapEditor from "@/components/editor/tiptapEditor";
 import ReturnPageButton from "@/components/button/returnPage";
@@ -66,7 +65,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     article.status_history?.some((status) => status.status === "DRAFT") || false
   );
   const { UpdateArticle, ListAuthorArticles, listArticles, uploadThumbnail } =
-  useContext(ArticleContext);
+    useContext(ArticleContext);
   const { ListCategorys, listCategorys } = useContext(CategorysContext);
   const { ListTags, listTags } = useContext(TagContext);
   const { profile } = useContext(UserContext);
@@ -79,55 +78,107 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     description: string;
   } | null>(null);
   
+  // Estados para controlar se os dados foram carregados
+  const [tagsLoaded, setTagsLoaded] = useState(false);
+  const [portalsLoaded, setPortalsLoaded] = useState(false);
+  const [categoriesLoaded, setCategoriesLoaded] = useState(false);
+
   const findArticle = listArticles?.data?.find(
     (item) => item.id === parameter.id
   );
-  
-  // Função simplificada para extrair os IDs dos portais
-  const getArticlePortalIds = () => {
-    if (!article.portals) return [];
-    return Array.isArray(listPortals) && typeof article.portals[0] === 'object'
-      ? article.portals.map(portal => portal.id)
-      : article.portals;
-  };
 
   useEffect(() => {
-    const statusHistory = () => {
-      if (
-        !findArticle?.status_history ||
-        findArticle.status_history.length === 1
-      ) {
-        return "";
-      }
-      const sortedHistory = [...findArticle.status_history].sort(
-        (a, b) =>
-          new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
-      );
+    if (
+      !findArticle?.status_history ||
+      findArticle.status_history.length === 1
+    ) {
+      return;
+    }
+    const sortedHistory = [...findArticle.status_history].sort(
+      (a, b) =>
+        new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
+    );
 
-      setChangeStatus(sortedHistory[0].status);
-      setChangeMessage(sortedHistory[0].change_request_description);
-    };
-    statusHistory();
+    setChangeStatus(sortedHistory[0].status);
+    setChangeMessage(sortedHistory[0].change_request_description);
   }, [findArticle?.status_history]);
 
+  // Carregar dados necessários e garantir que todos carregaram antes de definir valores
   useEffect(() => {
-    Promise.all([
-      ListTags && ListTags(),
-      ListCategorys && ListCategorys(),
-      ListAuthorArticles && ListAuthorArticles(),
-      ListPortals && ListPortals(),
-    ]).then(() => {
-      if (article.tags && article.tags.length > 0 && listTags?.length > 0) {
-        const validTagIds = article.tags
-          .filter((tag) => listTags.some((listTag) => listTag.id === tag.id))
-          .map((tag) => tag.id);
-
-        setValue("tagIds", validTagIds);
+    const loadData = async () => {
+      try {
+        // Carregar tags
+        if (ListTags) {
+          await ListTags();
+          setTagsLoaded(true);
+        }
+        
+        // Carregar categorias
+        if (ListCategorys) {
+          await ListCategorys();
+          setCategoriesLoaded(true);
+        }
+        
+        // Carregar artigos do autor
+        if (ListAuthorArticles) {
+          await ListAuthorArticles();
+        }
+        
+        // Carregar portais
+        if (ListPortals) {
+          await ListPortals();
+          setPortalsLoaded(true);
+        }
+      } catch (error) {
+        toast.error("Erro ao carregar dados necessários");
       }
-    });
+    };
+    
+    loadData();
   }, []);
 
-  // Inicializar a imagem da thumbnail se existir
+  // Configurar valores iniciais após todos os dados serem carregados
+  useEffect(() => {
+    if (!tagsLoaded || !portalsLoaded || !categoriesLoaded) {
+      return; // Esperar até que todos os dados sejam carregados
+    }
+    
+    // Configurar tags
+    if (article.tags && article.tags.length > 0 && listTags?.length > 0) {
+      const validTagIds = article.tags
+        .filter((tag) => listTags.some((listTag) => listTag.id === tag.id))
+        .map((tag) => tag.id);
+      
+      setValue("tagIds", validTagIds);
+    }
+    
+    // Configurar portais
+    if (article.portals && article.portals.length > 0 && listPortals?.length > 0) {
+      const validPortalIds = article.portals
+        .filter((portal) => listPortals.some((listPortal) => listPortal.id === portal.id))
+        .map((portal) => portal.id);
+      
+      setValue("portalIds", validPortalIds);
+    }
+    
+    // Garantir que o formulário está completamente atualizado
+    reset({
+      id: article.id,
+      title: article.title,
+      slug: article.slug,
+      creator: article.creator?.id || "",
+      reading_time: Number(article.reading_time),
+      resume_content: article.resume_content,
+      content: article.content,
+      highlight: article.highlight === true,
+      categoryId: article.category?.id,
+      tagIds: article.tags?.map((tag) => tag.id) || [],
+      chiefEditorId: profile?.chiefEditor?.id,
+      portalIds: article.portals?.map((portal) => portal.id) || [],
+    });
+    
+  }, [article, tagsLoaded, portalsLoaded, categoriesLoaded, listTags, listPortals]);
+
   useEffect(() => {
     if (article.thumbnail) {
       let thumbnailUrl = "";
@@ -139,7 +190,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
       if (thumbnailUrl) {
         setSelectedImage({
-          file: null as any, // Não temos o arquivo original, só a URL
+          file: null as any, 
           preview: thumbnailUrl,
           description: article.thumbnail.description || "",
         });
@@ -150,19 +201,21 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   const tagOptions: OptionType[] = Array.isArray(listTags)
     ? listTags.map((tag: any) => ({ value: tag.id, label: tag.name }))
     : [];
-    
+
   const categoryOptions: OptionType[] = Array.isArray(listCategorys)
     ? listCategorys.map((category: any) => ({
         value: category.id,
         label: category.name,
       }))
     : [];
-    
-  // Corrigido para acessar portals dentro de listPortals
-  const portalOptions: OptionType[] = listPortals?.portals
-    ? listPortals.portals.map(portal => ({ value: portal.id, label: portal.name }))
+
+  const portalOptions: OptionType[] = Array.isArray(listPortals)
+    ? listPortals.map((portal: any) => ({
+        value: portal.id,
+        label: portal.name,
+      }))
     : [];
-    
+
   const creatorOptions: OptionType[] = listArticles?.data
     ? Array.from(
         new Map(
@@ -183,46 +236,10 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     watch,
     setValue,
     getValues,
+    handleSubmit,
   } = useForm<ArticleFormData>({
     resolver: zodResolver(articleSchema),
-    defaultValues: {
-      id: article.id,
-      title: article.title,
-      slug: article.slug,
-      creator: article.creator.id,
-      reading_time: Number(article.reading_time),
-      resume_content: article.resume_content,
-      content: article.content,
-      highlight: article.highlight === true,
-      categoryId: article.category?.id,
-      tagIds: article.tags?.map((tag) => tag.id) || [],
-      portalIds: getArticlePortalIds(), 
-    },
   });
-
-  useEffect(() => {
-    if (article) {
-      reset({
-        id: article.id,
-        title: article.title,
-        slug: article.slug,
-        creator: article.creator?.id || "",
-        reading_time: Number(article.reading_time),
-        resume_content: article.resume_content,
-        content: article.content,
-        highlight: article.highlight === true,
-        categoryId: article.category?.id,
-        tagIds: article.tags?.map((tag) => tag.id) || [],
-        chiefEditorId: profile?.chiefEditor?.id,
-        portalIds: getArticlePortalIds(), 
-      });
-      setIsDraft(
-        article.status_history?.some((status) => status.status === "DRAFT") ||
-          false
-      );
-      setEditorContent(article.content || "");
-    }
-  }, [article, reset, profile]);
 
   const title = watch("title");
   const tagIds: string[] = watch("tagIds") || [];
@@ -280,11 +297,13 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         highlight: data.highlight,
         categoryId: data.categoryId,
         tagIds: data.tagIds,
-        portalIds: data.portalIds, // Enviando os IDs dos portais
+        portalIds: data.portalIds,
         setToDraft: setToDraft,
         chiefEditorId: profile?.chiefEditor?.id,
       };
-
+      
+      // Enviar dados para API (sem esperar retorno de dados)
+      console.log('finalData', finalData)
       await UpdateArticle(finalData, article.id);
 
       // Se tem imagem nova selecionada, faz o upload
@@ -296,17 +315,22 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
             article.id
           );
         } catch (error) {
-          console.error("Erro no upload da thumbnail:", error);
+          toast.error("Erro no upload da thumbnail");
         }
       }
 
       const statusMsg = setToDraft ? "Rascunho" : "Pendente de Revisão";
       toast.success(`Artigo atualizado com sucesso! Status: ${statusMsg}`);
+      
+      // Recarregar dados do local listing após submissão
+      if (ListAuthorArticles) {
+        await ListAuthorArticles();
+      }
+      
       setTimeout(() => {
         push("/postagens");
-      }, 1800);
+      }, 1);
     } catch (error) {
-      console.error("Erro ao atualizar artigo:", error);
       toast.error("Erro ao atualizar artigo. Tente novamente.");
     } finally {
       setIsSubmitting(false);
@@ -314,13 +338,15 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   };
 
   const handleSaveAsDraft = async () => {
-    const formData = getValues();
-    await submitArticle(formData, true);
+    handleSubmit((data) => submitArticle(data, true))();
+    setTimeout(() => {
+      push("/postagens?tab=DRAFT");
+    }, 1);
   };
 
   const handleSendForReview = async () => {
-    const formData = getValues();
-    await submitArticle(formData, false);
+    handleSubmit((data) => submitArticle(data, false))();
+   
   };
 
   const handleEditorChange = (content: string) => {
@@ -333,7 +359,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <form className="space-y-6 p-6">
           <div className="flex justify-between items-center -mb-4">
-            <ReturnPageButton />
+            <ReturnPageButton onClick={() => push("/postagens?tab=PUBLISHED")}/>
           </div>
           <div className="flex gap-6">
             <CustomInput
@@ -365,41 +391,41 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
               <input type="hidden" {...register("thumbnailDescription")} />
             </div>
             <div className="basis-1/2">
-            <div className="mt-5">
-              <CustomSelect
-                id="tagIds"
-                label="Tag(s):"
-                placeholder="Selecione uma ou mais tags"
-                options={tagOptions}
-                value={tagIds}
-                onChange={(value) =>
-                  setValue("tagIds", value as string[], {
-                    shouldValidate: true,
-                  })
-                }
-                isMulti={true}
-                error={errors.tagIds?.message}
-                noOptionsMessage="Nenhuma tag disponível"
-              />
-            </div>
-            <div className="mt-10">
-              <CustomInput
-                id="reading_time"
-                label="Tempo de leitura"
-                type="number"
-                {...register("reading_time", {
-                  setValueAs: (value: string) => Number(value) || undefined,
-                })}
-                onChange={(e) => {
-                  setValue("reading_time", Number(e.target.value));
-                }}
-              />
-              {errors.reading_time && (
-                <span className="text-sm text-red-500">
-                  {errors.reading_time.message}
-                </span>
-              )}
-            </div>
+              <div className="mt-5">
+                <CustomSelect
+                  id="tagIds"
+                  label="Tag(s):"
+                  placeholder="Selecione uma ou mais tags"
+                  options={tagOptions}
+                  value={tagIds}
+                  onChange={(value) =>
+                    setValue("tagIds", value as string[], {
+                      shouldValidate: true,
+                    })
+                  }
+                  isMulti={true}
+                  error={errors.tagIds?.message}
+                  noOptionsMessage="Nenhuma tag disponível"
+                />
+              </div>
+              <div className="mt-10">
+                <CustomInput
+                  id="reading_time"
+                  label="Tempo de leitura"
+                  type="number"
+                  {...register("reading_time", {
+                    setValueAs: (value: string) => Number(value) || undefined,
+                  })}
+                  onChange={(e) => {
+                    setValue("reading_time", Number(e.target.value));
+                  }}
+                />
+                {errors.reading_time && (
+                  <span className="text-sm text-red-500">
+                    {errors.reading_time.message}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -442,11 +468,11 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
                 placeholder="Selecione um ou mais portais"
                 options={portalOptions}
                 value={portalIds}
-                onChange={(value) =>
+                onChange={(value) => {
                   setValue("portalIds", value as string[], {
                     shouldValidate: true,
-                  })
-                }
+                  });
+                }}
                 isMulti={true}
                 error={errors.portalIds?.message}
                 noOptionsMessage="Nenhum portal disponível"
@@ -496,11 +522,6 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
                 value={changeMessage}
                 disabled
               />
-              {errors.resume_content && (
-                <span className="text-sm text-red-500">
-                  {errors.resume_content.message}
-                </span>
-              )}
             </div>
           ) : null}
           <div className="flex justify-end gap-4">

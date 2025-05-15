@@ -1,17 +1,20 @@
 "use client";
 
+import { on } from "events";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Button } from "../ui/button";
 
-export default function ReturnPageButton() {
+export default function ReturnPageButton({onClick}: {onClick?: () => void}) {
   const { back } = useRouter();
 
   return (
-    <span
-      onClick={() => back()}
-      className="flex items-center bg-primary-light text-primary p-2 rounded-full"
+    <Button
+    type="button"
+      onClick={onClick}
+      className="flex items-center bg-primary-light text-primary  rounded-full"
     >
       <ArrowLeft size={24} />
-    </span>
+    </Button>
   );
 }
