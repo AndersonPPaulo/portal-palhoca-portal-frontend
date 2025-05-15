@@ -20,7 +20,6 @@ import { CategorysContext } from "@/providers/categorys";
 import { TagContext } from "@/providers/tags";
 import { UserContext } from "@/providers/user";
 import { PortalContext } from "@/providers/portal";
-import { error } from "console";
 
 const ARTICLE_STATUS = { DRAFT: "DRAFT", PENDING_REVIEW: "PENDING_REVIEW" };
 
@@ -177,8 +176,9 @@ export default function FormCreateArticle() {
         initialStatus: status,
         chiefEditorId: profile.chiefEditor?.id || "",
         creator: profile.id,
-        portals: data.portalIds, // Map portalIds to portals
+        portals: data.portalIds,
       };
+
       const createdArticle = await CreateArticle(formData);
       if (selectedImage && selectedImage.file && createdArticle?.id) {
         try {
@@ -234,19 +234,6 @@ export default function FormCreateArticle() {
         >
           <div className="flex justify-between items-center -mb-4">
             <ReturnPageButton />
-            <div className="flex items-center justify-end gap-6 rounded-lg p-4">
-              <div className="flex items-center gap-2">
-                <label htmlFor="highlight" className="text-gray-40">
-                  Destaque
-                </label>
-                <Switch
-                  value={highlight}
-                  onChange={(checked) =>
-                    setValue("highlight", checked, { shouldValidate: true })
-                  }
-                />
-              </div>
-            </div>
           </div>
           <div className="flex gap-6">
             <div className="w-full">
@@ -272,15 +259,16 @@ export default function FormCreateArticle() {
             </div>
           </div>
           <div className="flex gap-6">
-            <div className="flex flex-col gap-1 w-full">
+            <div className="flex flex-col  w-full">
               <ThumbnailUploader
                 onImageUpload={handleImageUpload}
                 initialImage={selectedImage?.preview}
               />
               <input type="hidden" />
-              <input type="hidden"  />
+              <input type="hidden" />
             </div>
             <div className="basis-1/2">
+            <div className="mt-5">
               <CustomSelect
                 id="tagIds"
                 label="Tag(s):"
@@ -296,8 +284,8 @@ export default function FormCreateArticle() {
                 error={errors.tagIds?.message}
                 noOptionsMessage="Nenhuma tag disponível"
               />
-            </div>
-            <div className="basis-1/2 gap-1 flex flex-col">
+              </div>
+              <div className="mt-10">
               <CustomInput
                 id="reading_time"
                 label="Tempo de leitura"
@@ -314,6 +302,7 @@ export default function FormCreateArticle() {
                   {errors.reading_time.message}
                 </span>
               )}
+              </div>
             </div>
           </div>
           <div className="flex gap-6">

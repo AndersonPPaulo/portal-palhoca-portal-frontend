@@ -40,7 +40,7 @@ const articleSchema = z.object({
   categoryId: z.string().min(1, "Adicione uma categoria"),
   tagIds: z.array(z.string()).min(1, "Pelo menos uma tag é obrigatória"),
   chiefEditorId: z.string().optional(),
-  portalIds: z.array(z.string()).optional(),
+  portalIds: z.array(z.string()).min(1, "Pelo menos um portal é obrigatório"),
 });
 
 type ArticleFormData = z.infer<typeof articleSchema>;
@@ -52,32 +52,6 @@ const generateSlug = (text: string) => {
     .replace(/\s+/g, "-")
     .replace(/[^\w-]+/g, "");
 };
-
-// const uploadThumbnailToServer = async (
-//   file: File,
-//   description: string,
-//   articleId: string
-// ): Promise<string> => {
-//   const { "user:token": token } = parseCookies();
-//   const formData = new FormData();
-//   formData.append("description", description);
-//   formData.append("thumbnail", file);
-//   const config = {
-//     headers: {
-//       Authorization: `bearer ${token}`,
-//       "Content-Type": "multipart/form-data",
-//     },
-//   };
-//   try {
-//     const response = await api.post(`/upload-thumbnail/${articleId}`, formData, config);
-//     return response.data.thumbnailUrl || "";
-//   } catch (err) {
-//     console.error("Erro no upload da imagem:", err);
-//     throw err;
-//   }
-// };
-
-
 
 interface FormEditArticleProps {
   article: Article;
@@ -92,7 +66,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     article.status_history?.some((status) => status.status === "DRAFT") || false
   );
   const { UpdateArticle, ListAuthorArticles, listArticles, uploadThumbnail } =
-    useContext(ArticleContext);
+  useContext(ArticleContext);
   const { ListCategorys, listCategorys } = useContext(CategorysContext);
   const { ListTags, listTags } = useContext(TagContext);
   const { profile } = useContext(UserContext);
@@ -104,37 +78,17 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     preview: string;
     description: string;
   } | null>(null);
-
+  
   const findArticle = listArticles?.data?.find(
     (item) => item.id === parameter.id
   );
-
-  const getInitialPortals = () => {
-    if (!article.portals) {
-      return [];
-    }
-
-    if (
-      Array.isArray(article.portals) &&
-      article.portals.length > 0 &&
-      typeof article.portals[0] === "object"
-    ) {
-      return article.portals.map((portal) => portal.id);
-    }
-
-    if (
-      typeof article.portals === "object" &&
-      article.portals !== null &&
-      !Array.isArray(article.portals)
-    ) {
-      return [article.portals];
-    }
-
-    if (Array.isArray(article.portals)) {
-      return article.portals;
-    }
-
-    return [];
+  
+  // Função simplificada para extrair os IDs dos portais
+  const getArticlePortalIds = () => {
+    if (!article.portals) return [];
+    return Array.isArray(listPortals) && typeof article.portals[0] === 'object'
+      ? article.portals.map(portal => portal.id)
+      : article.portals;
   };
 
   useEffect(() => {
@@ -158,65 +112,22 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
   useEffect(() => {
     Promise.all([
-      ListTags(),
-      ListCategorys(),
-      ListAuthorArticles(),
+      ListTags && ListTags(),
+      ListCategorys && ListCategorys(),
+      ListAuthorArticles && ListAuthorArticles(),
       ListPortals && ListPortals(),
     ]).then(() => {
-      // Lógica para as tags
-      if (article.tags && article.tags.length > 0 && listTags.length > 0) {
+      if (article.tags && article.tags.length > 0 && listTags?.length > 0) {
         const validTagIds = article.tags
           .filter((tag) => listTags.some((listTag) => listTag.id === tag.id))
           .map((tag) => tag.id);
 
         setValue("tagIds", validTagIds);
       }
-
-      // Lógica para os portais (similar às tags)
-      // if (
-      //   article.portals &&
-      //   Array.isArray(listPortals) &&
-      //   listPortals.length > 0
-      // ) {
-        // Para portals como array de objetos
-    //     if (
-    //       Array.isArray(article.portals) &&
-    //       article.portals.length > 0 &&
-    //       typeof article.portals[0] === "object"
-    //     ) {
-    //       const validPortalIds = article.portals
-    //         .filter((portal) =>
-    //           listPortals.some((listPortal) => listPortal.id === portal.id)
-    //         )
-    //         .map((portal) => portal.id);
-
-    //       setValue("portalIds", validPortalIds);
-    //     }
-    //     // Para portal como objeto único
-    //     else if (
-    //       typeof article.portals === "object" &&
-    //       article.portals !== null &&
-    //       !Array.isArray(article.portals)
-    //     ) {
-    //       const portalId = article.portals.id;
-    //       if (listPortals.some((listPortal) => listPortal.id === portalId)) {
-    //         setValue("portalIds", [portalId]);
-    //       }
-    //     }
-    //     // Para portals como array de strings (IDs)
-    //     else if (Array.isArray(article.portals)) {
-    //       const validPortalIds = article.portals.filter((portalId) =>
-    //         listPortals.some((listPortal) => listPortal.id === portalId)
-    //       );
-
-    //       setValue("portalIds", validPortalIds);
-    //     }
-    //   }
     });
   }, []);
 
   // Inicializar a imagem da thumbnail se existir
-
   useEffect(() => {
     if (article.thumbnail) {
       let thumbnailUrl = "";
@@ -239,18 +150,19 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   const tagOptions: OptionType[] = Array.isArray(listTags)
     ? listTags.map((tag: any) => ({ value: tag.id, label: tag.name }))
     : [];
+    
   const categoryOptions: OptionType[] = Array.isArray(listCategorys)
     ? listCategorys.map((category: any) => ({
         value: category.id,
         label: category.name,
       }))
     : [];
-  const portalOptions: OptionType[] = Array.isArray(listPortals)
-    ? listPortals.map((portal: any) => ({
-        value: portal.id,
-        label: portal.name,
-      }))
+    
+  // Corrigido para acessar portals dentro de listPortals
+  const portalOptions: OptionType[] = listPortals?.portals
+    ? listPortals.portals.map(portal => ({ value: portal.id, label: portal.name }))
     : [];
+    
   const creatorOptions: OptionType[] = listArticles?.data
     ? Array.from(
         new Map(
@@ -266,11 +178,11 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
   const {
     register,
-    // handleSubmit,
     formState: { errors },
     reset,
     watch,
     setValue,
+    getValues,
   } = useForm<ArticleFormData>({
     resolver: zodResolver(articleSchema),
     defaultValues: {
@@ -284,7 +196,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       highlight: article.highlight === true,
       categoryId: article.category?.id,
       tagIds: article.tags?.map((tag) => tag.id) || [],
-      portalIds: []
+      portalIds: getArticlePortalIds(), 
     },
   });
 
@@ -302,7 +214,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         categoryId: article.category?.id,
         tagIds: article.tags?.map((tag) => tag.id) || [],
         chiefEditorId: profile?.chiefEditor?.id,
-        portalIds: []
+        portalIds: getArticlePortalIds(), 
       });
       setIsDraft(
         article.status_history?.some((status) => status.status === "DRAFT") ||
@@ -313,7 +225,6 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   }, [article, reset, profile]);
 
   const title = watch("title");
-  const highlight = watch("highlight");
   const tagIds: string[] = watch("tagIds") || [];
   const categoryId: string = watch("categoryId") || "";
   const portalIds: string[] = watch("portalIds") || [];
@@ -340,22 +251,6 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     return selectedTags;
   };
 
-  // Função para validar portais selecionados (similar às tags)
-  const validatePortalSelection = (selectedPortals: string[]) => {
-    const validPortals = selectedPortals.filter((portalId) =>
-      portalOptions.some((option) => option.value === portalId)
-    );
-
-    if (validPortals.length !== selectedPortals.length) {
-      toast.error(
-        "Um ou mais portais selecionados não foram encontrados. Por favor, selecione apenas portais válidos."
-      );
-      return validPortals;
-    }
-
-    return selectedPortals;
-  };
-
   const handleImageUpload = (
     file: File,
     previewUrl: string,
@@ -363,23 +258,14 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   ) => {
     setSelectedImage({ file, preview: previewUrl, description });
     setValue("thumbnailDescription", description, { shouldValidate: true });
-    // Não definimos a URL da thumbnail aqui, pois será feito no envio do formulário
   };
 
   const submitArticle = async (data: ArticleFormData, setToDraft: boolean) => {
     try {
       const validatedTags = validateTagSelection(data.tagIds);
-      const validatedPortals = data.portalIds
-        ? validatePortalSelection(data.portalIds)
-        : [];
 
       if (validatedTags.length !== data.tagIds.length) {
         setValue("tagIds", validatedTags);
-        return;
-      }
-
-      if (data.portalIds && validatedPortals.length !== data.portalIds.length) {
-        setValue("portalIds", validatedPortals);
         return;
       }
 
@@ -394,7 +280,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         highlight: data.highlight,
         categoryId: data.categoryId,
         tagIds: data.tagIds,
-        portalIds: ["0910e66d-af7a-4052-8594-805ec34ba830", "2e4bc219-389f-49cd-b7c5-30e6c738603a"],
+        portalIds: data.portalIds, // Enviando os IDs dos portais
         setToDraft: setToDraft,
         chiefEditorId: profile?.chiefEditor?.id,
       };
@@ -411,7 +297,6 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
           );
         } catch (error) {
           console.error("Erro no upload da thumbnail:", error);
-          // Continua com a thumbnail atual se falhar
         }
       }
 
@@ -443,47 +328,13 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     setValue("content", content, { shouldValidate: true });
   };
 
-  const getValues = () => {
-    return {
-      id: article.id,
-      title: watch("title"),
-      slug: watch("slug"),
-      creator: watch("creator"),
-      reading_time: watch("reading_time"),
-      thumbnail: watch("thumbnail"),
-      thumbnailDescription: watch("thumbnailDescription"),
-      resume_content: watch("resume_content"),
-      content: watch("content"),
-      highlight: watch("highlight"),
-      categoryId: watch("categoryId"),
-      tagIds: watch("tagIds"),
-      portals: watch("portalIds") || [],
-      chiefEditorId: profile?.chiefEditor?.id || "",
-    };
-  };
-
   return (
     <div className="w-full h-full flex flex-col bg-white rounded-[24px]">
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <form className="space-y-6 p-6">
           <div className="flex justify-between items-center -mb-4">
             <ReturnPageButton />
-
-            <div className="flex items-center justify-end gap-6 rounded-lg p-4">
-              <div className="flex items-center gap-2">
-                <label htmlFor="highlight" className="text-gray-40">
-                  Destaque
-                </label>
-                <Switch
-                  value={highlight}
-                  onChange={(checked) =>
-                    setValue("highlight", checked, { shouldValidate: true })
-                  }
-                />
-              </div>
-            </div>
           </div>
-
           <div className="flex gap-6">
             <CustomInput
               id="title"
@@ -513,8 +364,8 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
               <input type="hidden" {...register("thumbnail")} />
               <input type="hidden" {...register("thumbnailDescription")} />
             </div>
-
             <div className="basis-1/2">
+            <div className="mt-5">
               <CustomSelect
                 id="tagIds"
                 label="Tag(s):"
@@ -531,7 +382,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
                 noOptionsMessage="Nenhuma tag disponível"
               />
             </div>
-            <div className="basis-1/4 flex flex-col">
+            <div className="mt-10">
               <CustomInput
                 id="reading_time"
                 label="Tempo de leitura"
@@ -548,6 +399,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
                   {errors.reading_time.message}
                 </span>
               )}
+            </div>
             </div>
           </div>
 

@@ -243,10 +243,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
     data: UpdateArticleProps,
     articleId: string
   ): Promise<void> => {
-    console.log("articleId", articleId);
-    console.log("data", data);
     const { "user:token": token } = parseCookies();
-    console.log("token", token);
     const config = {
       headers: { Authorization: `bearer ${token}` },
       params: { articleId },
@@ -254,10 +251,8 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
 
     try {
       const response = await api.patch("/article", data, config);
-      console.log("response", response);
       toast.success("Artigo atualizado com sucesso!");
     } catch (err: any) {
-      console.log("err", err);
       toast.error(err.response.data.message);
       throw err;
     }
