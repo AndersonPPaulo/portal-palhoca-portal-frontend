@@ -45,9 +45,11 @@ export function ArticleViewModal({
   const [rejectReason, setRejectReason] = useState("");
   const [changeRequest, setChangeRequest] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [sortedStatusHistory, setSortedStatusHistory] = useState(article.status_history || []);
+  const [sortedStatusHistory, setSortedStatusHistory] = useState(
+    article.status_history || []
+  );
+  console.log("article", article);
 
-  // Reset forms when modal opens/closes and sort status history
   useEffect(() => {
     if (!open) {
       setShowRejectForm(false);
@@ -57,7 +59,8 @@ export function ArticleViewModal({
     } else if (article.status_history && article.status_history.length > 0) {
       // Ordenar o histórico de status pela data (do mais recente para o mais antigo)
       const sorted = [...article.status_history].sort(
-        (a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
+        (a, b) =>
+          new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
       );
       setSortedStatusHistory(sorted);
     }
@@ -104,19 +107,18 @@ export function ArticleViewModal({
   // Obter o status mais recente baseado na data
   const getCurrentStatus = () => {
     if (!article.status_history || article.status_history.length === 0) {
-      return article.status; // Fallback para o status direto do artigo
+      return article.status;
     }
-    
-    // Se já temos o histórico ordenado, pegamos o primeiro item (mais recente)
+
     if (sortedStatusHistory.length > 0) {
       return sortedStatusHistory[0].status;
     }
-    
-    // Caso ainda não tenhamos o histórico ordenado
+
     const mostRecent = [...article.status_history].sort(
-      (a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
+      (a, b) =>
+        new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
     )[0];
-    
+
     return mostRecent.status;
   };
 
@@ -139,7 +141,6 @@ export function ArticleViewModal({
         reviewerId: profile?.id,
       };
 
-      // Add optional parameters if provided
       if (newStatus === "REJECTED" && options?.reason_reject) {
         payload.reason_reject = options.reason_reject;
       }
@@ -149,10 +150,8 @@ export function ArticleViewModal({
         options?.change_request_description
       ) {
         payload.change_request_description = options.change_request_description;
-        // Não alteramos o newStatus para DRAFT, mantemos CHANGES_REQUESTED
       }
 
-      // Fazer a chamada à API para atualizar o status
       await api.patch(`/article-status-review/${article.id}`, payload, config);
 
       const successMessage = {
@@ -164,8 +163,6 @@ export function ArticleViewModal({
 
       toast.success(successMessage[newStatus]);
 
-      // Atualize apenas o artigo atual, sem recarregar todos os artigos
-      // Isso evita que artigos já publicados sejam afetados
       await ListAuthorArticles();
 
       // Fechar o modal
@@ -275,6 +272,12 @@ export function ArticleViewModal({
                     </div>
                   </div>
                 )}
+                {/* Campo para a descrição da thumbnail */}
+                {article.thumbnail.description && (
+                  <span className="text-gray-800">
+                    Descrição da Imagem: {article.thumbnail.description}
+                  </span>
+                )}
                 {/* Resumo */}
                 <div className="bg-gray-100 p-4 rounded-md">
                   <h3 className="font-semibold mb-2">Resumo</h3>
@@ -326,14 +329,15 @@ export function ArticleViewModal({
                   <div className="overflow-hidden">
                     <h3 className="font-semibold mb-2">Portais</h3>
                     <div className="flex flex-wrap gap-2">
-                      {article.portals && article.portals.map((portal) => (
-                        <span
-                          key={portal.id}
-                          className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs truncate max-w-full"
-                        >
-                          {portal.name}
-                        </span>
-                      ))}
+                      {article.portals &&
+                        article.portals.map((portal) => (
+                          <span
+                            key={portal.id}
+                            className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs truncate max-w-full"
+                          >
+                            {portal.name}
+                          </span>
+                        ))}
                     </div>
 
                     <h3 className="font-semibold mt-4 mb-2">Status</h3>
@@ -349,9 +353,7 @@ export function ArticleViewModal({
                 {/* Histórico de Status - com tabela responsiva */}
                 {sortedStatusHistory.length > 0 && (
                   <div>
-                    <h3 className="font-semibold mb-2">
-                      Histórico de Status
-                    </h3>
+                    <h3 className="font-semibold mb-2">Histórico de Status</h3>
                     <div className="overflow-x-auto w-full">
                       <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-200">

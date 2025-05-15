@@ -186,9 +186,7 @@ export default function FormCreateArticle() {
         return;
       }
 
-      // Garantir que a descrição da thumbnail esteja nos dados
       data.thumbnailDescription = thumbnailDescription;
-      console.log(" data.thumbnailDescription", data.thumbnailDescription);
 
       const formData = {
         ...data,

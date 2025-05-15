@@ -77,6 +77,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     preview: string;
     description: string;
   } | null>(null);
+  const [thumbnailDescription, setThumbnailDescription] = useState("");
   
   // Estados para controlar se os dados foram carregados
   const [tagsLoaded, setTagsLoaded] = useState(false);
@@ -101,7 +102,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
     setChangeStatus(sortedHistory[0].status);
     setChangeMessage(sortedHistory[0].change_request_description);
-  }, [findArticle?.status_history]);
+  }, []);
 
   // Carregar dados necessários e garantir que todos carregaram antes de definir valores
   useEffect(() => {
@@ -161,6 +162,12 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       setValue("portalIds", validPortalIds);
     }
     
+    // Configurar a descrição da thumbnail se existir
+    if (article.thumbnail && article.thumbnail.description) {
+      setThumbnailDescription(article.thumbnail.description || "");
+      setValue("thumbnailDescription", article.thumbnail.description || "");
+    }
+    
     // Garantir que o formulário está completamente atualizado
     reset({
       id: article.id,
@@ -175,6 +182,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       tagIds: article.tags?.map((tag) => tag.id) || [],
       chiefEditorId: profile?.chiefEditor?.id,
       portalIds: article.portals?.map((portal) => portal.id) || [],
+      thumbnailDescription: article.thumbnail?.description || "",
     });
     
   }, [article, tagsLoaded, portalsLoaded, categoriesLoaded, listTags, listPortals]);
@@ -182,21 +190,27 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   useEffect(() => {
     if (article.thumbnail) {
       let thumbnailUrl = "";
+      let description = "";
+      
       if (typeof article.thumbnail === "string") {
         thumbnailUrl = article.thumbnail;
       } else if (article.thumbnail?.url) {
         thumbnailUrl = article.thumbnail.url;
+        description = article.thumbnail.description || "";
       }
 
       if (thumbnailUrl) {
         setSelectedImage({
           file: null as any, 
           preview: thumbnailUrl,
-          description: article.thumbnail.description || "",
+          description: description,
         });
+        
+        setThumbnailDescription(description);
+        setValue("thumbnailDescription", description);
       }
     }
-  }, [article]);
+  }, []);
 
   const tagOptions: OptionType[] = Array.isArray(listTags)
     ? listTags.map((tag: any) => ({ value: tag.id, label: tag.name }))
@@ -246,12 +260,20 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   const categoryId: string = watch("categoryId") || "";
   const portalIds: string[] = watch("portalIds") || [];
   const creator: string = watch("creator") || "";
+  const watchedThumbnailDescription = watch("thumbnailDescription");
+
+  // Sincronizar o estado local com o valor do formulário
+  useEffect(() => {
+    if (watchedThumbnailDescription !== undefined) {
+      setThumbnailDescription(watchedThumbnailDescription);
+    }
+  }, []);
 
   useEffect(() => {
     if (title) {
       setValue("slug", generateSlug(title), { shouldValidate: true });
     }
-  }, [title, setValue]);
+  }, []);
 
   const validateTagSelection = (selectedTags: string[]) => {
     const validTags = selectedTags.filter((tagId) =>
@@ -275,6 +297,21 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   ) => {
     setSelectedImage({ file, preview: previewUrl, description });
     setValue("thumbnailDescription", description, { shouldValidate: true });
+    setThumbnailDescription(description);
+  };
+
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setThumbnailDescription(value);
+    setValue("thumbnailDescription", value);
+    
+    // Também atualiza no objeto selectedImage se existir
+    if (selectedImage) {
+      setSelectedImage({
+        ...selectedImage,
+        description: value,
+      });
+    }
   };
 
   const submitArticle = async (data: ArticleFormData, setToDraft: boolean) => {
@@ -288,6 +325,9 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
       setIsSubmitting(true);
 
+      // Garantir que a descrição da thumbnail esteja nos dados
+      data.thumbnailDescription = thumbnailDescription;
+
       const finalData = {
         title: data.title,
         slug: data.slug,
@@ -300,10 +340,10 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         portalIds: data.portalIds,
         setToDraft: setToDraft,
         chiefEditorId: profile?.chiefEditor?.id,
+        thumbnailDescription: thumbnailDescription,
       };
       
-      // Enviar dados para API (sem esperar retorno de dados)
-      console.log('finalData', finalData)
+      // Enviar dados para API
       await UpdateArticle(finalData, article.id);
 
       // Se tem imagem nova selecionada, faz o upload
@@ -311,7 +351,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         try {
           await uploadThumbnail(
             selectedImage.file,
-            selectedImage.description,
+            thumbnailDescription,
             article.id
           );
         } catch (error) {
@@ -329,7 +369,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       
       setTimeout(() => {
         push("/postagens");
-      }, 1);
+      }, 1000);
     } catch (error) {
       toast.error("Erro ao atualizar artigo. Tente novamente.");
     } finally {
@@ -339,14 +379,10 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
   const handleSaveAsDraft = async () => {
     handleSubmit((data) => submitArticle(data, true))();
-    setTimeout(() => {
-      push("/postagens?tab=DRAFT");
-    }, 1);
   };
 
   const handleSendForReview = async () => {
     handleSubmit((data) => submitArticle(data, false))();
-   
   };
 
   const handleEditorChange = (content: string) => {
@@ -359,7 +395,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <form className="space-y-6 p-6">
           <div className="flex justify-between items-center -mb-4">
-            <ReturnPageButton onClick={() => push("/postagens?tab=PUBLISHED")}/>
+            <ReturnPageButton />
           </div>
           <div className="flex gap-6">
             <CustomInput
@@ -387,8 +423,20 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
                 onImageUpload={handleImageUpload}
                 initialImage={selectedImage?.preview}
               />
+              
+              {/* Campo oculto para o valor do formulário */}
               <input type="hidden" {...register("thumbnail")} />
-              <input type="hidden" {...register("thumbnailDescription")} />
+              <input 
+                type="hidden" 
+                {...register("thumbnailDescription")} 
+                value={thumbnailDescription} 
+              />
+             {/* Campo para a descrição da thumbnail */}
+             {thumbnailDescription && (
+                <span className="text-gray-700 mt-2 ml-2">
+                  Descrição da Imagem: {thumbnailDescription}
+                </span>
+              )}
             </div>
             <div className="basis-1/2">
               <div className="mt-5">
