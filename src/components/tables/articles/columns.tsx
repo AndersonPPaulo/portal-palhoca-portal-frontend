@@ -256,23 +256,23 @@ export const columns: ColumnDef<Article>[] = [
       </div>
     ),
   },
-  {
-    accessorKey: "highlight",
-    header: () => <div className="text-center w-[150px]">Destaque</div>,
-    cell: ({ row }) => (
-      <div className="flex justify-center w-[150px]">
-        {row?.original?.highlight ? (
-          <span className="bg-green text-white px-3 py-1 rounded-full text-sm">
-            Sim
-          </span>
-        ) : (
-          <span className="bg-red text-white px-3 py-1 rounded-full text-sm">
-            Não
-          </span>
-        )}
-      </div>
-    ),
-  },
+  // {
+  //   accessorKey: "highlight",
+  //   header: () => <div className="text-center w-[150px]">Destaque</div>,
+  //   cell: ({ row }) => (
+  //     <div className="flex justify-center w-[150px]">
+  //       {row?.original?.highlight ? (
+  //         <span className="bg-green text-white px-3 py-1 rounded-full text-sm">
+  //           Sim
+  //         </span>
+  //       ) : (
+  //         <span className="bg-red text-white px-3 py-1 rounded-full text-sm">
+  //           Não
+  //         </span>
+  //       )}
+  //     </div>
+  //   ),
+  // },
   {
     id: "actions",
     header: () => <div className="text-center">Ações</div>,

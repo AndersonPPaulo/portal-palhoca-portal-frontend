@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Search, ChevronRight, ChevronLeft, Check } from "lucide-react";
@@ -36,7 +35,11 @@ const CompanyTransferList: React.FC<CompanyTransferListProps> = ({
   } = useCompanyTransfer();
 
   if (isLoading) {
-    return <div className="flex justify-center items-center h-64">Carregando Comércios</div>;
+    return (
+      <div className="flex justify-center items-center h-64">
+        Carregando Comércios
+      </div>
+    );
   }
 
   return (
@@ -54,21 +57,22 @@ const CompanyTransferList: React.FC<CompanyTransferListProps> = ({
 
         <div className="flex justify-between mb-2 px-2">
           <div className="flex gap-2">
-            <Button 
-              onClick={() => selectAll("source")} 
+            <Button
+              onClick={() => selectAll("source")}
               className="rounded-3xl h-8 text-[13px] p-1"
             >
               Selecionar todos
             </Button>
-            <Button 
-              onClick={() => deselectAll("source")} 
-              className="rounded-3xl h-8 text-[13px] p-1" 
+            <Button
+              onClick={() => deselectAll("source")}
+              className="rounded-3xl h-8 text-[13px] p-1"
             >
               Limpar
             </Button>
           </div>
           <div className="text-sm text-gray-500">
-            {selectedSourceItems.length} de {filteredSourceItems.length} Selecionados
+            {selectedSourceItems.length} de {filteredSourceItems.length}{" "}
+            Selecionados
           </div>
         </div>
 
@@ -91,7 +95,9 @@ const CompanyTransferList: React.FC<CompanyTransferListProps> = ({
                           : "border-gray-300"
                       }`}
                     >
-                      {selectedSourceItems.includes(item.id) && <Check className="h-3 w-3 text-white" />}
+                      {selectedSourceItems.includes(item.id) && (
+                        <Check className="h-3 w-3 text-white" />
+                      )}
                     </div>
                   </div>
                   <span className="text-body-m">{item.label}</span>
@@ -99,7 +105,9 @@ const CompanyTransferList: React.FC<CompanyTransferListProps> = ({
               ))}
             </ul>
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-500">Nenhum comércio encontrado</div>
+            <div className="flex items-center justify-center h-full text-gray-500">
+              Nenhum comércio encontrado
+            </div>
           )}
         </div>
       </div>
@@ -144,21 +152,22 @@ const CompanyTransferList: React.FC<CompanyTransferListProps> = ({
 
         <div className="flex justify-between mb-2 px-2">
           <div className="flex gap-2">
-            <button 
-              onClick={() => selectAll("target")} 
-              className="text-sm text-gray-600 hover:text-gray-900"
+            <Button
+              onClick={() => selectAll("target")}
+              className="rounded-3xl h-8 text-[13px] p-1"
             >
               Selecionar todos
-            </button>
-            <button 
-              onClick={() => deselectAll("target")} 
-              className="text-sm text-gray-600 hover:text-gray-900"
+            </Button>
+            <Button
+              onClick={() => deselectAll("target")}
+              className="rounded-3xl h-8 text-[13px] p-1"
             >
               Limpar
-            </button>
+            </Button>
           </div>
           <div className="text-sm text-gray-500">
-            {selectedTargetItems.length} de {filteredTargetItems.length} Selecionados
+            {selectedTargetItems.length} de {filteredTargetItems.length}{" "}
+            Selecionados
           </div>
         </div>
 
@@ -181,7 +190,9 @@ const CompanyTransferList: React.FC<CompanyTransferListProps> = ({
                           : "border-gray-300"
                       }`}
                     >
-                      {selectedTargetItems.includes(item.id) && <Check className="h-3 w-3 text-white" />}
+                      {selectedTargetItems.includes(item.id) && (
+                        <Check className="h-3 w-3 text-white" />
+                      )}
                     </div>
                   </div>
                   <span className="text-body-m">{item.label}</span>
@@ -189,7 +200,9 @@ const CompanyTransferList: React.FC<CompanyTransferListProps> = ({
               ))}
             </ul>
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-500">Nenhum Comércio Selecionado</div>
+            <div className="flex items-center justify-center h-full text-gray-500">
+              Nenhum Comércio Selecionado
+            </div>
           )}
         </div>
       </div>

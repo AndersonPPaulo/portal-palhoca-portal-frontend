@@ -467,6 +467,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
                   onChange={(e) => {
                     setValue("reading_time", Number(e.target.value));
                   }}
+                  min={1}
                 />
                 {errors.reading_time && (
                   <span className="text-sm text-red-500">

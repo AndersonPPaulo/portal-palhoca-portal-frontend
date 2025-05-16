@@ -27,7 +27,7 @@ const articleSchema = z.object({
   slug: z.string().min(1, "Slug é obrigatório"),
   reading_time: z.preprocess(
     (val) => (val === "" ? undefined : Number(val)),
-    z.number().min(1, "Tempo de leitura é obrigatório")
+    z.number().min(0, "Tempo de leitura é obrigatório")
   ),
   resume_content: z
     .string()
@@ -106,7 +106,7 @@ export default function FormCreateArticle() {
     ListCategorys && ListCategorys();
     ListAuthorArticles && ListAuthorArticles();
     ListPortals && ListPortals();
-  }, [ListTags, ListCategorys, ListAuthorArticles, ListPortals]);
+  }, []);
 
   const tagOptions: OptionType[] = Array.isArray(listTags)
     ? listTags.map((tag) => ({ value: tag.id, label: tag.name }))
@@ -222,7 +222,7 @@ export default function FormCreateArticle() {
       setSelectedImage(null);
       setEditorContent("");
       setThumbnailDescription("");
-      setTimeout(() => push("/postagens"), 1800);
+      setTimeout(() => push("/postagens"), 1000);
     } catch (error: any) {
       toast.error(
         `Erro ao ${
@@ -320,6 +320,7 @@ export default function FormCreateArticle() {
                   onChange={(e) =>
                     setValue("reading_time", Number(e.target.value))
                   }
+                  min={1}
                 />
                 {errors.reading_time && (
                   <span className="text-sm text-red-500">

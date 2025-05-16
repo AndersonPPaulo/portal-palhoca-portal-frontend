@@ -43,6 +43,6 @@ export default function TableCompany({ filter }: TableCompanyProps) {
     return matchesName
   }) || [];
 
-  return  <DataTable columns={columns} data={filteredCompanies} />
+  return  <DataTable columns={columns} data={filteredCompanies}/>
   
 }

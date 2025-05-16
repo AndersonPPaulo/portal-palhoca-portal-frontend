@@ -6,6 +6,8 @@ export const tabCompanyConfigurations = [
   {
     value: "company",
     label: "Comércios",
+    name: "Comércios",
+    title: "Comércios",
     description:
       "Gerencie, edite e monitore os comércios cadastrados do seu site.",
     component: <Comercio />,
@@ -13,11 +15,12 @@ export const tabCompanyConfigurations = [
   },
   {
     value: "categoria",
+    title: "Categorias",
+    name: "Categorias",
     label: "Categorias de comércios",
     description:
       "Gerencie, edite e monitore as categorias dos comércios cadastrados do seu site.",
     component: <CategoriaComercio/>,
     path: "/comercio/categoria/criar",
   },
-  
 ];
