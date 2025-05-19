@@ -43,7 +43,7 @@ export function NavigationMain() {
   const renderLevels = (data: NavigationList, isChild = false) => {
     return data
       .filter(
-        (item) => !(profile?.role !== "superuser" && item.path === "/autores")
+        (item) => !(profile?.role.name !== "administrador" && item.path === "/autores")
       )
       .map((item, index) => {
         const isActive = pathname.startsWith(item.path || "");

@@ -9,7 +9,7 @@ export default function ReturnPageButton() {
   return (
     <span
       onClick={() => back()}
-      className="flex items-center bg-primary-light text-primary p-2 rounded-full"
+      className="flex items-center bg-primary-light text-primary p-2 rounded-full cursor-pointer hover:bg-primary-dark hover:text-white"
     >
       <ArrowLeft size={24} />
     </span>
