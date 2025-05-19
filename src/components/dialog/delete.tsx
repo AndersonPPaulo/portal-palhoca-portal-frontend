@@ -25,12 +25,19 @@ import { CategorysContext } from "@/providers/categorys";
 import { ArticleContext } from "@/providers/article";
 import { UserContext } from "@/providers/user";
 import { CompanyCategoryContext } from "@/providers/company-category/index.tsx";
+import { BannerContext } from "@/providers/banner";
 import { useRouter } from "next/navigation";
 
 interface Props {
   item_id: string;
   item_name: string;
-  context: "tags" | "categories" | "articles" | "users" | "companyCategory";
+  context:
+    | "tags"
+    | "categories"
+    | "articles"
+    | "users"
+    | "companyCategory"
+    | "banners";
 }
 
 
@@ -42,6 +49,7 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
   const { DeleteCompanyCategory, ListCompanyCategory } = useContext(
     CompanyCategoryContext
   );
+  const { UpdateBanner, ListBanners } = useContext(BannerContext);
 
   const { push } = useRouter();
   const [open, setOpen] = useState(false);
@@ -74,6 +82,9 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
       } else if (context === "companyCategory") {
         await DeleteCompanyCategory(item_id);
         ListCompanyCategory();
+      } else if (context === "banners") {
+        await UpdateBanner({ status: false }, item_id);
+        ListBanners();
       }
       setError("");
       setInputValue("");
@@ -110,13 +121,6 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
     }
   };
 
-  const deleteMappedText = {
-    tags: "tag",
-    categories: "categorias",
-    articles: "artigos",
-    companyCategory: "categorias",
-  };
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <TooltipProvider delayDuration={600}>
@@ -134,7 +138,7 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
               sideOffset={5}
             >
               <span>
-                Deletar{" "}
+                {context === "banners" ? "Atualizar" : "Deletar"}{" "}
                 {context === "tags"
                   ? "tag"
                   : context === "categories"
@@ -143,6 +147,8 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
                   ? "usuário"
                   : context === "companyCategory"
                   ? "categoria de comércio"
+                  : context === "banners"
+                  ? "banner"
                   : "artigo"}
               </span>
 
@@ -155,7 +161,7 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
       <DialogContent className="bg-white border-none outline-none !rounded-3xl">
         <DialogHeader className="mb-2">
           <DialogTitle className="text-header-s">
-            Deletar{" "}
+            {context === "banners" ? "Atualizar" : "Deletar"}{" "}
             {context === "tags"
               ? "tag"
               : context === "categories"
@@ -164,15 +170,20 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
               ? "usuário"
               : context === "companyCategory"
               ? "categoria de comércio"
+              : context === "banners"
+              ? "banner"
               : "artigo"}
           </DialogTitle>
           <DialogDescription className="flex flex-col gap-4 pt-2">
             {getDialogDescription()}
-            <span className="font-semibold">{item_name}</span>
+            <span className="font-normal">
+              Nome do conteudo que você deseja atualizar ou deletar:{" "}
+              <strong>{item_name}</strong>
+            </span>
           </DialogDescription>
         </DialogHeader>
         <CustomInput
-          placeholder="adicionar contexto para deletar"
+          placeholder="adicone o nome acima para confirmar"
           value={inputValue}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             setInputValue(e.target.value)
@@ -192,6 +203,8 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Deletando...
               </>
+            ) : context === "banners" ? (
+              "Confirmar e atualizar"
             ) : (
               "Confirmar e deletar"
             )}
