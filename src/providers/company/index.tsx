@@ -107,7 +107,7 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
   const { push } = useRouter();
   const [listCompany, setListCompany] = useState<CompanyProps | null>(null);
 
-  const ListCompany = async (limit = 10, page = 1, options = {}): Promise<CompanyProps> => {
+  const ListCompany = async (limit = 10000, page = 1, options = {}): Promise<CompanyProps> => {
     const config = { params: { limit, page, ...options } };
     const response = await api
       .get("/company", config)
