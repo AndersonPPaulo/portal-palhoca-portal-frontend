@@ -24,10 +24,6 @@ export interface TransferListItem {
   label: string;
 }
 
-
-
-
-
 interface CompanyTransferContextProps {
   // Company data
   companies: CompanyResponseProps;
