@@ -10,11 +10,11 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React from "react";
-
+import Image from "next/image";
 
 const CellActions = (companyId: string) => {
   const { push } = useRouter();
-  
+
   return (
     <div className="flex gap-6">
       <TooltipProvider delayDuration={600}>
@@ -46,6 +46,71 @@ const CellActions = (companyId: string) => {
 };
 
 export const columns: ColumnDef<ICompanyProps>[] = [
+  {
+    accessorKey: "thumb",
+    header: "",
+    cell: ({ row }) => {
+      const company = row?.original;
+
+      if (company?.company_image) {
+        let logoUrl = "";
+
+        const imageObj = company.company_image as Record<string, any>;
+        if (imageObj.url) {
+          logoUrl = imageObj.url;
+        }
+
+        if (logoUrl) {
+          return (
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <img
+                    src={logoUrl}
+                    alt={`Logo ${company.name}`}
+                    className="rounded-full w-10 h-10 cursor-pointer object-cover"
+                    onError={(e) => {
+                      // Fallback para imagem padrão em caso de erro
+                      (e.target as HTMLImageElement).src =
+                        "/placeholder-logo.png";
+                    }}
+                  />
+                </TooltipTrigger>
+                <TooltipPortal>
+                  <TooltipContent
+                    side="top"
+                    align="center"
+                    sideOffset={10}
+                    className="bg-transparent border border-gray-300/50 backdrop-blur-lg p-2 rounded-lg shadow-2xl"
+                  >
+                    <img
+                      src={logoUrl}
+                      alt={`Logo ${company.name}`}
+                      className="w-56 h-56 object-cover rounded-lg"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          "/placeholder-logo.png";
+                      }}
+                    />
+                    <span className="font-semibold w-56 mt-2 text-body-g flex flex-wrap">
+                      {company.name}
+                    </span>
+                  </TooltipContent>
+                </TooltipPortal>
+              </Tooltip>
+            </TooltipProvider>
+          );
+        }
+      }
+
+      // Sem imagem, mostra um placeholder
+      return (
+        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
+          Sem logo
+        </div>
+      );
+    },
+  },
   {
     accessorKey: "name",
     header: () => <div>Comércio</div>,
@@ -120,8 +185,11 @@ export const columns: ColumnDef<ICompanyProps>[] = [
               : "bg-orange"
           } px-3 py-1 rounded-full text-sm capitalize`}
         >
-          {row.original.status}
-          
+          {row.original.status === "active"
+            ? "Ativo"
+            : row.original.status === "blocked"
+            ? "Bloqueado"
+            : "Inativo"}
         </span>
       </div>
     ),
@@ -131,7 +199,11 @@ export const columns: ColumnDef<ICompanyProps>[] = [
     header: () => <div className="text-center">Ações</div>,
     size: 150,
     cell: ({ row }) => {
-      return <div className="flex justify-center">{CellActions(row.original.id)}</div>;
+      return (
+        <div className="flex justify-center">
+          {CellActions(row.original.id)}
+        </div>
+      );
     },
   },
 ];
