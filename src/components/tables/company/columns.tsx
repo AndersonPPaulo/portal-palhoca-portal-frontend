@@ -4,27 +4,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ICompanyProps } from "@/providers/company";
 import { Tooltip, TooltipArrow, TooltipPortal } from "@radix-ui/react-tooltip";
 import { ColumnDef } from "@tanstack/react-table";
 import { Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React from "react";
 
-export interface CompanyItem {
-  id: string;
-  name: string;
-  phone?: string;
-  openingHours: string;
-  description?: string;
-  linkInstagram?: string;
-  linkWhatsapp?: string;
-  linkLocationMaps: string;
-  linkLocationWaze: string;
-  address: string;
-  status: "active" | "inactive" | "blocked";
-  created_at: Date;
-  update_at: Date;
-}
 
 const CellActions = (companyId: string) => {
   const { push } = useRouter();
@@ -59,7 +45,7 @@ const CellActions = (companyId: string) => {
   );
 };
 
-export const columns: ColumnDef<CompanyItem>[] = [
+export const columns: ColumnDef<ICompanyProps>[] = [
   {
     accessorKey: "name",
     header: () => <div>Comércio</div>,

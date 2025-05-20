@@ -22,7 +22,7 @@ export function Sidebar() {
       return "Autor";
     } else if (
       context?.toLocaleLowerCase() !== "common" &&
-      context?.toLocaleLowerCase() !== "superuser"
+      context?.toLocaleLowerCase() !== "administrador"
     ) {
       return "Visitante";
     }
@@ -48,7 +48,7 @@ export function Sidebar() {
             className="rounded-full h-14 w-14 object-cover"
           />
           <div className="flex flex-col gap-1">
-            <span className="text-header-xs">{profile?.name}</span>
+            <span className="text-header-xs">{profile?.role.name}</span>
             <span className="text-gray-30 capitalize">
               {contextProfile(profile?.role.name)}
             </span>

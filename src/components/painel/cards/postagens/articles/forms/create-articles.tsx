@@ -102,10 +102,12 @@ export default function FormCreateArticle() {
   const { ListPortals, listPortals } = useContext(PortalContext);
 
   useEffect(() => {
-    ListTags && ListTags();
-    ListCategorys && ListCategorys();
-    ListAuthorArticles && ListAuthorArticles();
-    ListPortals && ListPortals();
+    Promise.all([
+      ListTags(),
+      ListCategorys(),
+      ListAuthorArticles(),
+      ListPortals(),
+    ]);
   }, []);
 
   const tagOptions: OptionType[] = Array.isArray(listTags)
@@ -280,8 +282,16 @@ export default function FormCreateArticle() {
           <div className="flex gap-6">
             <div className="flex flex-col w-full">
               <ThumbnailUploader
+                label="Thumbnail"
+                modalTitle="Adicionar Thumbnail"
+                confirmButtonText="Selecionar Imagem"
+                uploadAreaText="Clique para adicionar o Thumbnail"
+                uploadAreaSubtext="SVG, PNG, JPG ou GIF (max. 5MB)"
                 onImageUpload={handleImageUpload}
-                initialImage={selectedImage?.preview}
+                selectedImage={selectedImage}
+                setSelectedImage={setSelectedImage}
+                thumbnailDescription={thumbnailDescription}
+                setThumbnailDescription={setThumbnailDescription}
               />
 
               {/* Campo para a descrição da thumbnail */}

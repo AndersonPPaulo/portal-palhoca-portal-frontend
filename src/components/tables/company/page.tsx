@@ -6,7 +6,6 @@ import { CompanyContext, ICompanyProps } from "@/providers/company";
 interface TableCompanyProps {
   filter: {
     name?: string[] | string;
-
   };
 }
 
@@ -18,7 +17,7 @@ export default function TableCompany({ filter }: TableCompanyProps) {
     const fetchCompanies = async () => {
       setLoading(true);
       try {
-        await ListCompany(4000, 1);
+        await ListCompany();
       } catch (error) {
         console.error("Error fetching companies:", error);
       } finally {

@@ -8,36 +8,38 @@ import { UserContext } from "@/providers/user";
 import { CompanyContext } from "@/providers/company";
 
 export default function InfoPainel() {
-  const { ListArticles, listArticles } = useContext(ArticleContext);
+  const { ListAuthorArticles, listArticles } = useContext(ArticleContext);
   const { ListUser, listUser, profile } = useContext(UserContext);
   const { ListCompany, listCompany } = useContext(CompanyContext);
 
   useEffect(() => {
-    if (profile?.role === "superuser") {
-      Promise.all([ListArticles(), ListUser(), ListCompany()]);
+    if (profile?.role.name.toLocaleLowerCase() === "administrador") {
+      Promise.all([ListAuthorArticles(), ListUser(), ListCompany()]);
     } else {
-      ListArticles();
+      ListAuthorArticles();
     }
   }, []);
 
   const count = {
-    published_articles: listArticles.length,
-    inactives_articles: listArticles.filter((item) => item.status === false)
-      .length,
-    clicks_views: listArticles.reduce(
+    published_articles: listArticles?.data.length,
+    inactives_articles: listArticles?.data.filter(
+      (item) => item.status === "inactive" || item.status === "blocked"
+    ).length,
+    clicks_views: listArticles?.data.reduce(
       (acc, article) => acc + Number(article.clicks_view),
       0
     ),
-    highlight_articles: listArticles.filter((item) => item.highlight).length,
+    highlight_articles: listArticles?.data.filter((item) => item.highlight)
+      .length,
     authors: listUser.length,
-    total_companies: listCompany?.total || 0, 
+    total_companies: listCompany?.total || 0,
   };
   return (
     <div className="h-full bg-white rounded-[32px] p-10">
       <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 ggxl:grid-cols-4 gap-4">
         <CardInfoPainel
           title="Artigos Publicados"
-          value={count.published_articles}
+          value={count.published_articles ? count.published_articles : 0}
           icon={<FileText size={32} />}
           bgCard="bg-primary-light"
           textColor="text-primary-dark"
@@ -46,7 +48,7 @@ export default function InfoPainel() {
 
         <CardInfoPainel
           title="Artigos Inativos"
-          value={count.inactives_articles}
+          value={count.inactives_articles ? count.inactives_articles : 0}
           icon={<FileX size={32} />}
           bgCard="bg-red-light"
           textColor="text-red-dark"
@@ -55,7 +57,7 @@ export default function InfoPainel() {
 
         <CardInfoPainel
           title="Visualizações"
-          value={count.clicks_views}
+          value={count.clicks_views ? count.clicks_views : 0}
           icon={<Eye size={32} />}
           bgCard="bg-green-light"
           textColor="text-green-dark"
@@ -64,7 +66,7 @@ export default function InfoPainel() {
 
         <CardInfoPainel
           title="Artigos em Destaque"
-          value={count.highlight_articles}
+          value={count.highlight_articles ? count.highlight_articles : 0}
           icon={<Sparkles size={32} />}
           bgCard="bg-primary-light"
           textColor="text-primary-dark"
@@ -78,7 +80,7 @@ export default function InfoPainel() {
           bgCard="bg-orange-light"
           textColor="text-primary-dark"
           path="/postagens"
-          isAdmin={profile?.role === "superuser"}
+          isAdmin={profile?.role.name.toLowerCase() === "administrador"}
         />
 
         <CardInfoPainel
@@ -88,7 +90,7 @@ export default function InfoPainel() {
           bgCard="bg-blue-light"
           textColor="text-blue-dark"
           path="/comercio"
-          isAdmin={profile?.role === "superuser"}
+          isAdmin={profile?.role.name.toLowerCase() === "administrador"}
         />
       </div>
     </div>

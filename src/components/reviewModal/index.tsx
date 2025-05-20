@@ -48,7 +48,6 @@ export function ArticleViewModal({
   const [sortedStatusHistory, setSortedStatusHistory] = useState(
     article.status_history || []
   );
-  console.log("article", article);
 
   useEffect(() => {
     if (!open) {

@@ -126,7 +126,7 @@ export const UserProvider = ({ children }: ICihldrenReact) => {
       headers: { Authorization: `bearer ${token}` },
     };
     const response = await api
-      .get("/users", config)
+      .get("/user", config)
       .then((res) => {
         setListUser(res.data.response);
       })
