@@ -14,7 +14,7 @@ export default function Autores() {
         title="Usuários"
         text_button="Novo usuário"
         onClick={() => push("/usuarios/criar")}
-        description="Criar usuários para poderem publicarem artigos/postagens para o blog"
+        description="Criar usuários para poderem publicar artigos/postagens para o blog"
       />
       <div className="flex-1 p-6">
         <div className="">

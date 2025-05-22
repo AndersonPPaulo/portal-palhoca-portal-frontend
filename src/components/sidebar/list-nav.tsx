@@ -1,4 +1,6 @@
-import { Home, ListIcon, User, LogOut, Users, Dot, Store } from "lucide-react";
+import { Home,  User, LogOut, Users, Dot, Store, NotebookPen } from "lucide-react";
+import { RiMegaphoneLine } from "react-icons/ri";
+
 
 export const navigationMain = [
   {
@@ -8,7 +10,7 @@ export const navigationMain = [
   },
   {
     name: "Noticias",
-    icon: ListIcon,
+    icon: NotebookPen ,
     path: "/postagens",
     children: [
       {
@@ -24,20 +26,20 @@ export const navigationMain = [
     ],
   },
   {
-    name: "Usuários",
-    icon: Users,
-    path: "/usuarios",
-  },
-  {
     name: "Comércios",
     icon: Store,
     path: "/comercio",
   },
   {
     name: "Banners",
-    icon: Store,
+    icon: RiMegaphoneLine,
     path: "/banners",
   },
+  {
+    name: "Usuários",
+    icon: Users,
+    path: "/usuarios",
+  }
 ];
 
 export const navigationSecond = [
@@ -51,4 +53,5 @@ export const navigationSecond = [
     icon: LogOut,
     path: "/",
   },
+  
 ];

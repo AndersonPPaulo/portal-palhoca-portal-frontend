@@ -46,10 +46,10 @@ const FilterUsers = ({
     <div className="flex flex-col w-full gap-4">
       <div className="flex items-center gap-4">
         <div className="flex-grow">
-          <span className="text-body-g ms-4">Nome do Banner:</span>
+          <span className="text-body-g ms-4">Nome do Usuário:</span>
           <CustomInput
             type="search"
-            placeholder="Digite o nome do banner..."
+            placeholder="Digite o nome do usuário..."
             value={filter}
             icon={<Search />}
             onChange={(e) => setFilter(e.target.value)}

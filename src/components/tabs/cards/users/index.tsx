@@ -16,8 +16,8 @@ const Usuarios = () => {
     status: null,
   });
   return (
-    <div className="flex flex-col gap-4 p-4 bg-primary-light">
-      <Card className="rounded-3xl bg-white flex items-center gap-4 p-4 shadow-none">
+    <div className="flex flex-col gap-3  bg-primary-light">
+      <Card className="rounded-3xl bg-white flex items-center  p-4 shadow-none">
         <FilterUsers
           filter={filter}
           setFilter={setFilter}
