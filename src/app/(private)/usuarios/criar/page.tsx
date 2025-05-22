@@ -5,9 +5,9 @@ export default function CriarAutor() {
   return (
     <div className="h-screen bg-primary-light flex flex-col overflow-hidden">
       <Header
-        title="Criar Autor"
+        title="Criar Usuário"
         buttonHidden
-        description="Criar autores para poderem publicarem artigos/postagens para o blog"
+        description="Criar usuários para poderem publicar artigos/postagens para o site"
       />
       <div className="flex-1 p-6">
         <FormCreateAuthors />

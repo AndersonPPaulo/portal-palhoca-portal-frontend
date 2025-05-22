@@ -9,13 +9,15 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import ReturnPageButton from "@/components/button/returnPage";
 import { UserContext } from "@/providers/user";
+import ThumbnailUploader from "@/components/thumbnail";
 
 const authorsSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   email: z.string().email().min(1, "Email obrigatório"),
   phone: z.string().min(1, "Telefone/celular obrigatório"),
-  role: z.string().min(1, "Função obrigatório"),
+  roleId: z.string().min(1, "Função obrigatório"),
   password: z.string().min(1, "Senha obrigatório"),
+  chiefEditorId: z.string().min(1, "Responsável necessita ser indicado"),
 });
 
 type AuthorsFormData = z.infer<typeof authorsSchema>;
@@ -30,15 +32,15 @@ export default function FormCreateAuthors() {
     handleSubmit,
     formState: { errors },
     reset,
-    setValue,
   } = useForm<AuthorsFormData>({
     resolver: zodResolver(authorsSchema),
     defaultValues: {
       name: "",
       email: "",
       phone: "",
-      role: "autor",
+      roleId: "",
       password: "",
+      chiefEditorId: "",
     },
   });
 
@@ -62,90 +64,133 @@ export default function FormCreateAuthors() {
         <div className="w-full flex justify-between items-center">
           <ReturnPageButton />
         </div>
-        <div className="grid grid-cols-2 gap-8">
-          <div className="space-y-2">
-            <CustomInput
-              id="name"
-              label="Nome"
-              {...register("name")}
-              placeholder="Digite o nome do Autor"
+
+        {/* Layout com foto à esquerda e inputs em duas linhas à direita */}
+        <div className="flex gap-6 items-start">
+          {/* Thumbnail Uploader - mantém posição e tamanho */}
+          <div className="flex-shrink-0 w-32">
+            <ThumbnailUploader
+              showDescription={false}
+              width="w-full"
+              height="h-28"
+              borderRadius="rounded-xl"
+              label="Foto"
+              uploadAreaText="+"
+              uploadAreaSubtext=""
+              modalWidth="max-w-sm"
+              previewHeight="h-32"
             />
-            {errors.name && (
-              <span className="text-sm text-red-500">
-                {errors.name.message}
-              </span>
-            )}
           </div>
 
-          <div className="space-y-2">
-            <CustomInput
-              id="email"
-              label="Email"
-              {...register("email")}
-              placeholder="Digite o nome do Autor"
-            />
-            {errors.email && (
-              <span className="text-sm text-red-500">
-                {errors.email.message}
-              </span>
-            )}
+          {/* Container dos inputs organizados em duas linhas */}
+          <div className="flex-1 space-y-4">
+            {/* Primeira linha de inputs */}
+            <div className="grid grid-cols-3 gap-4">
+              {/* Nome */}
+              <div className="space-y-1">
+                <CustomInput
+                  id="name"
+                  label="Nome"
+                  {...register("name")}
+                  placeholder="Nome completo"
+                />
+                {errors.name && (
+                  <span className="text-xs text-red-500 block">
+                    {errors.name.message}
+                  </span>
+                )}
+              </div>
+
+              {/* Email */}
+              <div className="space-y-1">
+                <CustomInput
+                  id="email"
+                  label="Email"
+                  type="email"
+                  {...register("email")}
+                  placeholder="email@exemplo.com"
+                />
+                {errors.email && (
+                  <span className="text-xs text-red-500 block">
+                    {errors.email.message}
+                  </span>
+                )}
+              </div>
+
+              {/* Telefone */}
+              <div className="space-y-1">
+                <CustomInput
+                  id="phone"
+                  label="Telefone"
+                  {...register("phone")}
+                  placeholder="(11) 99999-9999"
+                />
+                {errors.phone && (
+                  <span className="text-xs text-red-500 block">
+                    {errors.phone.message}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Segunda linha de inputs */}
+            <div className="grid grid-cols-3 gap-4">
+              {/* Senha */}
+              <div className="space-y-1">
+                <CustomInput
+                  id="password"
+                  label="Senha"
+                  type="password"
+                  {...register("password")}
+                  placeholder="••••••••"
+                />
+                {errors.password && (
+                  <span className="text-xs text-red-500 block">
+                    {errors.password.message}
+                  </span>
+                )}
+              </div>
+
+              {/* Cargo */}
+              <div className="space-y-1">
+                <CustomInput
+                  id="roleId"
+                  label="Cargo"
+                  {...register("roleId")}
+                  placeholder="Função do usuário"
+                />
+                {errors.roleId && (
+                  <span className="text-xs text-red-500 block">
+                    {errors.roleId.message}
+                  </span>
+                )}
+              </div>
+
+              {/* Responsável Técnico */}
+              <div className="space-y-1">
+                <CustomInput
+                  id="chiefEditor"
+                  label="Responsável Técnico"
+                  {...register("chiefEditorId")}
+                  placeholder="Supervisor responsável"
+                />
+                {errors.chiefEditorId && (
+                  <span className="text-xs text-red-500 block">
+                    {errors.chiefEditorId.message}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-8">
-          <div className="space-y-2">
-            <CustomInput
-              id="phone"
-              label="Telefone"
-              {...register("phone")}
-              placeholder="(xx) xxxxx-xxxx"
-            />
-            {errors.phone && (
-              <span className="text-sm text-red-500">
-                {errors.phone.message}
-              </span>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <CustomInput
-              id="password"
-              label="Senha"
-              type="password"
-              {...register("password")}
-              placeholder="Digite a senha de acesso do autor"
-            />
-            {errors.password && (
-              <span className="text-sm text-red-500">
-                {errors.password.message}
-              </span>
-            )}
-          </div>
-          <div className="space-y-2">
-            <CustomInput
-              id="role"
-              disabled
-              label="Função"
-              {...register("role")}
-              placeholder="Autor"
-              onChange={() => {
-                setValue("role", "autor");
-              }}
-            />
-            {errors.role && (
-              <span className="text-sm text-red-500">
-                {errors.role.message}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="flex w-full justify-end items-center">
+        {/* Botões de ação */}
+        <div className="flex w-full justify-end items-center pt-4">
           <div className="space-x-4">
             <Button
               type="button"
               onClick={back}
-              className="bg-red-light text-[#611A1A] hover:bg-red-light/80  rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
+              className="bg-red-light text-[#611A1A] hover:bg-red-light/80 rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
               disabled={isSubmitting}
             >
               Cancelar
@@ -155,7 +200,14 @@ export default function FormCreateAuthors() {
               className="rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
               disabled={isSubmitting}
             >
-              Criar Categoria
+              {isSubmitting ? (
+                <div className="flex items-center">
+                  <div className="animate-spin h-5 w-5 border-2 border-white rounded-full border-t-transparent mr-2"></div>
+                  Criando...
+                </div>
+              ) : (
+                "Criar Usuário"
+              )}
             </Button>
           </div>
         </div>
