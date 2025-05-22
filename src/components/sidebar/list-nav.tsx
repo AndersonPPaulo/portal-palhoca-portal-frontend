@@ -24,9 +24,9 @@ export const navigationMain = [
     ],
   },
   {
-    name: "Autores",
+    name: "Usuários",
     icon: Users,
-    path: "/autores",
+    path: "/usuarios",
   },
   {
     name: "Comércios",

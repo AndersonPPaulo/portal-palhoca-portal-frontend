@@ -78,7 +78,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     description: string;
   } | null>(null);
   const [thumbnailDescription, setThumbnailDescription] = useState("");
-  
+
   // Estados para controlar se os dados foram carregados
   const [tagsLoaded, setTagsLoaded] = useState(false);
   const [portalsLoaded, setPortalsLoaded] = useState(false);
@@ -113,18 +113,18 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
           await ListTags();
           setTagsLoaded(true);
         }
-        
+
         // Carregar categorias
         if (ListCategorys) {
           await ListCategorys();
           setCategoriesLoaded(true);
         }
-        
+
         // Carregar artigos do autor
         if (ListAuthorArticles) {
           await ListAuthorArticles();
         }
-        
+
         // Carregar portais
         if (ListPortals) {
           await ListPortals();
@@ -134,40 +134,46 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         toast.error("Erro ao carregar dados necessários");
       }
     };
-    
+
     loadData();
   }, []);
 
   // Configurar valores iniciais após todos os dados serem carregados
   useEffect(() => {
     if (!tagsLoaded || !portalsLoaded || !categoriesLoaded) {
-      return; // Esperar até que todos os dados sejam carregados
+      return; 
     }
-    
+
     // Configurar tags
     if (article.tags && article.tags.length > 0 && listTags?.length > 0) {
       const validTagIds = article.tags
         .filter((tag) => listTags.some((listTag) => listTag.id === tag.id))
         .map((tag) => tag.id);
-      
+
       setValue("tagIds", validTagIds);
     }
-    
+
     // Configurar portais
-    if (article.portals && article.portals.length > 0 && listPortals?.length > 0) {
+    if (
+      article.portals &&
+      article.portals.length > 0 &&
+      listPortals?.length > 0
+    ) {
       const validPortalIds = article.portals
-        .filter((portal) => listPortals.some((listPortal) => listPortal.id === portal.id))
+        .filter((portal) =>
+          listPortals.some((listPortal) => listPortal.id === portal.id)
+        )
         .map((portal) => portal.id);
-      
+
       setValue("portalIds", validPortalIds);
     }
-    
+
     // Configurar a descrição da thumbnail se existir
     if (article.thumbnail && article.thumbnail.description) {
       setThumbnailDescription(article.thumbnail.description || "");
       setValue("thumbnailDescription", article.thumbnail.description || "");
     }
-    
+
     // Garantir que o formulário está completamente atualizado
     reset({
       id: article.id,
@@ -184,14 +190,20 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       portalIds: article.portals?.map((portal) => portal.id) || [],
       thumbnailDescription: article.thumbnail?.description || "",
     });
-    
-  }, [article, tagsLoaded, portalsLoaded, categoriesLoaded, listTags, listPortals]);
+  }, [
+    article,
+    tagsLoaded,
+    portalsLoaded,
+    categoriesLoaded,
+    listTags,
+    listPortals,
+  ]);
 
   useEffect(() => {
     if (article.thumbnail) {
       let thumbnailUrl = "";
       let description = "";
-      
+
       if (typeof article.thumbnail === "string") {
         thumbnailUrl = article.thumbnail;
       } else if (article.thumbnail?.url) {
@@ -201,11 +213,11 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
       if (thumbnailUrl) {
         setSelectedImage({
-          file: null as any, 
+          file: null as any,
           preview: thumbnailUrl,
           description: description,
         });
-        
+
         setThumbnailDescription(description);
         setValue("thumbnailDescription", description);
       }
@@ -304,7 +316,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     const value = e.target.value;
     setThumbnailDescription(value);
     setValue("thumbnailDescription", value);
-    
+
     // Também atualiza no objeto selectedImage se existir
     if (selectedImage) {
       setSelectedImage({
@@ -342,7 +354,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         chiefEditorId: profile?.chiefEditor?.id,
         thumbnailDescription: thumbnailDescription,
       };
-      
+
       // Enviar dados para API
       await UpdateArticle(finalData, article.id);
 
@@ -361,12 +373,12 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
       const statusMsg = setToDraft ? "Rascunho" : "Pendente de Revisão";
       toast.success(`Artigo atualizado com sucesso! Status: ${statusMsg}`);
-      
+
       // Recarregar dados do local listing após submissão
       if (ListAuthorArticles) {
         await ListAuthorArticles();
       }
-      
+
       setTimeout(() => {
         push("/postagens");
       }, 1000);
@@ -389,6 +401,8 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     setEditorContent(content);
     setValue("content", content, { shouldValidate: true });
   };
+
+ 
 
   return (
     <div className="w-full h-full flex flex-col bg-white rounded-[24px]">
@@ -423,16 +437,16 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
                 onImageUpload={handleImageUpload}
                 initialImage={selectedImage?.preview}
               />
-              
+
               {/* Campo oculto para o valor do formulário */}
               <input type="hidden" {...register("thumbnail")} />
-              <input 
-                type="hidden" 
-                {...register("thumbnailDescription")} 
-                value={thumbnailDescription} 
+              <input
+                type="hidden"
+                {...register("thumbnailDescription")}
+                value={thumbnailDescription}
               />
-             {/* Campo para a descrição da thumbnail */}
-             {thumbnailDescription && (
+              {/* Campo para a descrição da thumbnail */}
+              {thumbnailDescription && (
                 <span className="text-gray-700 ">
                   Descrição da Imagem: {thumbnailDescription}
                 </span>

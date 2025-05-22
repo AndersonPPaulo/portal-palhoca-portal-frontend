@@ -69,11 +69,6 @@ export const columns: ColumnDef<ICompanyProps>[] = [
                     src={logoUrl}
                     alt={`Logo ${company.name}`}
                     className="rounded-full w-10 h-10 cursor-pointer object-cover"
-                    onError={(e) => {
-                      // Fallback para imagem padrão em caso de erro
-                      (e.target as HTMLImageElement).src =
-                        "/placeholder-logo.png";
-                    }}
                   />
                 </TooltipTrigger>
                 <TooltipPortal>
@@ -87,10 +82,7 @@ export const columns: ColumnDef<ICompanyProps>[] = [
                       src={logoUrl}
                       alt={`Logo ${company.name}`}
                       className="w-56 h-56 object-cover rounded-lg"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                          "/placeholder-logo.png";
-                      }}
+                    
                     />
                     <span className="font-semibold w-56 mt-2 text-body-g flex flex-wrap">
                       {company.name}

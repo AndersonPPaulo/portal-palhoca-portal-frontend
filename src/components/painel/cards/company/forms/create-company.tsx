@@ -53,7 +53,7 @@ const companySchema = z.object({
   address: z.string().min(1, "Endereço é obrigatório"),
   status: z.enum(["active", "inactive", "blocked"]),
   portalIds: z.array(z.string()).min(1, "Selecione pelo menos um portal"),
-  company_category_id: z.array(z.string()).min(1, "Selecione pelo menos uma categoria"),
+  companyCategoryIds: z.array(z.string()).min(1, "Selecione pelo menos uma categoria"),
 });
 
 type CompanyFormData = z.infer<typeof companySchema>;
@@ -79,7 +79,11 @@ export default function FormCreateCompany() {
     file: File;
     preview: string;
   } | null>(null);
-  const { listCompanyCategory, ListCompanyCategory } = useContext(CompanyCategoryContext);
+  const { 
+    listCompanyCategory, 
+    ListCompanyCategory 
+  } = useContext(CompanyCategoryContext);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
 
   // Ref para determinar se o formulário foi enviado com sucesso
   const formSubmittedSuccessfully = useRef(false);
@@ -112,7 +116,7 @@ export default function FormCreateCompany() {
       address: "",
       status: "active",
       portalIds: [],
-      company_category_id: [],
+      companyCategoryIds: [],
     },
   });
 
@@ -127,7 +131,7 @@ export default function FormCreateCompany() {
   const city = watch("city");
   const state = watch("state");
   const portalIds = watch("portalIds");
-  const categoryIds = watch("company_category_id");
+  const categoryIds = watch("companyCategoryIds");
 
   // Função para buscar dados do CEP
   const GetByZipcode = async (cep: string) => {
@@ -187,10 +191,12 @@ export default function FormCreateCompany() {
       if (city && state) {
         fullAddress += ` - ${city}/${state}`;
       }
-
+      if (apiCep) {
+        fullAddress += ` - ${apiCep.cep}`;
+      }
       setValue("address", fullAddress);
     }
-  }, [street, number, complement, district, city, state, setValue]);
+  }, [street, number, complement, district, city, state, apiCep, setValue]);
 
   // Efeito para buscar CEP quando o usuário parar de digitar
   useEffect(() => {
@@ -198,15 +204,30 @@ export default function FormCreateCompany() {
       if (cep && cep.length >= 8) {
         GetByZipcode(cep);
       }
-    }, 1000);
+    }, 500);
 
     return () => clearTimeout(timeoutId);
   }, [cep]);
 
-  // Listar portais e categorias disponíveis ao carregar o componente
+  // Listar portais disponíveis ao carregar o componente
   useEffect(() => {
-    Promise.all([ListPortals(), ListCompanyCategory()])
-    
+    const loadData = async () => {
+      try {
+        // Carregar portais
+        await ListPortals();
+        
+        // Carregar categorias
+        setIsLoadingCategories(true);
+        await ListCompanyCategory(100, 1); // Carregar até 100 categorias na página 1
+        setIsLoadingCategories(false);
+      } catch (error) {
+        console.error("Erro ao carregar dados iniciais:", error);
+        toast.error("Erro ao carregar dados. Por favor, recarregue a página.");
+        setIsLoadingCategories(false);
+      }
+    };
+
+    loadData();
   }, []);
 
   // Função para lidar com o upload da imagem
@@ -224,7 +245,7 @@ export default function FormCreateCompany() {
       try {
         const response = await ListCompany(1, 1, {
           name: companyName,
-          order: "DESC", // Para pegar a mais recente primeiro
+          order: "DESC", 
           orderBy: "created_at",
         });
 
@@ -266,13 +287,19 @@ export default function FormCreateCompany() {
     }
   };
 
+  // Converter portais para opções de select
   const portalOptions: OptionType[] = Array.isArray(listPortals)
     ? listPortals.map((portal) => ({ value: portal.id, label: portal.name }))
     : [];
 
-  const categoryOptions: OptionType[] = Array.isArray(listCompanyCategory)
-    ? listCompanyCategory.map((category) => ({ value: category.id, label: category.name }))
-    : [];
+  // Converter categorias para opções de select
+  const categoryOptions: OptionType[] = 
+    listCompanyCategory && Array.isArray(listCompanyCategory.data)
+      ? listCompanyCategory.data.map((category) => ({
+          value: category.id,
+          label: category.name,
+        }))
+      : [];
 
   // Modificar o onSubmit para usar a abordagem de envio separado da imagem
   const onSubmit = async (data: CompanyFormData) => {
@@ -294,8 +321,11 @@ export default function FormCreateCompany() {
         district: data.district,
         status: data.status,
         portalIds: data.portalIds,
-        company_category_id: data.company_category_id,
+        companyCategoryIds: data.companyCategoryIds,
       };
+      
+      console.log('data.companyCategoryIds', data.companyCategoryIds)
+      console.log("Dados enviados:", companyData);
 
       const hasImage = selectedImage && selectedImage.file;
 
@@ -694,7 +724,7 @@ export default function FormCreateCompany() {
                 </div>
               </div>
 
-              {/* Portais e Categorias na mesma linha */}
+              {/* Portais e Categorias  */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
@@ -725,18 +755,18 @@ export default function FormCreateCompany() {
                   </h3>
                   <div className="mb-2">
                     <CustomSelect
-                      id="company_category_id"
+                      id="companyCategoryIds"
                       label="Categorias Disponíveis"
                       placeholder="Selecione uma ou mais categorias"
                       options={categoryOptions}
                       value={categoryIds}
                       onChange={(value) =>
-                        setValue("company_category_id", value as string[], {
+                        setValue("companyCategoryIds", value as string[], {
                           shouldValidate: true,
                         })
                       }
                       isMulti={true}
-                      error={errors.company_category_id?.message}
+                      error={errors.companyCategoryIds?.message}
                       noOptionsMessage="Nenhuma categoria disponível"
                     />
                   </div>
@@ -758,7 +788,7 @@ export default function FormCreateCompany() {
             <Button
               type="submit"
               className="rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isLoadingCategories || categoryOptions.length === 0}
             >
               {isSubmitting ? (
                 <div className="flex items-center">

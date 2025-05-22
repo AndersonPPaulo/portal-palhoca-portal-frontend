@@ -41,22 +41,8 @@ interface UpdateCompanyProps {
   district?: string;
   status: "active" | "inactive" | "blocked";
   portalIds?: string[];
+  companyCategoryIds?: string[];
 }
-
-export interface ICompanyProps extends UpdateCompanyProps {
-  id: string;
-  created_at?: Date;
-  update_at?: Date;
-  company_image: UploadCompanyImageProps
-}
-
-export type CompanyProps = {
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-  data: ICompanyProps[];
-};
 
 export interface UploadCompanyImageProps {
   id?: string;
@@ -69,21 +55,23 @@ export interface UploadCompanyImageProps {
   company_id: string;
 }
 
-interface ICompanyData {
-  ListCompany(limit?: number, page?: number, options?: any): Promise<CompanyProps>;
-  CreateCompany(data: UpdateCompanyProps): Promise<void>;
-  apiCep: GetCEPProps | null;
-  setApiCep: React.Dispatch<React.SetStateAction<GetCEPProps | null>>;
-  UpdateCompany(data: UpdateCompanyProps, id: string): Promise<void>;
-  listCompany: CompanyProps | null;
-  SelfCompany(companyId: string): Promise<CompanyProps>;
-  company: ICompanyProps | null;
-  CreateImageCompany(
-    data: UploadCompanyImageProps,
-    company_id: string
-  ): Promise<void>;
-  UploadCompanyLogo(file: File, company_id: string): Promise<void>;
+export interface ICompanyProps extends UpdateCompanyProps {
+  id: string;
+  created_at?: Date;
+  update_at?: Date;
+  company_image?: UploadCompanyImageProps;
+  companyImage?: string; 
+  portals?: string[]
+  companyCategories?: string[]
 }
+
+export type CompanyProps = {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  data: ICompanyProps[];
+} | ICompanyProps; 
 
 interface GetCEPProps {
   cep: string;
@@ -98,6 +86,23 @@ interface GetCEPProps {
   siafi: string;
 }
 
+interface ICompanyData {
+  ListCompany(limit?: number, page?: number, options?: any): Promise<CompanyProps>;
+  CreateCompany(data: UpdateCompanyProps): Promise<void>;
+  apiCep: GetCEPProps | null;
+  setApiCep: React.Dispatch<React.SetStateAction<GetCEPProps | null>>;
+  UpdateCompany(data: UpdateCompanyProps, id: string): Promise<void>;
+  listCompany: CompanyProps | null;
+  SelfCompany(companyId: string): Promise<ICompanyProps>; 
+  GetCompanyById(companyId: string): Promise<ICompanyProps>; 
+  company: ICompanyProps | null;
+  CreateImageCompany(
+    data: UploadCompanyImageProps,
+    company_id: string
+  ): Promise<void>;
+  UploadCompanyLogo(file: File, company_id: string): Promise<void>;
+}
+
 interface IChildrenReact {
   children: ReactNode;
 }
@@ -106,32 +111,31 @@ export const CompanyContext = createContext<ICompanyData>({} as ICompanyData);
 export const CompanyProvider = ({ children }: IChildrenReact) => {
   const { push } = useRouter();
   const [listCompany, setListCompany] = useState<CompanyProps | null>(null);
+  const [company, setCompany] = useState<ICompanyProps | null>(null);
+  const [apiCep, setApiCep] = useState<GetCEPProps | null>(null);
 
-  const ListCompany = async (limit = 10000, page = 1, options = {}): Promise<CompanyProps> => {
+  const ListCompany = async (limit = 1000, page = 1, options = {}): Promise<CompanyProps> => {
     const config = { params: { limit, page, ...options } };
-    const response = await api
-      .get("/company", config)
-      .then((res) => {
-        const dataWithStatus = res.data.response.data.map(
-          (company: ICompanyProps) => ({
-            ...company,
-            status: company.status || "active",
-          })
-        );
+    try {
+      const res = await api.get("/company", config);
+      const dataWithStatus = res.data.response.data.map(
+        (company: ICompanyProps) => ({
+          ...company,
+          status: company.status || "active",
+        })
+      );
 
-        const formattedResponse = {
-          ...res.data.response,
-          data: dataWithStatus,
-        };
+      const formattedResponse = {
+        ...res.data.response,
+        data: dataWithStatus,
+      };
 
-        setListCompany(formattedResponse);
-        return formattedResponse;
-      })
-      .catch((err) => {
-        toast.error(err.response?.data?.message || "Erro ao listar empresas");
-        throw err;
-      });
-    return response;
+      setListCompany(formattedResponse);
+      return formattedResponse;
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro ao listar empresas");
+      throw err;
+    }
   };
 
   const CreateCompany = async (data: UpdateCompanyProps): Promise<void> => {
@@ -167,40 +171,44 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
     }
   };
 
-  // API CEP
-  const [apiCep, setApiCep] = useState<GetCEPProps | null>(null);
   const GetByZipcode = async (cep: string) => {
-    const response = await api_cep
-      .get(`/${cep}/json`)
-      .then((res) => {
-        setApiCep(res.data);
-        return res.data;
-      })
-      .catch((err) => {
-        throw err;
-      });
-
-    return response;
+    try {
+      const response = await api_cep.get(`/${cep}/json`);
+      setApiCep(response.data);
+      return response.data;
+    } catch (err) {
+      console.error("Erro ao buscar CEP:", err);
+      throw err;
+    }
   };
 
-  const [company, setCompany] = useState<ICompanyProps | null>(null);
-  const SelfCompany = async (companyId: string): Promise<CompanyProps> => {
-    const response = await api
-      .get(`/company/${companyId}`)
-      .then((res) => {
-        const companyWithStatus = {
-          ...res.data.response,
-          status: res.data.response.status || "inactive",
-        };
-        setCompany(companyWithStatus);
-        return companyWithStatus;
-      })
-      .catch((err) => {
-        toast.error(err.response?.data?.message);
-        throw err;
-      });
+  const SelfCompany = async (companyId: string): Promise<ICompanyProps> => {
+    try {
+      const res = await api.get(`/company/${companyId}`);
+      const companyWithStatus = {
+        ...res.data.response,
+        status: res.data.response.status || "inactive",
+      };
+      setCompany(companyWithStatus);
+      return companyWithStatus;
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro ao buscar empresa");
+      throw err;
+    }
+  };
 
-    return response;
+  // Método adicional para buscar empresa pelo ID (similar ao SelfCompany)
+  const GetCompanyById = async (companyId: string): Promise<ICompanyProps> => {
+    try {
+      const res = await api.get(`/company/${companyId}`);
+      return {
+        ...res.data.response,
+        status: res.data.response.status || "inactive",
+      };
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro ao buscar detalhes da empresa");
+      throw err;
+    }
   };
 
   const CreateImageCompany = async (
@@ -222,7 +230,6 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
     }
   };
 
-  // Nova função para fazer upload direto do arquivo
   const UploadCompanyLogo = async (
     file: File,
     company_id: string
@@ -258,6 +265,7 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
         UpdateCompany,
         listCompany,
         SelfCompany,
+        GetCompanyById,
         company,
         apiCep,
         setApiCep,
