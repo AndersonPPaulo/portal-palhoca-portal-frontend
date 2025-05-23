@@ -40,61 +40,126 @@ export function NavigationMain() {
     setOpenMenus((prev) => ({ ...prev, [path]: !prev[path] }));
   };
 
+  // Função para determinar quais abas o usuário pode ver baseado no role
+  const getVisibleTabs = (userRole: string): string[] => {
+    const roleName = userRole.toLowerCase();
+    
+    switch (roleName) {
+      case "jornalista":
+      case "colunista":
+      case "chefe de redação":
+        return ["/dashboard", "/postagens"]; 
+      
+      case "gerente comercial":
+      case "vendedor":
+        return ["/dashboard", "/banners", "/comercio"]; 
+      
+      case "administrador":
+        return ["all"]; 
+      
+      default:
+        return ["/dashboard"]; 
+    }
+  };
+
+  // Função para verificar se um item deve ser visível
+  const isItemVisible = (itemPath: string | undefined, userRole: string): boolean => {
+    if (!itemPath) return true;
+    
+    const visibleTabs = getVisibleTabs(userRole);
+    
+    // Se for administrador, pode ver tudo
+    if (visibleTabs.includes("all")) return true;
+    
+    // Verifica se o path está na lista de tabs visíveis
+    // Também verifica paths que começam com as rotas permitidas
+    return visibleTabs.some(allowedPath => 
+      itemPath === allowedPath || itemPath.startsWith(allowedPath + "/")
+    );
+  };
+
+  // Função recursiva para filtrar itens baseado no role
+  const filterNavigationByRole = (items: NavigationList, userRole: string): NavigationList => {
+    return items
+      .filter(item => {
+        // Sempre manter usuários apenas para administrador
+        if (item.path === "/usuarios" && userRole.toLowerCase() !== "administrador") {
+          return false;
+        }
+        
+        // Verificar se o item é visível para o role
+        return isItemVisible(item.path, userRole);
+      })
+      .map(item => ({
+        ...item,
+        // Recursivamente filtrar children se existirem
+        children: item.children 
+          ? filterNavigationByRole(item.children, userRole)
+          : undefined
+      }))
+      .filter(item => {
+        // Remover itens que ficaram sem children visíveis (se aplicável)
+        if (item.children) {
+          return item.children.length > 0 || isItemVisible(item.path, userRole);
+        }
+        return true;
+      });
+  };
+
   const renderLevels = (data: NavigationList, isChild = false) => {
-    return data
-      .filter(
-        (item) => !(profile?.role.name.toLocaleLowerCase() !== "administrador" && item.path === "/autores")
-      )
-      .map((item, index) => {
-        const isActive = pathname.startsWith(item.path || "");
-        const isOpen = openMenus[item.path || ""] || isActive;
+    return data.map((item, index) => {
+      const isActive = pathname.startsWith(item.path || "");
+      const isOpen = openMenus[item.path || ""] || isActive;
 
-        return (
-          <div key={index} className="w-full">
-            <div
+      return (
+        <div key={index} className="w-full">
+          <div
+            className={`${
+              isActive ? "bg-primary-light text-primary" : "hover:bg-zinc-100"
+            } flex items-center justify-between w-full rounded-3xl`}
+          >
+            <Link
+              href={item.path ?? "#"}
               className={`${
-                isActive ? "bg-primary-light text-primary" : "hover:bg-zinc-100"
-              } flex items-center justify-between w-full rounded-3xl`}
+                isActive
+                  ? "bg-primary-light text-primary"
+                  : "hover:bg-zinc-100"
+              } flex items-center w-full font-[600] py-2 px-6 rounded-[48px] transition duration-300 ease-linear ${
+                isChild ? "pl-10 text-sm" : ""
+              }`}
             >
-              <Link
-                href={item.path ?? "#"}
-                className={`${
-                  isActive
-                    ? "bg-primary-light text-primary"
-                    : "hover:bg-zinc-100"
-                } flex items-center w-full font-[600] py-2 px-6 rounded-[48px] transition duration-300 ease-linear ${
-                  isChild ? "pl-10 text-sm" : ""
-                }`}
+              <item.icon size={18} className="mr-2" />
+              <span>{item.name}</span>
+            </Link>
+
+            {item.children && (
+              <button
+                onClick={(event) => toggleMenu(item.path, event)}
+                className="p-2 rounded-md transition duration-300 ease-linear"
               >
-                <item.icon size={18} className="mr-2" />
-                <span>{item.name}</span>
-              </Link>
-
-              {item.children && (
-                <button
-                  onClick={(event) => toggleMenu(item.path, event)}
-                  className="p-2 rounded-md transition duration-300 ease-linear"
-                >
-                  {isOpen ? (
-                    <ChevronDown size={16} />
-                  ) : (
-                    <ChevronRight size={16} />
-                  )}
-                </button>
-              )}
-            </div>
-
-            {item.children && isOpen && (
-              <div className="ml-4 mt-1 space-y-1">
-                {renderLevels(item.children, true)}
-              </div>
+                {isOpen ? (
+                  <ChevronDown size={16} />
+                ) : (
+                  <ChevronRight size={16} />
+                )}
+              </button>
             )}
           </div>
-        );
-      });
+
+          {item.children && isOpen && (
+            <div className="ml-4 mt-1 space-y-1">
+              {renderLevels(item.children, true)}
+            </div>
+          )}
+        </div>
+      );
+    });
   };
 
   if (!profile) return <NavigationSkeleton />;
 
-  return <>{renderLevels(navigationMain)}</>;
+  // Filtrar a navegação baseado no role do usuário
+  const filteredNavigation = filterNavigationByRole(navigationMain, profile.role.name);
+
+  return <>{renderLevels(filteredNavigation)}</>;
 }
