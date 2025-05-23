@@ -3,16 +3,18 @@
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState, useRef } from "react";
 import CustomInput from "@/components/input/custom-input";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import ReturnPageButton from "@/components/button/returnPage";
 import { UserContext } from "@/providers/user";
 import ThumbnailUploader from "@/components/thumbnail";
+import { parseCookies } from "nookies";
+import { api } from "@/service/api";
+import { toast } from "sonner";
 import CustomSelect from "@/components/select/custom-select";
 
-// Definir tipo para opções dos selects
 interface OptionType {
   value: string;
   label: string;
@@ -36,7 +38,11 @@ export default function FormCreateAuthors() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rolesOptions, setRolesOptions] = useState<OptionType[]>([]);
   const [usersOptions, setUsersOptions] = useState<OptionType[]>([]);
-
+  const formSubmittedSuccessfully = useRef(false);
+  const [selectedImage, setSelectedImage] = useState<{
+      file: File;
+      preview: string;
+    } | null>(null);
   const {
     register,
     handleSubmit,
@@ -73,9 +79,7 @@ export default function FormCreateAuthors() {
     loadInitialData();
   }, []);
 
-  // Atualizar opções quando os dados chegarem do contexto
   useEffect(() => {
-    // Mapear roles para opções do select
     if (roles && Array.isArray(roles)) {
       const roleOptions: OptionType[] = roles.map((role) => ({
         value: role.id,
@@ -86,7 +90,6 @@ export default function FormCreateAuthors() {
   }, [roles]);
 
   useEffect(() => {
-    // Mapear users para opções do select (responsáveis técnicos)
     if (listUser && Array.isArray(listUser)) {
       const userOptions: OptionType[] = listUser.map((user) => ({
         value: user.id,
@@ -96,19 +99,139 @@ export default function FormCreateAuthors() {
     }
   }, [listUser]);
 
-  const onSubmit = async (data: AuthorsFormData) => {
-    setIsSubmitting(true);
+  const handleImageUpload = (file: File, previewUrl: string) => {
+    setSelectedImage({ file, preview: previewUrl });
+  };
+
+  useEffect(() => {
+  }, [selectedImage]);
+
+  const uploadUserImage = async (file: File, userEmail: string) => {
     try {
-      await CreateUser(data);
-      console.log('data', data);
+      
+      
+      const { "user:token": token } = parseCookies();
+      
+      const users = await ListUser();
+      
+      
+      const createdUser = users?.find(user => 
+        user.email.toLowerCase() === userEmail.toLowerCase()
+      );
+      
+
+      if (createdUser) {
+        const userId = createdUser.id;
+
+        if (!file || file.size === 0) {
+          throw new Error('Arquivo inválido ou vazio');
+        }
+
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+          throw new Error(`Tipo de arquivo não suportado: ${file.type}. Use JPEG, PNG, GIF ou WebP.`);
+        }
+
+        // Verificar tamanho (max 5MB)
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.size > maxSize) {
+          throw new Error(`Arquivo muito grande: ${(file.size / 1024 / 1024).toFixed(2)}MB. Máximo permitido: 5MB.`);
+        }
+
+        // Criar FormData para enviar o arquivo
+        const formData = new FormData();
+        
+        formData.append("user_image", file, file.name);
+      
+        // Fazer o upload da foto
+        const uploadResponse = await api.post(
+          `/user/${userId}/upload-user-image`,
+          formData,
+          {
+            headers: {
+              Authorization: `bearer ${token}`,
+            },
+            timeout: 60000, // 60 segundos timeout
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity,
+          }
+        );
+        
+        
+        // Verificar se a resposta contém user_image
+        if (uploadResponse.data?.user_image) {
+          toast.success("Foto de perfil enviada com sucesso!");
+        } else {
+          toast.success("Upload realizado, mas verifique se a foto foi salva corretamente");
+        }
+        
+      } else {
+        throw new Error(
+          "Usuário criado, mas não foi possível encontrá-lo para adicionar a foto"
+        );
+      }
+    } catch (error: any) {
+      
+      if (error.response) {
+      } else if (error.request) {
+        console.error("Request feito mas sem resposta:", error.request);
+      }
+      
+      const errorMessage = error.response?.data?.message || error.message || "Erro ao fazer upload da foto";
+      toast.error(errorMessage);
+      throw error;
+    }
+  };
+
+  const onSubmit = async (data: AuthorsFormData) => {
+    try {
+      setIsSubmitting(true);
+      formSubmittedSuccessfully.current = false;
+
+
+      const hasImage = selectedImage && selectedImage.file;
+
+      const createdUserResponse = await CreateUser(data);
+      formSubmittedSuccessfully.current = true;
+      
+      
+      // Se há imagem selecionada, fazer upload após criação bem-sucedida
+      if (hasImage) {
+        const imageFile = selectedImage.file;
+        const userEmail = data.email;
+        
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        try {
+          await uploadUserImage(imageFile, userEmail);
+          
+          setTimeout(async () => {
+            try {
+              await ListUser();
+            } catch (reloadError) {
+              console.error('Erro ao recarregar lista:', reloadError);
+            }
+          }, 1000);
+          
+        } catch (uploadError) {
+          console.error("Erro ao fazer upload da foto:", uploadError);
+          toast.error("Usuário criado, mas houve erro no upload da foto");
+        }
+      } 
+      // Limpar formulário e imagem
+      reset();
+      setSelectedImage(null);
+      
       setTimeout(() => {
         setIsSubmitting(false);
-        reset();
-      }, 2000);
+      }, 1000);
+      
     } catch (error) {
       setIsSubmitting(false);
-      alert(error);
+      console.error("Erro ao criar usuário:", error);
+      toast.error("Erro ao criar usuário: " + (error as Error).message);
     }
+    console.log('data', data)
   };
 
   return (
@@ -128,11 +251,21 @@ export default function FormCreateAuthors() {
               height="h-28"
               borderRadius="rounded-xl"
               label="Foto"
-              uploadAreaText="+"
-              uploadAreaSubtext=""
               modalWidth="max-w-sm"
               previewHeight="h-32"
+              onImageUpload={handleImageUpload}
+              selectedImage={selectedImage}
+              setSelectedImage={setSelectedImage}
+              modalTitle="Adicionar Foto de Perfil"
+              confirmButtonText="Selecionar Foto"
+              uploadAreaText="Clique para adicionar foto"
+              uploadAreaSubtext="JPG, PNG ou GIF (max. 5MB)"
             />
+            {selectedImage && (
+              <p className="text-green-600 text-xs mt-1">
+                Foto selecionada
+              </p>
+            )}
           </div>
 
           {/* Container dos inputs organizados em duas linhas */}
@@ -273,10 +406,17 @@ export default function FormCreateAuthors() {
               {isSubmitting ? (
                 <div className="flex items-center">
                   <div className="animate-spin h-5 w-5 border-2 border-white rounded-full border-t-transparent mr-2"></div>
-                  Criando...
+                  {selectedImage ? "Criando usuário e enviando foto..." : "Criando..."}
                 </div>
               ) : (
-                "Criar Usuário"
+                <div className="flex items-center">
+                  Criar Usuário
+                  {selectedImage && (
+                    <span className="ml-2 text-xs bg-green-500 px-2 py-1 rounded-full">
+                      +foto
+                    </span>
+                  )}
+                </div>
               )}
             </Button>
           </div>
