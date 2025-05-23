@@ -10,7 +10,6 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React from "react";
-import Image from "next/image";
 
 const CellActions = (companyId: string) => {
   const { push } = useRouter();
@@ -44,6 +43,8 @@ const CellActions = (companyId: string) => {
     </div>
   );
 };
+
+
 
 export const columns: ColumnDef<ICompanyProps>[] = [
   {
@@ -95,10 +96,17 @@ export const columns: ColumnDef<ICompanyProps>[] = [
         }
       }
 
-      // Sem imagem, mostra um placeholder
+      // Sem imagem, mostra um placeholder com iniciais
+      const initials = company.name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .substring(0, 2)
+        .toUpperCase();
+
       return (
-        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
-          Sem logo
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-semibold">
+          {initials}
         </div>
       );
     },
