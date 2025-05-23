@@ -3,13 +3,20 @@
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import CustomInput from "@/components/input/custom-input";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import ReturnPageButton from "@/components/button/returnPage";
 import { UserContext } from "@/providers/user";
 import ThumbnailUploader from "@/components/thumbnail";
+import CustomSelect from "@/components/select/custom-select";
+
+// Definir tipo para opções dos selects
+interface OptionType {
+  value: string;
+  label: string;
+}
 
 const authorsSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -18,20 +25,25 @@ const authorsSchema = z.object({
   roleId: z.string().min(1, "Função obrigatório"),
   password: z.string().min(1, "Senha obrigatório"),
   chiefEditorId: z.string().min(1, "Responsável necessita ser indicado"),
+  topic: z.string(),
 });
 
 type AuthorsFormData = z.infer<typeof authorsSchema>;
 
 export default function FormCreateAuthors() {
-  const { CreateUser } = useContext(UserContext);
+  const { CreateUser, ListRoles, ListUser, listUser, roles } = useContext(UserContext);
   const { back } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [rolesOptions, setRolesOptions] = useState<OptionType[]>([]);
+  const [usersOptions, setUsersOptions] = useState<OptionType[]>([]);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
+    watch,
   } = useForm<AuthorsFormData>({
     resolver: zodResolver(authorsSchema),
     defaultValues: {
@@ -41,13 +53,54 @@ export default function FormCreateAuthors() {
       roleId: "",
       password: "",
       chiefEditorId: "",
+      topic: ""
     },
   });
+
+  // Carregar dados iniciais
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        await Promise.all([
+          ListRoles(),
+          ListUser()
+        ]);
+      } catch (error) {
+        console.error("Erro ao carregar dados iniciais:", error);
+      }
+    };
+
+    loadInitialData();
+  }, []);
+
+  // Atualizar opções quando os dados chegarem do contexto
+  useEffect(() => {
+    // Mapear roles para opções do select
+    if (roles && Array.isArray(roles)) {
+      const roleOptions: OptionType[] = roles.map((role) => ({
+        value: role.id,
+        label: role.name || `Role ${role.id}`,
+      }));
+      setRolesOptions(roleOptions);
+    }
+  }, [roles]);
+
+  useEffect(() => {
+    // Mapear users para opções do select (responsáveis técnicos)
+    if (listUser && Array.isArray(listUser)) {
+      const userOptions: OptionType[] = listUser.map((user) => ({
+        value: user.id,
+        label: user.name || user.email || `Usuário ${user.id}`,
+      }));
+      setUsersOptions(userOptions);
+    }
+  }, [listUser]);
 
   const onSubmit = async (data: AuthorsFormData) => {
     setIsSubmitting(true);
     try {
       await CreateUser(data);
+      console.log('data', data);
       setTimeout(() => {
         setIsSubmitting(false);
         reset();
@@ -151,13 +204,15 @@ export default function FormCreateAuthors() {
                 )}
               </div>
 
-              {/* Cargo */}
+              {/* Cargo - Usando CustomSelect */}
               <div className="space-y-1">
-                <CustomInput
+                <CustomSelect
                   id="roleId"
                   label="Cargo"
-                  {...register("roleId")}
-                  placeholder="Função do usuário"
+                  options={rolesOptions}
+                  value={watch("roleId")}
+                  onChange={(value) => setValue("roleId", value)}
+                  placeholder="Selecione a função"
                 />
                 {errors.roleId && (
                   <span className="text-xs text-red-500 block">
@@ -166,17 +221,32 @@ export default function FormCreateAuthors() {
                 )}
               </div>
 
-              {/* Responsável Técnico */}
+              {/* Responsável Técnico - Usando CustomSelect */}
               <div className="space-y-1">
-                <CustomInput
-                  id="chiefEditor"
+                <CustomSelect
+                  id="chiefEditorId"
                   label="Responsável Técnico"
-                  {...register("chiefEditorId")}
-                  placeholder="Supervisor responsável"
+                  options={usersOptions}
+                  value={watch("chiefEditorId")}
+                  onChange={(value) => setValue("chiefEditorId", value)}
+                  placeholder="Selecione o responsável"
                 />
                 {errors.chiefEditorId && (
                   <span className="text-xs text-red-500 block">
                     {errors.chiefEditorId.message}
+                  </span>
+                )}
+              </div>
+              <div className="space-y-1">
+                <CustomInput
+                  id="topic"
+                  label="Titulo da coluna"
+                  {...register("topic")}
+                  placeholder="Insira o titulo da coluna do colunista"
+                />
+                {errors.password && (
+                  <span className="text-xs text-red-500 block">
+                    {errors.topic?.message}
                   </span>
                 )}
               </div>

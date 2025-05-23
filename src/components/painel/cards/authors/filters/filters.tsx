@@ -46,15 +46,17 @@ const FilterUsers = ({
     <div className="flex flex-col w-full gap-4">
       <div className="flex items-center gap-4">
         <div className="flex-grow">
-          <span className="text-body-g ms-4">Nome do Usuário:</span>
+          <span className="text-body-g ms-4">Pesquisar:</span>
           <CustomInput
             type="search"
-            placeholder="Digite o nome do usuário..."
+            placeholder="Digite o nome do usuário ou email..."
             value={filter}
             icon={<Search />}
             onChange={(e) => setFilter(e.target.value)}
           />
         </div>
+        
+        
 
         <Popover
           open={openPopovers.status}

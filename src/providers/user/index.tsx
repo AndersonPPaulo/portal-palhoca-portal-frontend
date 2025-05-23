@@ -58,7 +58,6 @@ interface IUserData {
   profile: ResponsePromise | null;
   UpdateUser(data: UpdateUserProps, userId: string): Promise<void>;
   UploadUserImage(file: File, userId: string): Promise<void>;
-  // Métodos para roles
   roles: Role[];
   ListRoles(): Promise<Role[]>;
 }
