@@ -28,7 +28,6 @@ interface UpdateUserProps {
   roleId?: string;
   chiefEditorId?: string;
   user_image: string
-
 }
 
 export interface ResponsePromise {

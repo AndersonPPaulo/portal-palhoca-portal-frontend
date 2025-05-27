@@ -1,5 +1,5 @@
 import React from "react";
-import Articles from "../cards/articles/articles";
+import Articles from "../../cards/articles/articles";
 
 export const tabPostConfigurations = [
   {
@@ -10,8 +10,13 @@ export const tabPostConfigurations = [
     description: "As noticias publicadas em seu site.",
     component: <Articles status="PUBLISHED" />,
     path: "/postagens/artigos/criar",
+    allowedRoles: [
+      "administrador",
+      "chefe de redação",
+      "jornalista",
+      "colunista",
+    ],
   },
-
   {
     value: "DRAFT",
     label: "Rascunho",
@@ -20,6 +25,12 @@ export const tabPostConfigurations = [
     description: "Continue a editar sua noticia.",
     component: <Articles status="DRAFT" />,
     path: "/postagens/artigos/criar",
+    allowedRoles: [
+      "administrador",
+      "chefe de redação",
+      "jornalista",
+      "colunista",
+    ],
   },
   {
     value: "PENDING_REVIEW",
@@ -29,6 +40,7 @@ export const tabPostConfigurations = [
     description: "Revisão para publicação da noticia",
     component: <Articles status="PENDING_REVIEW" />,
     path: "/postagens/artigos/criar",
+    allowedRoles: ["administrador", "chefe de redação"],
   },
   {
     value: "REJECTED",
@@ -38,16 +50,46 @@ export const tabPostConfigurations = [
     description: "Noticias rejeitadas e não publicadas.",
     component: <Articles status="REJECTED" />,
     path: "/postagens/artigos/criar",
-    
+    allowedRoles: [
+      "administrador",
+      "chefe de redação",
+      "jornalista",
+      "colunista",
+    ],
   },
   {
     value: "CHANGES_REQUESTED",
     label: "Mudanças necessárias",
     title: "Noticias",
     name: "Noticias",
-    description: "Noticias rejeitadas e não publicadas.",
+    description: "Noticias que precisam de alterações.",
     component: <Articles status="CHANGES_REQUESTED" />,
     path: "/postagens/artigos/criar",
-    
+    allowedRoles: [
+      "administrador",
+      "chefe de redação",
+      "jornalista",
+      "colunista",
+    ],
   },
 ];
+
+export const filterTabsByRole = (tabs: any[], userRole?: string) => {
+  if (!userRole) return [];
+
+  const normalizedRole = userRole.toLowerCase();
+  const allowedSystemRoles = [
+    "administrador",
+    "chefe de redação",
+    "jornalista",
+    "colunista",
+  ];
+
+  if (!allowedSystemRoles.includes(normalizedRole)) return [];
+
+  return tabs.filter((tab) => {
+    return tab.allowedRoles.some(
+      (role: string) => role.toLowerCase() === normalizedRole
+    );
+  });
+};

@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useContext, useEffect } from "react";
 import Comercio from "../cards/company/company";
 import CategoriaComercio from "../cards/company-category/companyCategory";
+
+
 
 export const tabCompanyConfigurations = [
   {
