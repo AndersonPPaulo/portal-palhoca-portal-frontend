@@ -411,11 +411,6 @@ export default function FormCreateAuthors() {
               ) : (
                 <div className="flex items-center">
                   Criar Usuário
-                  {selectedImage && (
-                    <span className="ml-2 text-xs bg-green-500 px-2 py-1 rounded-full">
-                      +foto
-                    </span>
-                  )}
                 </div>
               )}
             </Button>

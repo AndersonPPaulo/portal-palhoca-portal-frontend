@@ -111,7 +111,6 @@ export const CompanyContext = createContext<ICompanyData>({} as ICompanyData);
 export const CompanyProvider = ({ children }: IChildrenReact) => {
   const { push } = useRouter();
   const [listCompany, setListCompany] = useState<CompanyProps | null>(null);
-  const [company, setCompany] = useState<ICompanyProps | null>(null);
   const [apiCep, setApiCep] = useState<GetCEPProps | null>(null);
 
   const ListCompany = async (limit = 1000, page = 1, options = {}): Promise<CompanyProps> => {
@@ -181,6 +180,9 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
       throw err;
     }
   };
+
+
+  const [company, setCompany] = useState<ICompanyProps | null>(null);
 
   const SelfCompany = async (companyId: string): Promise<ICompanyProps> => {
     try {

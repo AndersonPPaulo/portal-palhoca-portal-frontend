@@ -94,7 +94,7 @@ export const columns: ColumnDef<UsersProps>[] = [
                         {user.name}
                       </span>
                       <span className="text-sm text-gray-600 block">
-                        {user.role?.name || 'Sem cargo'}
+                        {user.role?.name || "Sem cargo"}
                       </span>
                     </div>
                   </TooltipContent>
@@ -107,9 +107,9 @@ export const columns: ColumnDef<UsersProps>[] = [
 
       // Sem imagem, mostra um placeholder com iniciais
       const initials = user.name
-        .split(' ')
-        .map(n => n[0])
-        .join('')
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
         .substring(0, 2)
         .toUpperCase();
 
@@ -156,14 +156,16 @@ export const columns: ColumnDef<UsersProps>[] = [
         <TooltipProvider delayDuration={600}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="truncate">{row.original.role?.name || 'Sem cargo'}</div>
+              <div className="truncate">
+                {row.original.role?.name || "Sem cargo"}
+              </div>
             </TooltipTrigger>
             <TooltipPortal>
               <TooltipContent
                 className="rounded-2xl shadow-sm bg-white text-[16px] text-gray-30 px-4 py-2 animate-fadeIn"
                 sideOffset={5}
               >
-                <span>{row.original.role?.name || 'Sem cargo'}</span>
+                <span>{row.original.role?.name || "Sem cargo"}</span>
                 <TooltipArrow
                   className="fill-primary-light"
                   width={11}
@@ -240,16 +242,14 @@ export const columns: ColumnDef<UsersProps>[] = [
         <TooltipProvider delayDuration={600}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="truncate">
-                {row.original.topic || '-'}
-              </div>
+              <div className="truncate">{row.original.topic || "-"}</div>
             </TooltipTrigger>
             <TooltipPortal>
               <TooltipContent
                 className="rounded-2xl shadow-sm bg-white text-[16px] text-gray-30 px-4 py-2 animate-fadeIn"
                 sideOffset={5}
               >
-                <span>{row.original.topic || 'Sem título de coluna'}</span>
+                <span>{row.original.topic || "Sem título de coluna"}</span>
                 <TooltipArrow
                   className="fill-primary-light"
                   width={11}
@@ -271,7 +271,7 @@ export const columns: ColumnDef<UsersProps>[] = [
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="truncate">
-                {row.original.chiefEditor?.name || 'Sem responsável'}
+                {row.original.chiefEditor?.name || "Sem responsável"}
               </div>
             </TooltipTrigger>
             <TooltipPortal>
@@ -279,7 +279,9 @@ export const columns: ColumnDef<UsersProps>[] = [
                 className="rounded-2xl shadow-sm bg-white text-[16px] text-gray-30 px-4 py-2 animate-fadeIn"
                 sideOffset={5}
               >
-                <span>{row.original.chiefEditor?.name || 'Sem responsável'}</span>
+                <span>
+                  {row.original.chiefEditor?.name || "Sem responsável"}
+                </span>
                 <TooltipArrow
                   className="fill-primary-light"
                   width={11}

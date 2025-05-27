@@ -9,7 +9,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useContext, useState, useEffect } from "react";
 import CustomInput from "@/components/input/custom-input";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { CompanyContext } from "@/providers/company";
 import ReturnPageButton from "@/components/button/returnPage";
 import { Button } from "@/components/ui/button";
@@ -56,8 +56,10 @@ export default function FormUpdateCompany({
 }: {
   companyData: any;
 }) {
+  const parameter = useParams();
+
   const router = useRouter();
-  const { UpdateCompany, SelfCompany } = useContext(CompanyContext);
+  const { UpdateCompany, SelfCompany, company } = useContext(CompanyContext);
   const { listPortals, ListPortals } = useContext(PortalContext);
   const { listCompanyCategory, ListCompanyCategory } = useContext(
     CompanyCategoryContext
@@ -70,127 +72,6 @@ export default function FormUpdateCompany({
     file: File | null;
     preview: string;
   } | null>(null);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    watch,
-    reset,
-  } = useForm<CompanyFormData>({
-    resolver: zodResolver(companySchema),
-  });
-
-  // Valores observados do formulário
-  const cep = watch("cep");
-  const street = watch("street");
-  const number = watch("number");
-  const complement = watch("complement");
-  const district = watch("district");
-  const city = watch("city");
-  const state = watch("state");
-
-  // Carregar dados iniciais
-  useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        // Carregar dados em paralelo
-        await Promise.all([
-          ListPortals(),
-          ListCompanyCategory(100, 1),
-          SelfCompany(companyData.id),
-        ]);
-        
-        // Buscar dados da empresa para preencher o formulário
-        const data = await SelfCompany(companyData.id);
-        
-        // Configurar imagem se existir
-        const imageUrl = data?.company_image?.url || data?.companyImage || "";
-        if (imageUrl) {
-          setSelectedImage({
-            file: null,
-            preview: imageUrl,
-          });
-        }
-
-        // Extrair informações do endereço
-        const addressParts = parseAddress(companyData.address || "");
-        
-        // Processar categorias e portais
-        const categoryIds =
-          data?.companyCategories?.map((cat) => cat.id) ||
-          data?.company_category?.map((cat) => cat.id) ||
-          [];
-
-        const portalIds =
-          data?.portals?.filter((p) => p && p.id).map((p) => p.id) || [];
-
-        // Configurar formulário
-        reset({
-          name: companyData.name || "",
-          phone: companyData.phone || "",
-          openingHours: companyData.openingHours || "",
-          description: companyData.description || "",
-          linkInstagram: companyData.linkInstagram || "",
-          linkWhatsapp: companyData.linkWhatsapp || "",
-          linkLocationMaps: companyData.linkLocationMaps || "",
-          linkLocationWaze: companyData.linkLocationWaze || "",
-          street: addressParts.street,
-          number: addressParts.number,
-          complement: addressParts.complement,
-          district: addressParts.district,
-          city: addressParts.city,
-          state: addressParts.state,
-          cep: addressParts.cep,
-          address: companyData.address || "",
-          status: companyData.status,
-          portalIds: portalIds,
-          companyCategoryIds: categoryIds,
-        });
-      } catch (error) {
-        toast.error("Erro ao carregar dados. Por favor, recarregue a página.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadData();
-  }, [companyData.id]);
-
-  // Busca de CEP
-  const getCepData = async (cepValue: string) => {
-    if (cepValue.length < 8) return;
-
-    const cepFormatted = cepValue.replace(/\D/g, "");
-    if (cepFormatted.length !== 8) return;
-
-    setLoadingCep(true);
-
-    try {
-      const response = await axios.get(
-        `https://viacep.com.br/ws/${cepFormatted}/json`
-      );
-      const data = response.data;
-
-      if (data.erro) {
-        toast.error("CEP não encontrado");
-        return;
-      }
-
-      setValue("street", data.logradouro || "");
-      setValue("district", data.bairro || "");
-      setValue("city", data.localidade || "");
-      setValue("state", data.uf || "");
-
-      document.getElementById("number")?.focus();
-    } catch (error) {
-      toast.error("Erro ao buscar CEP. Tente novamente.");
-    } finally {
-      setLoadingCep(false);
-    }
-  };
 
   // Função simplificada para analisar endereço
   function parseAddress(address: string) {
@@ -243,6 +124,116 @@ export default function FormUpdateCompany({
     return result;
   }
 
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    watch,
+    reset,
+  } = useForm<CompanyFormData>({
+    resolver: zodResolver(companySchema),
+  });
+
+  // Valores observados do formulário
+  const cep = watch("cep");
+  const street = watch("street");
+  const number = watch("number");
+  const complement = watch("complement");
+  const district = watch("district");
+  const city = watch("city");
+  const state = watch("state");
+
+  useEffect(() => {}, [companyData]);
+
+  useEffect(() => {
+    setIsLoading(true);
+
+    reset();
+    setSelectedImage(null);
+
+    Promise.all([ListPortals(), ListCompanyCategory(100, 1)]);
+
+    const loadData = async () => {
+      const data = await SelfCompany(parameter.id as string);
+
+      const imageUrl = data?.company_image?.url || data?.companyImage || "";
+      if (imageUrl) {
+        setSelectedImage({
+          file: null,
+          preview: imageUrl,
+        });
+      }
+
+      const addressParts = parseAddress(data?.address || "");
+
+      const categoryIds =
+        data?.companyCategories?.map((cat) => cat.id) ||
+        data?.companyCategoryIds?.map((cat) => cat.id) ||
+        [];
+
+      const portalIds =
+        data?.portals?.filter((p) => p && p.id).map((p) => p.id) || [];
+
+      reset({
+        name: data?.name || "",
+        phone: data?.phone || "",
+        openingHours: data?.openingHours || "",
+        description: data?.description || "",
+        linkInstagram: data?.linkInstagram || "",
+        linkWhatsapp: data?.linkWhatsapp || "",
+        linkLocationMaps: data?.linkLocationMaps || "",
+        linkLocationWaze: data?.linkLocationWaze || "",
+        street: addressParts.street,
+        number: addressParts.number,
+        complement: addressParts.complement,
+        district: addressParts.district,
+        city: addressParts.city,
+        state: addressParts.state,
+        cep: addressParts.cep,
+        address: data?.address || "",
+        status: data?.status,
+        portalIds: portalIds,
+        companyCategoryIds: categoryIds,
+      });
+    };
+
+    loadData().finally(() => {
+      setIsLoading(false);
+    });
+  }, [parameter.id]);
+
+  // Busca de CEP
+  const getCepData = async (cepValue: string) => {
+    if (cepValue.length < 8) return;
+
+    const cepFormatted = cepValue.replace(/\D/g, "");
+    if (cepFormatted.length !== 8) return;
+
+    setLoadingCep(true);
+
+    try {
+      const response = await axios.get(
+        `https://viacep.com.br/ws/${cepFormatted}/json`
+      );
+      const data = response.data;
+
+      if (data.erro) {
+        toast.error("CEP não encontrado");
+        return;
+      }
+
+      setValue("street", data.logradouro || "");
+      setValue("district", data.bairro || "");
+      setValue("city", data.localidade || "");
+      setValue("state", data.uf || "");
+    } catch (error) {
+      toast.error("Erro ao buscar CEP. Tente novamente.");
+    } finally {
+      setLoadingCep(false);
+    }
+  };
+
   // Atualizar endereço completo
   useEffect(() => {
     if (street && number) {
@@ -292,7 +283,6 @@ export default function FormUpdateCompany({
     }
   };
 
-  // Submissão do formulário
   const onSubmit = async (data: any) => {
     try {
       setIsSubmitting(true);
@@ -313,10 +303,12 @@ export default function FormUpdateCompany({
         companyCategoryIds: data.companyCategoryIds,
       };
 
-      await UpdateCompany(companyUpdateData, companyData.id);
+      // USAR parameter.id EM VEZ DE companyData.id
+      const companyId = parameter.id as string;
+      await UpdateCompany(companyUpdateData, companyId);
 
       if (selectedImage && selectedImage.file) {
-        await uploadCompanyLogo(selectedImage.file, companyData.id);
+        await uploadCompanyLogo(selectedImage.file, companyId);
       }
 
       toast.success("Empresa atualizada com sucesso!");
@@ -373,7 +365,7 @@ export default function FormUpdateCompany({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 p-6">
           {/* Header */}
           <div className="flex justify-between items-center">
-            <div >
+            <div>
               <ReturnPageButton />
             </div>
             <div className="flex flex-col">

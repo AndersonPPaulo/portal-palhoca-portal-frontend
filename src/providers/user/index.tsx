@@ -15,6 +15,8 @@ export interface UserProps {
   topic?: string;
   roleId: string;
   chiefEditorId?: string;
+  user_image: string
+
 }
 
 interface UpdateUserProps {
@@ -25,6 +27,8 @@ interface UpdateUserProps {
   topic?: string;
   roleId?: string;
   chiefEditorId?: string;
+  user_image: string
+
 }
 
 export interface ResponsePromise {
@@ -39,6 +43,8 @@ export interface ResponsePromise {
   created_at?: string;
   updated_at?: string;
   isActive?: boolean;
+  user_image: string
+  
 }
 
 // Tipo para Role separado

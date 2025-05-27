@@ -61,9 +61,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   const { back, push } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editorContent, setEditorContent] = useState(article.content || "");
-  const [isDraft, setIsDraft] = useState(
-    article.status_history?.some((status) => status.status === "DRAFT") || false
-  );
+
   const { UpdateArticle, ListAuthorArticles, listArticles, uploadThumbnail } =
     useContext(ArticleContext);
   const { ListCategorys, listCategorys } = useContext(CategorysContext);

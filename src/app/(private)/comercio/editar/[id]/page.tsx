@@ -22,9 +22,6 @@ export default function EditCompanyPage({ params }: Props) {
     });
   }, [params]);
 
-  if(!company?.id){
-    return loading
-  }
 
   return (
     <div className="flex flex-col h-screen bg-primary-light overflow-scroll overflow-x-hidden">

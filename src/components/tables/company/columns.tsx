@@ -44,8 +44,6 @@ const CellActions = (companyId: string) => {
   );
 };
 
-
-
 export const columns: ColumnDef<ICompanyProps>[] = [
   {
     accessorKey: "thumb",
@@ -83,7 +81,6 @@ export const columns: ColumnDef<ICompanyProps>[] = [
                       src={logoUrl}
                       alt={`Logo ${company.name}`}
                       className="w-56 h-56 object-cover rounded-lg"
-                    
                     />
                     <span className="font-semibold w-56 mt-2 text-body-g flex flex-wrap">
                       {company.name}
@@ -98,9 +95,9 @@ export const columns: ColumnDef<ICompanyProps>[] = [
 
       // Sem imagem, mostra um placeholder com iniciais
       const initials = company.name
-        .split(' ')
-        .map(n => n[0])
-        .join('')
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
         .substring(0, 2)
         .toUpperCase();
 
