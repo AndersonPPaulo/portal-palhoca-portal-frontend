@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function Comercio() {
-  const { push } = useRouter();
   const [filter, setFilter] = useState("");
   const [activeFilters, setActiveFilters] = useState<{
     name: string[];

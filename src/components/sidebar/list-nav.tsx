@@ -33,6 +33,11 @@ export const navigationMain = [
     icon: Store,
     path: "/comercio",
   },
+  {
+    name: "Banners",
+    icon: Store,
+    path: "/banners",
+  },
 ];
 
 export const navigationSecond = [
