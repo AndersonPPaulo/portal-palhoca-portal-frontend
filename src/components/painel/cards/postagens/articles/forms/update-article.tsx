@@ -3,28 +3,20 @@
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import React, { ChangeEvent, useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import CustomInput from "@/components/input/custom-input";
 import { Button } from "@/components/ui/button";
-import Switch from "@/components/switch";
 import { useParams, useRouter } from "next/navigation";
 import TiptapEditor from "@/components/editor/tiptapEditor";
 import ReturnPageButton from "@/components/button/returnPage";
 import { ArticleContext, Article } from "@/providers/article";
 import { CategorysContext } from "@/providers/categorys";
 import { TagContext } from "@/providers/tags";
-import {
-  Select as CustomSelect,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import ReactSelect from "react-select";
-import { MultiValue } from "react-select";
 import { toast } from "sonner";
 import { UserContext } from "@/providers/user";
-import { set } from "date-fns";
+import CustomSelect, { OptionType } from "@/components/select/custom-select";
+import { PortalContext } from "@/providers/portal";
+import ThumbnailUploader from "@/components/thumbnail";
 
 const articleSchema = z.object({
   id: z.string().optional(),
@@ -43,9 +35,11 @@ const articleSchema = z.object({
     .min(300, "Conteúdo é obrigatório mínimo de 300 caracteres"),
   highlight: z.boolean().default(false),
   thumbnail: z.string(),
+  thumbnailDescription: z.string().optional().default(""),
   categoryId: z.string().min(1, "Adicione uma categoria"),
   tagIds: z.array(z.string()).min(1, "Pelo menos uma tag é obrigatória"),
   chiefEditorId: z.string().optional(),
+  portalIds: z.array(z.string()).min(1, "Pelo menos um portal é obrigatório"),
 });
 
 type ArticleFormData = z.infer<typeof articleSchema>;
@@ -58,187 +52,282 @@ const generateSlug = (text: string) => {
     .replace(/[^\w-]+/g, "");
 };
 
-type OptionType = { value: string; label: string };
-
-interface TagOption {
-  value: string;
-  label: string;
-}
-
-interface Tag {
-  id: string;
-  name: string;
-}
-
 interface FormEditArticleProps {
   article: Article;
 }
 
 export default function FormEditArticle({ article }: FormEditArticleProps) {
   const parameter = useParams();
-  console.log("parameter", parameter);
   const { back, push } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editorContent, setEditorContent] = useState(article.content || "");
   const [isDraft, setIsDraft] = useState(
     article.status_history?.some((status) => status.status === "DRAFT") || false
   );
-  const {
-    UpdateArticle,
-    ListAuthorArticles,
-    listArticles,
-    uploadThumbnail,
-    SelfArticle,
-  } = useContext(ArticleContext);
+  const { UpdateArticle, ListAuthorArticles, listArticles, uploadThumbnail } =
+    useContext(ArticleContext);
   const { ListCategorys, listCategorys } = useContext(CategorysContext);
   const { ListTags, listTags } = useContext(TagContext);
   const { profile } = useContext(UserContext);
-  const [changeStatus, setChangeStatus] = useState('')
-  const [changeMessage, setChangeMessage] = useState('')
+  const { ListPortals, listPortals } = useContext(PortalContext);
+  const [changeStatus, setChangeStatus] = useState("");
+  const [changeMessage, setChangeMessage] = useState("");
+  const [selectedImage, setSelectedImage] = useState<{
+    file: File;
+    preview: string;
+    description: string;
+  } | null>(null);
+  const [thumbnailDescription, setThumbnailDescription] = useState("");
+  
+  // Estados para controlar se os dados foram carregados
+  const [tagsLoaded, setTagsLoaded] = useState(false);
+  const [portalsLoaded, setPortalsLoaded] = useState(false);
+  const [categoriesLoaded, setCategoriesLoaded] = useState(false);
 
   const findArticle = listArticles?.data?.find(
     (item) => item.id === parameter.id
   );
-  const currentStatus = React.useEffect(() => {
-    const statusHistory = () => {
-      if (
-        !findArticle?.status_history ||
-        findArticle.status_history.length === 1
-      ) {
-        return "";
-      }
-      // Ordenar o histórico de status pela data (do mais recente para o mais antigo)
-      const sortedHistory = [...findArticle.status_history].sort(
-        (a, b) =>
-          new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
-      );
-      
-      // Retornar o status do primeiro item (o mais recente)
-  
-      setChangeStatus(sortedHistory[0].status)
-      setChangeMessage(sortedHistory[0].change_request_description)
-    };
-    statusHistory();
-  }, [findArticle?.status_history]);
-  console.log('findArticle?.status_history', findArticle?.status_history)
-  
 
   useEffect(() => {
-    Promise.all([
-      ListTags(),
-      ListCategorys(),
-      ListAuthorArticles(),
-    ]).then(() => {
-      // Verificar se as tags do artigo existem na lista de tags após o carregamento
-      if (article.tags && article.tags.length > 0 && listTags.length > 0) {
-        // Filtra as tags do artigo para garantir que existam na lista atual de tags
-        const validTagIds = article.tags
-          .filter((tag) => listTags.some((listTag) => listTag.id === tag.id))
-          .map((tag) => tag.id);
+    if (
+      !findArticle?.status_history ||
+      findArticle.status_history.length === 1
+    ) {
+      return;
+    }
+    const sortedHistory = [...findArticle.status_history].sort(
+      (a, b) =>
+        new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
+    );
 
-        setValue("tagIds", validTagIds);
-      }
-    });
+    setChangeStatus(sortedHistory[0].status);
+    setChangeMessage(sortedHistory[0].change_request_description);
   }, []);
 
-  const handleEditorChange = (content: string) => {
-    setEditorContent(content);
-    setValue("content", content, { shouldValidate: true });
-  };
+  // Carregar dados necessários e garantir que todos carregaram antes de definir valores
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Carregar tags
+        if (ListTags) {
+          await ListTags();
+          setTagsLoaded(true);
+        }
+        
+        // Carregar categorias
+        if (ListCategorys) {
+          await ListCategorys();
+          setCategoriesLoaded(true);
+        }
+        
+        // Carregar artigos do autor
+        if (ListAuthorArticles) {
+          await ListAuthorArticles();
+        }
+        
+        // Carregar portais
+        if (ListPortals) {
+          await ListPortals();
+          setPortalsLoaded(true);
+        }
+      } catch (error) {
+        toast.error("Erro ao carregar dados necessários");
+      }
+    };
+    
+    loadData();
+  }, []);
 
-  const tagOptions: OptionType[] = listTags.map((tag: Tag) => ({
-    value: tag.id,
-    label: tag.name,
-  }));
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-    watch,
-    setValue,
-  } = useForm<ArticleFormData>({
-    resolver: zodResolver(articleSchema),
-    defaultValues: {
+  // Configurar valores iniciais após todos os dados serem carregados
+  useEffect(() => {
+    if (!tagsLoaded || !portalsLoaded || !categoriesLoaded) {
+      return; // Esperar até que todos os dados sejam carregados
+    }
+    
+    // Configurar tags
+    if (article.tags && article.tags.length > 0 && listTags?.length > 0) {
+      const validTagIds = article.tags
+        .filter((tag) => listTags.some((listTag) => listTag.id === tag.id))
+        .map((tag) => tag.id);
+      
+      setValue("tagIds", validTagIds);
+    }
+    
+    // Configurar portais
+    if (article.portals && article.portals.length > 0 && listPortals?.length > 0) {
+      const validPortalIds = article.portals
+        .filter((portal) => listPortals.some((listPortal) => listPortal.id === portal.id))
+        .map((portal) => portal.id);
+      
+      setValue("portalIds", validPortalIds);
+    }
+    
+    // Configurar a descrição da thumbnail se existir
+    if (article.thumbnail && article.thumbnail.description) {
+      setThumbnailDescription(article.thumbnail.description || "");
+      setValue("thumbnailDescription", article.thumbnail.description || "");
+    }
+    
+    // Garantir que o formulário está completamente atualizado
+    reset({
       id: article.id,
       title: article.title,
       slug: article.slug,
-      creator: article.creator?.id || article.creator,
+      creator: article.creator?.id || "",
       reading_time: Number(article.reading_time),
-      thumbnail: article.thumbnail,
       resume_content: article.resume_content,
       content: article.content,
       highlight: article.highlight === true,
       categoryId: article.category?.id,
       tagIds: article.tags?.map((tag) => tag.id) || [],
-    },
-  });
+      chiefEditorId: profile?.chiefEditor?.id,
+      portalIds: article.portals?.map((portal) => portal.id) || [],
+      thumbnailDescription: article.thumbnail?.description || "",
+    });
+    
+  }, [article, tagsLoaded, portalsLoaded, categoriesLoaded, listTags, listPortals]);
 
   useEffect(() => {
-    if (article) {
-      reset({
-        id: article.id,
-        title: article.title,
-        slug: article.slug,
-        creator: article.creator?.id || article.creator,
-        reading_time: Number(article.reading_time),
-        thumbnail: article.thumbnail,
-        resume_content: article.resume_content,
-        content: article.content,
-        highlight: article.highlight === true,
-        categoryId: article.category?.id,
-        tagIds: article.tags?.map((tag) => tag.id) || [],
-        chiefEditorId: profile?.chiefEditor?.id,
-      });
-      setIsDraft(
-        article.status_history?.some((status) => status.status === "DRAFT") ||
-          false
-      );
-      setEditorContent(article.content || "");
+    if (article.thumbnail) {
+      let thumbnailUrl = "";
+      let description = "";
+      
+      if (typeof article.thumbnail === "string") {
+        thumbnailUrl = article.thumbnail;
+      } else if (article.thumbnail?.url) {
+        thumbnailUrl = article.thumbnail.url;
+        description = article.thumbnail.description || "";
+      }
+
+      if (thumbnailUrl) {
+        setSelectedImage({
+          file: null as any, 
+          preview: thumbnailUrl,
+          description: description,
+        });
+        
+        setThumbnailDescription(description);
+        setValue("thumbnailDescription", description);
+      }
     }
-  }, [article, reset, profile]);
+  }, []);
+
+  const tagOptions: OptionType[] = Array.isArray(listTags)
+    ? listTags.map((tag: any) => ({ value: tag.id, label: tag.name }))
+    : [];
+
+  const categoryOptions: OptionType[] = Array.isArray(listCategorys)
+    ? listCategorys.map((category: any) => ({
+        value: category.id,
+        label: category.name,
+      }))
+    : [];
+
+  const portalOptions: OptionType[] = Array.isArray(listPortals)
+    ? listPortals.map((portal: any) => ({
+        value: portal.id,
+        label: portal.name,
+      }))
+    : [];
+
+  const creatorOptions: OptionType[] = listArticles?.data
+    ? Array.from(
+        new Map(
+          listArticles.data
+            .filter((article) => article.creator?.id)
+            .map((article) => [
+              article.creator.id,
+              { value: article.creator.id, label: article.creator.name },
+            ])
+        ).values()
+      )
+    : [];
+
+  const {
+    register,
+    formState: { errors },
+    reset,
+    watch,
+    setValue,
+    getValues,
+    handleSubmit,
+  } = useForm<ArticleFormData>({
+    resolver: zodResolver(articleSchema),
+  });
 
   const title = watch("title");
-  const highlight = watch("highlight");
+  const tagIds: string[] = watch("tagIds") || [];
+  const categoryId: string = watch("categoryId") || "";
+  const portalIds: string[] = watch("portalIds") || [];
+  const creator: string = watch("creator") || "";
+  const watchedThumbnailDescription = watch("thumbnailDescription");
+
+  // Sincronizar o estado local com o valor do formulário
+  useEffect(() => {
+    if (watchedThumbnailDescription !== undefined) {
+      setThumbnailDescription(watchedThumbnailDescription);
+    }
+  }, []);
 
   useEffect(() => {
     if (title) {
       setValue("slug", generateSlug(title), { shouldValidate: true });
     }
-  }, [title, setValue]);
+  }, []);
 
-  // Validar se as tags selecionadas existem na lista de tags disponíveis
   const validateTagSelection = (selectedTags: string[]) => {
-    // Verificar se cada tag selecionada existe na lista de tags disponíveis
     const validTags = selectedTags.filter((tagId) =>
       tagOptions.some((option) => option.value === tagId)
     );
 
-    // Se o número de tags válidas for diferente do número de tags selecionadas,
-    // algumas tags não foram encontradas
     if (validTags.length !== selectedTags.length) {
       toast.error(
         "Uma ou mais tags selecionadas não foram encontradas. Por favor, selecione apenas tags válidas."
       );
-      return validTags; // Retorna apenas as tags válidas
+      return validTags;
     }
 
     return selectedTags;
   };
 
+  const handleImageUpload = (
+    file: File,
+    previewUrl: string,
+    description: string
+  ) => {
+    setSelectedImage({ file, preview: previewUrl, description });
+    setValue("thumbnailDescription", description, { shouldValidate: true });
+    setThumbnailDescription(description);
+  };
+
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setThumbnailDescription(value);
+    setValue("thumbnailDescription", value);
+    
+    // Também atualiza no objeto selectedImage se existir
+    if (selectedImage) {
+      setSelectedImage({
+        ...selectedImage,
+        description: value,
+      });
+    }
+  };
+
   const submitArticle = async (data: ArticleFormData, setToDraft: boolean) => {
     try {
-      // Validar as tags antes de enviar
       const validatedTags = validateTagSelection(data.tagIds);
 
-      // Se houver diferença, atualiza os valores do formulário
       if (validatedTags.length !== data.tagIds.length) {
         setValue("tagIds", validatedTags);
-        return; // Não prossegue com a submissão
+        return;
       }
 
       setIsSubmitting(true);
+
+      // Garantir que a descrição da thumbnail esteja nos dados
+      data.thumbnailDescription = thumbnailDescription;
+
       const finalData = {
         title: data.title,
         slug: data.slug,
@@ -246,65 +335,59 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         resume_content: data.resume_content,
         content: data.content,
         highlight: data.highlight,
-        thumbnail: data.thumbnail || article.thumbnail,
         categoryId: data.categoryId,
         tagIds: data.tagIds,
-        setToDraft: setToDraft, // Definido com base no botão clicado
+        portalIds: data.portalIds,
+        setToDraft: setToDraft,
         chiefEditorId: profile?.chiefEditor?.id,
+        thumbnailDescription: thumbnailDescription,
       };
-
+      
+      // Enviar dados para API
       await UpdateArticle(finalData, article.id);
+
+      // Se tem imagem nova selecionada, faz o upload
+      if (selectedImage && selectedImage.file) {
+        try {
+          await uploadThumbnail(
+            selectedImage.file,
+            thumbnailDescription,
+            article.id
+          );
+        } catch (error) {
+          toast.error("Erro no upload da thumbnail");
+        }
+      }
+
       const statusMsg = setToDraft ? "Rascunho" : "Pendente de Revisão";
       toast.success(`Artigo atualizado com sucesso! Status: ${statusMsg}`);
+      
+      // Recarregar dados do local listing após submissão
+      if (ListAuthorArticles) {
+        await ListAuthorArticles();
+      }
+      
       setTimeout(() => {
         push("/postagens");
-      }, 1800);
+      }, 1000);
     } catch (error) {
-      console.error("Erro ao atualizar artigo:", error);
+      toast.error("Erro ao atualizar artigo. Tente novamente.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleSaveAsDraft = async () => {
-    const formData = getValues();
-    await submitArticle(formData, true);
+    handleSubmit((data) => submitArticle(data, true))();
   };
 
   const handleSendForReview = async () => {
-    const formData = getValues();
-    await submitArticle(formData, false);
+    handleSubmit((data) => submitArticle(data, false))();
   };
 
-  const handleThumbnailChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-
-      try {
-        // Usar o método do provider para upload
-        const imageUrl = await uploadThumbnail(file);
-        setValue("thumbnail", imageUrl, { shouldValidate: true });
-      } catch (error) {
-        console.error("Erro no upload da imagem:", error);
-      }
-    }
-  };
-
-  const getValues = () => {
-    return {
-      id: article.id,
-      title: watch("title"),
-      slug: watch("slug"),
-      creator: watch("creator"),
-      reading_time: watch("reading_time"),
-      thumbnail: watch("thumbnail"),
-      resume_content: watch("resume_content"),
-      content: watch("content"),
-      highlight: watch("highlight"),
-      categoryId: watch("categoryId"),
-      tagIds: watch("tagIds"),
-      chiefEditorId: profile?.chiefEditor?.id || "",
-    };
+  const handleEditorChange = (content: string) => {
+    setEditorContent(content);
+    setValue("content", content, { shouldValidate: true });
   };
 
   return (
@@ -313,22 +396,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         <form className="space-y-6 p-6">
           <div className="flex justify-between items-center -mb-4">
             <ReturnPageButton />
-
-            <div className="flex items-center justify-end gap-6 rounded-lg p-4">
-              <div className="flex items-center gap-2">
-                <label htmlFor="highlight" className="text-gray-40">
-                  Destaque
-                </label>
-                <Switch
-                  value={highlight}
-                  onChange={(checked) =>
-                    setValue("highlight", checked, { shouldValidate: true })
-                  }
-                />
-              </div>
-            </div>
           </div>
-
           <div className="flex gap-6">
             <CustomInput
               id="title"
@@ -350,252 +418,113 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
           </div>
 
           <div className="flex gap-6">
-            <div className="flex flex-col gap-1 w-full">
-              <label className="ml-6">Adicionar Thumbnail (capa)</label>
-              <div className="border h-full border-blue-500/30 rounded-[34px] flex items-center justify-center max-h-[54px]">
-                <input
-                  id="thumbnail"
-                  type="file"
-                  accept="image/*"
-                  className="w-full text-gray-30 py-2 px-8 rounded-md bg-transparent"
-                  onChange={handleThumbnailChange}
+            <div className="flex flex-col  w-full">
+              <ThumbnailUploader
+                onImageUpload={handleImageUpload}
+                initialImage={selectedImage?.preview}
+              />
+              
+              {/* Campo oculto para o valor do formulário */}
+              <input type="hidden" {...register("thumbnail")} />
+              <input 
+                type="hidden" 
+                {...register("thumbnailDescription")} 
+                value={thumbnailDescription} 
+              />
+             {/* Campo para a descrição da thumbnail */}
+             {thumbnailDescription && (
+                <span className="text-gray-700 ">
+                  Descrição da Imagem: {thumbnailDescription}
+                </span>
+              )}
+            </div>
+            <div className="basis-1/2">
+              <div className="mt-5">
+                <CustomSelect
+                  id="tagIds"
+                  label="Tag(s):"
+                  placeholder="Selecione uma ou mais tags"
+                  options={tagOptions}
+                  value={tagIds}
+                  onChange={(value) =>
+                    setValue("tagIds", value as string[], {
+                      shouldValidate: true,
+                    })
+                  }
+                  isMulti={true}
+                  error={errors.tagIds?.message}
+                  noOptionsMessage="Nenhuma tag disponível"
                 />
               </div>
-              {article.thumbnail && (
-                <div className="ml-6 mt-2">
-                  <p className="text-sm text-gray-500">Thumbnail atual:</p>
-                  <img
-                    src={article.thumbnail}
-                    alt="Thumbnail atual"
-                    className="h-16 w-auto object-cover rounded-md mt-1"
-                  />
-                </div>
-              )}
-              {errors.thumbnail && (
-                <span className="text-sm text-red-500 w-full">
-                  {errors.thumbnail.message}
-                </span>
-              )}
-            </div>
-
-            <div className="basis-1/2">
-              <label className="px-6" htmlFor="tagIds">
-                Tag(s):
-              </label>
-              <ReactSelect
-                id="tagIds"
-                isMulti
-                className="basic-multi-select w-full"
-                classNamePrefix="select"
-                value={tagOptions.filter((tag) =>
-                  watch("tagIds").includes(tag.value)
+              <div className="mt-10">
+                <CustomInput
+                  id="reading_time"
+                  label="Tempo de leitura"
+                  type="number"
+                  {...register("reading_time", {
+                    setValueAs: (value: string) => Number(value) || undefined,
+                  })}
+                  onChange={(e) => {
+                    setValue("reading_time", Number(e.target.value));
+                  }}
+                />
+                {errors.reading_time && (
+                  <span className="text-sm text-red-500">
+                    {errors.reading_time.message}
+                  </span>
                 )}
-                onChange={(selectedOptions: MultiValue<TagOption>) => {
-                  const selectedTagIds = selectedOptions
-                    ? selectedOptions.map((option) => option.value)
-                    : [];
-
-                  // Verifica se todas as tags selecionadas existem na lista de tags disponíveis
-                  const validTags = selectedTagIds.filter((tagId) =>
-                    tagOptions.some((option) => option.value === tagId)
-                  );
-
-                  // Se o número de tags válidas for diferente do número de tags selecionadas,
-                  // algumas tags não existem mais
-                  if (validTags.length !== selectedTagIds.length) {
-                    toast.warning(
-                      "Algumas tags selecionadas não foram encontradas e foram removidas."
-                    );
-                  }
-
-                  setValue("tagIds", validTags);
-                }}
-                options={tagOptions}
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    borderRadius: "24px",
-                    padding: "0rem 24px",
-                    minHeight: "56px",
-                    marginTop: "6px",
-                    borderWidth: "2px",
-                    borderColor: "#DFEAF6",
-                    "&:hover": {
-                      borderColor: "#DFEAF695",
-                    },
-                  }),
-                  multiValue: (base) => ({
-                    ...base,
-                    backgroundColor: "#3b82f6",
-                    padding: "0.25rem 0.5rem",
-                  }),
-                  multiValueLabel: (base) => ({
-                    ...base,
-                    color: "white",
-                  }),
-                  multiValueRemove: (base) => ({
-                    ...base,
-                    color: "white",
-                    ":hover": {
-                      backgroundColor: "#2563eb",
-                      color: "white",
-                    },
-                  }),
-                  menu: (base) => ({
-                    ...base,
-                    borderRadius: "24px",
-                  }),
-                  menuList: (base) => ({
-                    ...base,
-                    borderRadius: "20px",
-                  }),
-                }}
-              />
-              {errors.tagIds && (
-                <p className="text-red-500">{errors.tagIds.message}</p>
-              )}
-            </div>
-            <div className="basis-1/4 flex flex-col">
-              <CustomInput
-                id="reading_time"
-                label="Tempo de leitura"
-                type="number"
-                {...register("reading_time", {
-                  setValueAs: (value: string) => Number(value) || undefined,
-                })}
-                onChange={(e) => {
-                  setValue("reading_time", Number(e.target.value));
-                }}
-              />
-              {errors.reading_time && (
-                <span className="text-sm text-red-500">
-                  {errors.reading_time.message}
-                </span>
-              )}
+              </div>
             </div>
           </div>
 
           <div className="flex gap-6">
             <div className="flex flex-col gap-1 w-full">
-              <label className="px-6" htmlFor="creator">
-                Criador
-              </label>
               <CustomSelect
-                onValueChange={(value) => setValue("creator", value)}
-                defaultValue={
-                  article.creator?.id || article.creator || "placeholder"
-                }
-                disabled
-              >
-                <SelectTrigger className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light outline-none focus:border-blue-500 focus:ring-blue-500">
-                  <SelectValue placeholder="Selecione um criador" />
-                </SelectTrigger>
-                <SelectContent className="bg-white rounded-2xl">
-                  <SelectItem value="placeholder" disabled>
-                    Selecione um criador
-                  </SelectItem>
-                  {listArticles?.data &&
-                    Array.from(
-                      new Map(
-                        listArticles.data
-                          .filter((article) => article.creator?.id)
-                          .map((article) => [
-                            article.creator.id,
-                            article.creator,
-                          ])
-                      ).values()
-                    ).map((creator) => (
-                      <SelectItem
-                        key={creator.id}
-                        value={creator.id}
-                        className="hover:bg-blue-500 hover:text-white"
-                      >
-                        {creator.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </CustomSelect>
-              {errors.creator && (
-                <span className="text-sm text-red-500">
-                  {errors.creator.message}
-                </span>
-              )}
+                id="creator"
+                label="Criador"
+                placeholder="Selecione um criador"
+                options={creatorOptions}
+                value={creator}
+                onChange={(value) => setValue("creator", value as string)}
+                isMulti={false}
+                error={errors.creator?.message}
+                noOptionsMessage="Nenhum criador disponível"
+              />
             </div>
 
             <div className="flex gap-6 w-full">
-              <div className="w-full">
-                <label
-                  htmlFor="categoryId"
-                  className="block px-6 font-medium text-black"
-                >
-                  Categoria
-                </label>
-                <CustomSelect
-                  onValueChange={(value) => setValue("categoryId", value)}
-                  defaultValue={article.category?.id || "placeholder"}
-                >
-                  <SelectTrigger className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light outline-none focus:border-blue-500 focus:ring-blue-500">
-                    <SelectValue placeholder="Selecione uma categoria" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white rounded-2xl">
-                    <SelectItem value="placeholder" disabled>
-                      Selecione uma categoria
-                    </SelectItem>
-                    {listCategorys.map((category) => (
-                      <SelectItem
-                        key={category.id}
-                        value={category.id}
-                        className="hover:bg-blue-500 hover:text-white"
-                      >
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </CustomSelect>
-                {errors.categoryId && (
-                  <span className="text-sm text-red-500">
-                    {errors.categoryId.message}
-                  </span>
-                )}
-              </div>
+              <CustomSelect
+                id="categoryId"
+                label="Categoria"
+                placeholder="Selecione uma categoria"
+                options={categoryOptions}
+                value={categoryId}
+                onChange={(value) =>
+                  setValue("categoryId", value as string, {
+                    shouldValidate: true,
+                  })
+                }
+                isMulti={false}
+                error={errors.categoryId?.message}
+                noOptionsMessage="Nenhuma categoria disponível"
+              />
             </div>
             <div className="flex gap-6 w-full">
-              <div className="w-full">
-                <label
-                  htmlFor="cityId"
-                  className="block px-6 font-medium text-black"
-                >
-                  Portal
-                </label>
-                <CustomSelect defaultValue={article.city?.id || "placeholder"}>
-                  <SelectTrigger className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light outline-none focus:border-blue-500 focus:ring-blue-500">
-                    <SelectValue placeholder="Selecione uma cidade" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white rounded-2xl">
-                    <SelectItem value="placeholder" disabled>
-                      Selecione um Portal
-                    </SelectItem>
-                    <SelectItem
-                      value="palhoca"
-                      className="hover:bg-blue-500 hover:text-white"
-                    >
-                      Palhoça
-                    </SelectItem>
-                    <SelectItem
-                      value="florianopolis"
-                      className="hover:bg-blue-500 hover:text-white"
-                    >
-                      Florianópolis
-                    </SelectItem>
-                    <SelectItem
-                      value="sao-jose"
-                      className="hover:bg-blue-500 hover:text-white"
-                    >
-                      São José
-                    </SelectItem>
-                  </SelectContent>
-                </CustomSelect>
-              </div>
+              <CustomSelect
+                id="portalIds"
+                label="Portal"
+                placeholder="Selecione um ou mais portais"
+                options={portalOptions}
+                value={portalIds}
+                onChange={(value) => {
+                  setValue("portalIds", value as string[], {
+                    shouldValidate: true,
+                  });
+                }}
+                isMulti={true}
+                error={errors.portalIds?.message}
+                noOptionsMessage="Nenhum portal disponível"
+              />
             </div>
           </div>
 
@@ -641,11 +570,6 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
                 value={changeMessage}
                 disabled
               />
-              {errors.resume_content && (
-                <span className="text-sm text-red-500">
-                  {errors.resume_content.message}
-                </span>
-              )}
             </div>
           ) : null}
           <div className="flex justify-end gap-4">

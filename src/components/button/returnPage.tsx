@@ -2,16 +2,21 @@
 
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Button } from "../ui/button";
+import { useState } from "react";
 
 export default function ReturnPageButton() {
   const { back } = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   return (
-    <span
-      onClick={() => back()}
-      className="flex items-center bg-primary-light text-primary p-2 rounded-full cursor-pointer hover:bg-primary-dark hover:text-white"
+    <Button
+      type="button"
+      disabled={isSubmitting}
+      onClick={back}
+      className="flex items-center bg-primary-light text-primary  rounded-full"
     >
       <ArrowLeft size={24} />
-    </span>
+    </Button>
   );
 }

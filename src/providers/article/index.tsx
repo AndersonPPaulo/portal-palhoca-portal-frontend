@@ -15,10 +15,10 @@ export interface ArticleProps {
   content: string;
   initialStatus: string;
   highlight: boolean;
-  thumbnail: string;
   categoryId: string;
   tagIds: string[];
   chiefEditorId: string;
+  portals: string[];
 }
 
 interface UpdateArticleProps {
@@ -30,9 +30,9 @@ interface UpdateArticleProps {
   content?: string;
   status?: boolean;
   highlight?: boolean;
-  thumbnail?: string;
   categoryId?: string;
   tagIds?: string[];
+  portalIds: string[];
 }
 
 export interface ArticleResponse {
@@ -41,12 +41,13 @@ export interface ArticleResponse {
   meta: Meta;
 }
 
+
 export interface Article {
   id: string;
   title: string;
   slug: string;
   reading_time: number;
-  thumbnail: string;
+  thumbnail: { id: string; url: string; key: string; description: string };
   resume_content: string;
   content: string;
   clicks_view: string;
@@ -59,6 +60,7 @@ export interface Article {
   tags: Tag[];
   status_history: StatusHistory[];
   status: string;
+  portals: Portal[];
 }
 
 export interface User {
@@ -84,12 +86,22 @@ export interface Tag {
   created_at: string;
   updated_at: string;
 }
+export interface Portal {
+  id: string;
+  name: string;
+  link_referer: string;
+}
 
 export interface StatusHistory {
   id: string;
-  status: "CHANGES_REQUESTED" | "PENDING_REVIEW" | "PUBLISHED" | "DRAFT" | "REJECTED";
-  change_request_description: string 
-  reason_reject: string 
+  status:
+    | "CHANGES_REQUESTED"
+    | "PENDING_REVIEW"
+    | "PUBLISHED"
+    | "DRAFT"
+    | "REJECTED";
+  change_request_description: string;
+  reason_reject: string;
   changed_at: string;
 }
 
@@ -118,7 +130,11 @@ interface IArticleData {
   listArticles: ArticleResponse | null;
   UpdateArticle(data: UpdateArticleProps, articleId: string): Promise<void>;
   DeleteArticle(articleId: string): Promise<void>;
-  uploadThumbnail(file: File): Promise<string>;
+  uploadThumbnail(
+    file: File,
+    description: string,
+    articleId: string
+  ): Promise<string>;
   GetPublishedArticles(page?: number, limit?: number): Promise<ArticleResponse>;
   publishedArticles: ArticleResponse | null;
 }
@@ -152,11 +168,11 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
         setTimeout(() => {
           back();
         }, 1800);
-        return res.data.response;
+        return res.data.article;
       })
       .catch((err) => {
         toast.error(err.response.data.message);
-        throw err;
+        return err;
       });
 
     return response;
@@ -171,7 +187,6 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
       .get(`/article/${articleId}`, config)
       .then((res) => {
         setArticle(res.data.response);
-        console.log('res.data.response', res.data.response)
         return res.data.response;
       })
       .catch((err) => {
@@ -201,7 +216,6 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
     try {
       const response = await api.get(url, config);
       setListArticles(response.data);
-      console.log('response.data', response.data)
       return response.data;
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Erro ao listar artigos");
@@ -236,7 +250,8 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
     };
 
     try {
-      await api.patch("/article", data, config);
+      const response = await api.patch("/article", data, config);
+      console.log('response', response)
       toast.success("Artigo atualizado com sucesso!");
     } catch (err: any) {
       toast.error(err.response.data.message);
@@ -244,10 +259,15 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
     }
   };
 
-  const uploadThumbnail = async (file: File): Promise<string> => {
+  const uploadThumbnail = async (
+    file: File,
+    description: string,
+    articleId: string
+  ): Promise<string> => {
     const { "user:token": token } = parseCookies();
     const formData = new FormData();
     formData.append("thumbnail", file);
+    formData.append("description", description);
 
     const config = {
       headers: {
@@ -257,7 +277,11 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
     };
 
     try {
-      const response = await api.post("/upload", formData, config);
+      const response = await api.post(
+        `/upload-thumbnail/${articleId}`,
+        formData,
+        config
+      );
       return response.data.url;
     } catch (err: any) {
       toast.error(

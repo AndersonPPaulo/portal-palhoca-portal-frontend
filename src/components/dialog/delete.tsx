@@ -26,6 +26,8 @@ import { ArticleContext } from "@/providers/article";
 import { UserContext } from "@/providers/user";
 import { CompanyCategoryContext } from "@/providers/company-category/index.tsx";
 import { BannerContext } from "@/providers/banner";
+import { useRouter } from "next/navigation";
+
 
 interface Props {
   item_id: string;
@@ -39,6 +41,7 @@ interface Props {
     | "banners";
 }
 
+
 export function DialogDelete({ item_id, item_name, context }: Props) {
   const { DeleteTag, ListTags } = useContext(TagContext);
   const { DeleteCategory, ListCategorys } = useContext(CategorysContext);
@@ -49,20 +52,22 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
   );
   const { UpdateBanner, ListBanners } = useContext(BannerContext);
 
+  const { push } = useRouter();
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
+  
+  
   const handleDelete = async () => {
     if (inputValue !== item_name) {
       setError("O nome não corresponde.");
       return;
     }
-
+    
     try {
       setIsLoading(true);
-
+      
       if (context === "tags") {
         await DeleteTag(item_id);
         ListTags();
@@ -71,7 +76,8 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
         ListCategorys();
       } else if (context === "articles") {
         await DeleteArticle(item_id);
-        ListAuthorArticles(profile!.id);
+        ListAuthorArticles(profile?.id);
+        push("/postagens")
       } else if (context === "users") {
         DeleteUser(item_id);
       } else if (context === "companyCategory") {

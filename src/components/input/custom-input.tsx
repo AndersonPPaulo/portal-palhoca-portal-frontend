@@ -44,7 +44,7 @@ const CustomInput: React.FC<CustomInputProps> = ({
         ) : (
           <input
             {...props}
-            className={` w-full text-body-m text-gray-900 rounded-[24px] px-6 py-4 outline-none focus:border-blue-500 focus:ring-blue-500 ${
+            className={` w-full text-body-m text-gray-900 rounded-[24px] px-6 py-4 outline-none focus:border-blue-950 focus:ring-blue-900 ${
               error
                 ? "border border-red-500 focus:border-red-500 focus:ring-red-500"
                 : "border-none"

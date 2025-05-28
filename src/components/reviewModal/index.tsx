@@ -17,7 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { useState, useContext, useEffect} from "react";
+import { useState, useContext, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ArticleContext, Article } from "@/providers/article";
@@ -25,6 +25,7 @@ import { api } from "@/service/api";
 import { parseCookies } from "nookies";
 import { toast } from "sonner";
 import { UserContext } from "@/providers/user";
+import { useRouter } from "next/navigation";
 
 interface ArticleViewModalProps {
   open: boolean;
@@ -36,26 +37,34 @@ export function ArticleViewModal({
   open,
   onOpenChange,
   article,
-  
 }: ArticleViewModalProps) {
-  const { ListAuthorArticles, SelfArticle } = useContext(ArticleContext);
+  const { ListAuthorArticles } = useContext(ArticleContext);
   const { profile } = useContext(UserContext);
-
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [showChangesForm, setShowChangesForm] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [changeRequest, setChangeRequest] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sortedStatusHistory, setSortedStatusHistory] = useState(
+    article.status_history || []
+  );
+  console.log("article", article);
 
-  // Reset forms when modal opens/closes
   useEffect(() => {
     if (!open) {
       setShowRejectForm(false);
       setShowChangesForm(false);
       setRejectReason("");
       setChangeRequest("");
+    } else if (article.status_history && article.status_history.length > 0) {
+      // Ordenar o histórico de status pela data (do mais recente para o mais antigo)
+      const sorted = [...article.status_history].sort(
+        (a, b) =>
+          new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
+      );
+      setSortedStatusHistory(sorted);
     }
-  }, [open]);
+  }, [open, article]);
 
   // Função para formatar datas
   const formatDate = (dateString: string) => {
@@ -95,11 +104,26 @@ export function ArticleViewModal({
     }
   };
 
-  const currentStatus =
-    article.status ||
-    (article.status_history && article.status_history.length > 0
-      ? article.status_history[article.status_history.length - 1].status
-      : undefined);
+  // Obter o status mais recente baseado na data
+  const getCurrentStatus = () => {
+    if (!article.status_history || article.status_history.length === 0) {
+      return article.status;
+    }
+
+    if (sortedStatusHistory.length > 0) {
+      return sortedStatusHistory[0].status;
+    }
+
+    const mostRecent = [...article.status_history].sort(
+      (a, b) =>
+        new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
+    )[0];
+
+    return mostRecent.status;
+  };
+
+  const currentStatus = getCurrentStatus();
+  const { push } = useRouter();
 
   const updateArticleStatus = async (
     newStatus: "PUBLISHED" | "REJECTED" | "CHANGES_REQUESTED" | "DRAFT",
@@ -117,7 +141,6 @@ export function ArticleViewModal({
         reviewerId: profile?.id,
       };
 
-      // Add optional parameters if provided
       if (newStatus === "REJECTED" && options?.reason_reject) {
         payload.reason_reject = options.reason_reject;
       }
@@ -127,10 +150,8 @@ export function ArticleViewModal({
         options?.change_request_description
       ) {
         payload.change_request_description = options.change_request_description;
-        // Não alteramos o newStatus para DRAFT, mantemos CHANGES_REQUESTED
       }
 
-      // Fazer a chamada à API para atualizar o status
       await api.patch(`/article-status-review/${article.id}`, payload, config);
 
       const successMessage = {
@@ -142,8 +163,6 @@ export function ArticleViewModal({
 
       toast.success(successMessage[newStatus]);
 
-      // Atualize apenas o artigo atual, sem recarregar todos os artigos
-      // Isso evita que artigos já publicados sejam afetados
       await ListAuthorArticles();
 
       // Fechar o modal
@@ -161,7 +180,12 @@ export function ArticleViewModal({
     }
   };
 
-  const handleApproveArticle = () => updateArticleStatus("PUBLISHED");
+  const handleApproveArticle = () => {
+    updateArticleStatus("PUBLISHED");
+    setTimeout(() => {
+      push("/postagens?tab=PUBLISHED");
+    }, 500);
+  };
 
   const handleRequestChanges = () => {
     if (showChangesForm) {
@@ -171,8 +195,10 @@ export function ArticleViewModal({
       }
       updateArticleStatus("CHANGES_REQUESTED", {
         change_request_description: changeRequest,
-        
       });
+      setTimeout(() => {
+        push("/postagens?tab=CHANGES_REQUESTED");
+      }, 500);
     } else {
       setShowChangesForm(true);
       setShowRejectForm(false);
@@ -186,6 +212,9 @@ export function ArticleViewModal({
         return;
       }
       updateArticleStatus("REJECTED", { reason_reject: rejectReason });
+      setTimeout(() => {
+        push("/postagens?tab=REJECTED");
+      }, 500);
     } else {
       setShowRejectForm(true);
       setShowChangesForm(false);
@@ -231,24 +260,24 @@ export function ArticleViewModal({
                     </div>
                   </div>
                 </div>
-
                 {/* Thumbnail se disponível */}
                 {article.thumbnail && (
                   <div className="rounded-md overflow-hidden">
                     <div className="relative w-full h-64">
                       <img
-                        src={
-                          article.thumbnail.startsWith("http")
-                            ? article.thumbnail
-                            : `http://localhost:5555/${article.thumbnail}`
-                        }
+                        src={article.thumbnail.url}
                         alt="Thumbnail"
                         className="object-cover w-full h-full"
                       />
                     </div>
                   </div>
                 )}
-
+                {/* Campo para a descrição da thumbnail */}
+                {article.thumbnail.description && (
+                  <span className="text-gray-800">
+                    Descrição da Imagem: {article.thumbnail.description}
+                  </span>
+                )}
                 {/* Resumo */}
                 <div className="bg-gray-100 p-4 rounded-md">
                   <h3 className="font-semibold mb-2">Resumo</h3>
@@ -256,7 +285,6 @@ export function ArticleViewModal({
                     {article.resume_content}
                   </p>
                 </div>
-
                 {/* Conteúdo */}
                 <div className="bg-gray-100 p-4 rounded-md">
                   <h3 className="font-semibold mb-2">Conteúdo</h3>
@@ -266,7 +294,6 @@ export function ArticleViewModal({
                     />
                   </div>
                 </div>
-
                 {/* Grid de informações com 3 colunas que se adaptam em telas menores */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Coluna 1 */}
@@ -300,16 +327,18 @@ export function ArticleViewModal({
 
                   {/* Coluna 3 */}
                   <div className="overflow-hidden">
-                    <h3 className="font-semibold mb-2">Destaque</h3>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs ${
-                        article.highlight
-                          ? "bg-green-500 text-white"
-                          : "bg-red-500 text-white"
-                      }`}
-                    >
-                      {article.highlight ? "Sim" : "Não"}
-                    </span>
+                    <h3 className="font-semibold mb-2">Portais</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {article.portals &&
+                        article.portals.map((portal) => (
+                          <span
+                            key={portal.id}
+                            className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs truncate max-w-full"
+                          >
+                            {portal.name}
+                          </span>
+                        ))}
+                    </div>
 
                     <h3 className="font-semibold mt-4 mb-2">Status</h3>
                     <span
@@ -321,78 +350,73 @@ export function ArticleViewModal({
                     </span>
                   </div>
                 </div>
-
                 {/* Histórico de Status - com tabela responsiva */}
-                {article.status_history &&
-                  article.status_history.length > 0 && (
-                    <div>
-                      <h3 className="font-semibold mb-2">
-                        Histórico de Status
-                      </h3>
-                      <div className="overflow-x-visible w-full">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-200">
-                            <tr>
-                              <th
-                                scope="col"
-                                className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/6"
-                              >
-                                Status
-                              </th>
-                              <th
-                                scope="col"
-                                className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/5"
-                              >
-                                Data
-                              </th>
-                              <th
-                                scope="col"
-                                className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/3"
-                              >
-                                Descrição
-                              </th>
-                              <th
-                                scope="col"
-                                className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/4"
-                              >
-                                Motivo de Rejeição
-                              </th>
+                {sortedStatusHistory.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Histórico de Status</h3>
+                    <div className="overflow-x-auto w-full">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-200">
+                          <tr>
+                            <th
+                              scope="col"
+                              className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/6"
+                            >
+                              Status
+                            </th>
+                            <th
+                              scope="col"
+                              className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/5"
+                            >
+                              Data
+                            </th>
+                            <th
+                              scope="col"
+                              className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/3"
+                            >
+                              Descrição
+                            </th>
+                            <th
+                              scope="col"
+                              className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/4"
+                            >
+                              Motivo de Rejeição
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sortedStatusHistory.map((history, idx) => (
+                            <tr
+                              key={history.id || idx}
+                              className={
+                                idx % 2 === 0 ? "bg-white" : "bg-gray-50"
+                              }
+                            >
+                              <td className="px-3 py-2 whitespace-nowrap text-sm w-1/6">
+                                <span
+                                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                                    history.status
+                                  )}`}
+                                >
+                                  {history.status}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-sm text-gray-700 w-1/5">
+                                {formatDate(history.changed_at)}
+                              </td>
+                              <td className="px-3 py-2 text-sm text-gray-700 w-1/3 break-words">
+                                {history.change_request_description || "-"}
+                              </td>
+                              <td className="px-3 py-2 text-sm text-gray-700 w-1/4 break-words">
+                                {history.reason_reject || "-"}
+                              </td>
                             </tr>
-                          </thead>
-                          <tbody>
-                            {article.status_history.map((history, idx) => (
-                              <tr
-                                key={history.id}
-                                className={
-                                  idx % 2 === 0 ? "bg-white" : "bg-gray-50"
-                                }
-                              >
-                                <td className="px-3 py-2 whitespace-nowrap text-sm w-1/6">
-                                  <span
-                                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                                      history.status
-                                    )}`}
-                                  >
-                                    {history.status}
-                                  </span>
-                                </td>
-                                <td className="px-3 py-2 text-sm text-gray-700 w-1/5">
-                                  {formatDate(history.changed_at)}
-                                </td>
-                                <td className="px-3 py-2 text-sm text-gray-700 w-1/3 break-words">
-                                  {history.change_request_description || "-"}
-                                </td>
-                                <td className="px-3 py-2 text-sm text-gray-700 w-1/4 break-words">
-                                  {history.reason_reject || "-"}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                  )}
-
+                  </div>
+                )}
                 {/* Formulário de solicitação de alterações */}
                 {showChangesForm && (
                   <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
@@ -409,7 +433,6 @@ export function ArticleViewModal({
                     />
                   </div>
                 )}
-
                 {/* Formulário de rejeição */}
                 {showRejectForm && (
                   <div className="bg-red-50 p-4 rounded-md border border-red-200">

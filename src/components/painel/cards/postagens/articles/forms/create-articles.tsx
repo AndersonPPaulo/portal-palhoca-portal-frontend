@@ -3,27 +3,24 @@
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ChangeEvent, useContext, useEffect, useState } from "react";
-import CustomInput from "@/components/input/custom-input";
-import { Button } from "@/components/ui/button";
-import Switch from "@/components/switch";
+import { useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { api } from "@/service/api";
+import { parseCookies } from "nookies";
+import CustomInput from "@/components/input/custom-input";
+import CustomSelect, { OptionType } from "@/components/select/custom-select";
+import { Button } from "@/components/ui/button";
 import TiptapEditor from "@/components/editor/tiptapEditor";
 import ReturnPageButton from "@/components/button/returnPage";
+import ThumbnailUploader from "@/components/thumbnail";
 import { ArticleContext } from "@/providers/article";
 import { CategorysContext } from "@/providers/categorys";
-import {
-  Select as CustomSelect,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import ReactSelect from "react-select";
-import { MultiValue } from "react-select";
-import { toast } from "sonner";
 import { TagContext } from "@/providers/tags";
 import { UserContext } from "@/providers/user";
+import { PortalContext } from "@/providers/portal";
+
+const ARTICLE_STATUS = { DRAFT: "DRAFT", PENDING_REVIEW: "PENDING_REVIEW" };
 
 const articleSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
@@ -38,50 +35,91 @@ const articleSchema = z.object({
   content: z
     .string()
     .min(300, "Conteudo é obrigatório minimo de 300 caracteres"),
-  initialStatus: z.string(),
+  initialStatus: z.string().optional(),
   highlight: z.boolean().default(false),
-  thumbnail: z.string(),
   categoryId: z.string().min(1, "Adicione uma categoria"),
   tagIds: z.array(z.string()).min(1, "Pelo menos uma tag é obrigatória"),
   chiefEditorId: z.string().optional(),
+  portalIds: z.array(z.string()).min(1, "Pelo menos um portal é obrigatório"),
+  thumbnailDescription: z.string().optional().default(""),
 });
-
 type ArticleFormData = z.infer<typeof articleSchema>;
 
-const generateSlug = (text: string) => {
-  return text
+const generateSlug = (text: string) =>
+  text
     .toLowerCase()
     .trim()
     .replace(/\s+/g, "-")
     .replace(/[^\w-]+/g, "");
+
+const uploadThumbnailToServer = async (
+  file: File,
+  description: string,
+  articleId: string
+): Promise<string> => {
+  const { "user:token": token } = parseCookies();
+  const formData = new FormData();
+
+  // Garantir que a descrição seja enviada, mesmo que vazia
+  formData.append("description", description || "");
+  formData.append("thumbnail", file);
+
+  const config = {
+    headers: {
+      Authorization: `bearer ${token}`,
+      "Content-Type": "multipart/form-data",
+    },
+  };
+
+  try {
+    const response = await api.post(
+      `/upload-thumbnail/${articleId}`,
+      formData,
+      config
+    );
+    return response.data?.thumbnailUrl || "";
+  } catch (err) {
+    console.error("Erro ao fazer upload da thumbnail:", err);
+    return "";
+  }
 };
 
-type OptionType = { value: string; label: string };
-
-interface TagOption {
-  value: string;
-  label: string;
-}
-
 export default function FormCreateArticle() {
-  const { push , back } = useRouter();
+  const { push, back } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editorContent, setEditorContent] = useState("");
-  const { CreateArticle, ListAuthorArticles, uploadThumbnail } = useContext(ArticleContext);
+  const [selectedImage, setSelectedImage] = useState<{
+    file: File;
+    preview: string;
+    description: string;
+  } | null>(null);
+  const [thumbnailDescription, setThumbnailDescription] = useState("");
+
+  const { CreateArticle, ListAuthorArticles } = useContext(ArticleContext);
   const { ListCategorys, listCategorys } = useContext(CategorysContext);
   const { ListTags, listTags } = useContext(TagContext);
   const { profile } = useContext(UserContext);
-  const [draftStatus, setDraftStatus] = useState("DRAFT");
-  const [pendingReview, setPendingReview] = useState("PENDING_REVIEW");
+  const { ListPortals, listPortals } = useContext(PortalContext);
 
   useEffect(() => {
-    Promise.all([ListTags(), ListCategorys(), ListAuthorArticles()]);
-  }, []);
+    ListTags && ListTags();
+    ListCategorys && ListCategorys();
+    ListAuthorArticles && ListAuthorArticles();
+    ListPortals && ListPortals();
+  }, [ListTags, ListCategorys, ListAuthorArticles, ListPortals]);
 
-  const tagOptions: OptionType[] = listTags.map((tag) => ({
-    value: tag.id,
-    label: tag.name,
-  }));
+  const tagOptions: OptionType[] = Array.isArray(listTags)
+    ? listTags.map((tag) => ({ value: tag.id, label: tag.name }))
+    : [];
+  const portalOptions: OptionType[] = Array.isArray(listPortals)
+    ? listPortals.map((portal) => ({ value: portal.id, label: portal.name }))
+    : [];
+  const categoryOptions: OptionType[] = Array.isArray(listCategorys)
+    ? listCategorys.map((category) => ({
+        value: category.id,
+        label: category.name,
+      }))
+    : [];
 
   const {
     register,
@@ -96,7 +134,6 @@ export default function FormCreateArticle() {
       title: "",
       slug: "",
       reading_time: 0,
-      thumbnail: "",
       resume_content: "",
       content: "",
       initialStatus: "",
@@ -104,16 +141,24 @@ export default function FormCreateArticle() {
       categoryId: "",
       tagIds: [],
       chiefEditorId: profile?.chiefEditor?.id || "",
+      portalIds: [],
+      thumbnailDescription: "",
     },
   });
 
   const title = watch("title");
-  const highlight = watch("highlight");
+  const categoryId = watch("categoryId");
+  const tagIds = watch("tagIds");
+  const portalIds = watch("portalIds");
+  const watchedThumbnailDescription = watch("thumbnailDescription");
+
+  // Sincronizar o estado local com o valor do formulário
+  useEffect(() => {
+    setThumbnailDescription(watchedThumbnailDescription || "");
+  }, []);
 
   useEffect(() => {
-    if (title) {
-      setValue("slug", generateSlug(title), { shouldValidate: true });
-    }
+    if (title) setValue("slug", generateSlug(title), { shouldValidate: true });
   }, [title, setValue]);
 
   const handleEditorChange = (content: string) => {
@@ -121,74 +166,71 @@ export default function FormCreateArticle() {
     setValue("content", content, { shouldValidate: true });
   };
 
-  const onSubmit = async (data: ArticleFormData) => {
+  const handleImageUpload = (
+    file: File,
+    previewUrl: string,
+    description: string
+  ) => {
+    setSelectedImage({ file, preview: previewUrl, description });
+    setValue("thumbnailDescription", description);
+    setThumbnailDescription(description);
+  };
+
+  const submitWithStatus = async (data: ArticleFormData, status: string) => {
     try {
       setIsSubmitting(true);
-
       if (!profile?.id) {
-        toast.error("Seu perfil não está completamente carregado. Recarregue a página.");
+        toast.error(
+          "Seu perfil não está completamente carregado. Recarregue a página."
+        );
         return;
       }
 
-      const formData = {
-        ...data,
-        initialStatus: pendingReview,
-        chiefEditorId: profile.chiefEditor?.id || "",
-        creator: profile.id  // Usar o ID do usuário logado como criador
-      };
-
-      await CreateArticle(formData);
-      toast.success("Artigo enviado para revisão com sucesso!");
-      reset();
-      setTimeout(() => {
-        push("/postagens");
-      }, 1800);
-    } catch (error) {
-      console.error("Error creating article:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDraftStatus = async (data: ArticleFormData) => {
-    try {
-      setIsSubmitting(true);
-
-      if (!profile?.id) {
-        toast.error("Seu perfil não está completamente carregado. Recarregue a página.");
-        return;
-      }
+      data.thumbnailDescription = thumbnailDescription;
 
       const formData = {
         ...data,
-        initialStatus: draftStatus,
+        thumbnail: "",
+        initialStatus: status,
         chiefEditorId: profile.chiefEditor?.id || "",
-        creator: profile.id  // Usar o ID do usuário logado como criador
+        creator: profile.id,
+        portals: data.portalIds,
       };
 
-      await CreateArticle(formData);
-      toast.success("Rascunho salvo com sucesso!");
+      const createdArticle = await CreateArticle(formData);
+      if (selectedImage && selectedImage.file && createdArticle?.id) {
+        try {
+          await uploadThumbnailToServer(
+            selectedImage.file,
+            thumbnailDescription,
+            createdArticle.id
+          );
+        } catch (error: any) {
+          toast.error(
+            `Artigo criado, mas houve um erro no upload da imagem: ${
+              error.message || error
+            }`
+          );
+        }
+      }
+      toast.success(
+        status === ARTICLE_STATUS.DRAFT
+          ? "Rascunho salvo com sucesso!"
+          : "Artigo enviado para revisão com sucesso!"
+      );
       reset();
-      setTimeout(() => {
-        push("/postagens");
-      }, 1800);
-    } catch (error) {
-      console.error("Error creating draft:", error);
+      setSelectedImage(null);
+      setEditorContent("");
+      setThumbnailDescription("");
+      setTimeout(() => push("/postagens"), 1800);
+    } catch (error: any) {
+      toast.error(
+        `Erro ao ${
+          status === ARTICLE_STATUS.DRAFT ? "salvar rascunho" : "criar artigo"
+        }. Tente novamente.`
+      );
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleThumbnailChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      
-      try {
-        const imageUrl = await uploadThumbnail(file);
-        setValue("thumbnail", imageUrl, { shouldValidate: true });
-      } catch (error) {
-        toast.error(`Erro no upload da imagem: ${error}`);
-      }
     }
   };
 
@@ -203,237 +245,132 @@ export default function FormCreateArticle() {
   return (
     <div className="w-full h-full flex flex-col bg-white rounded-[24px]">
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-6">
+        <form
+          onSubmit={handleSubmit((data) =>
+            submitWithStatus(data, ARTICLE_STATUS.PENDING_REVIEW)
+          )}
+          className="space-y-6 p-6"
+        >
           <div className="flex justify-between items-center -mb-4">
             <ReturnPageButton />
+          </div>
+          <div className="flex gap-6">
+            <div className="w-full">
+              <CustomInput
+                id="title"
+                label="Título"
+                {...register("title")}
+                placeholder="Digite o título"
+              />
+              {errors.title && (
+                <span className="text-sm text-red-500">
+                  {errors.title.message}
+                </span>
+              )}
+            </div>
+            <div className="w-full">
+              <CustomInput
+                id="slug"
+                label="Slug"
+                {...register("slug")}
+                disabled
+              />
+            </div>
+          </div>
+          <div className="flex gap-6">
+            <div className="flex flex-col w-full">
+              <ThumbnailUploader
+                onImageUpload={handleImageUpload}
+                initialImage={selectedImage?.preview}
+              />
 
-            <div className="flex items-center justify-end gap-6 rounded-lg p-4">
-              <div className="flex items-center gap-2">
-                <label htmlFor="highlight" className="text-gray-40">
-                  Destaque
-                </label>
-                <Switch
-                  value={highlight}
-                  onChange={(checked) =>
-                    setValue("highlight", checked, { shouldValidate: true })
+              {/* Campo para a descrição da thumbnail */}
+              {thumbnailDescription && (
+                <span className="text-gray-700 mt-2 ml-2">
+                  Descrição da Imagem: {thumbnailDescription}
+                </span>
+              )}
+            </div>
+            <div className="basis-1/2">
+              <div className="mt-5">
+                <CustomSelect
+                  id="tagIds"
+                  label="Tag(s):"
+                  placeholder="Selecione uma ou mais tags"
+                  options={tagOptions}
+                  value={tagIds}
+                  onChange={(value) =>
+                    setValue("tagIds", value as string[], {
+                      shouldValidate: true,
+                    })
+                  }
+                  isMulti={true}
+                  error={errors.tagIds?.message}
+                  noOptionsMessage="Nenhuma tag disponível"
+                />
+              </div>
+              <div className="mt-10">
+                <CustomInput
+                  id="reading_time"
+                  label="Tempo de leitura"
+                  type="number"
+                  {...register("reading_time", {
+                    setValueAs: (value: string) => Number(value) || undefined,
+                  })}
+                  onChange={(e) =>
+                    setValue("reading_time", Number(e.target.value))
                   }
                 />
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-6">
-            <CustomInput
-              id="title"
-              label="Título"
-              {...register("title")}
-              placeholder="Digite o título"
-            />
-            {errors.title && (
-              <span className="text-sm text-red-500">
-                {errors.title.message}
-              </span>
-            )}
-            <CustomInput
-              id="slug"
-              label="Slug"
-              {...register("slug")}
-              disabled
-            />
-          </div>
-
-          <div className="flex gap-6">
-            <div className="flex flex-col gap-1 w-full">
-              <label className="ml-6">Adicionar Thumbnail (capa)</label>
-              <div className="border h-full border-blue-500/30 rounded-[34px] flex items-center justify-center max-h-[54px]">
-                <input
-                  id="thumbnail"
-                  type="file"
-                  accept="image/*"
-                  className="w-full text-gray-30 py-2 px-8 rounded-md bg-transparent"
-                  onChange={handleThumbnailChange}
-                />
-              </div>
-              {errors.thumbnail && (
-                <span className="text-sm text-red-500 w-full">
-                  {errors.thumbnail.message}
-                </span>
-              )}
-            </div>
-
-            <div className="basis-1/2 ">
-              <label className="px-6" htmlFor="tagIds">
-                Tag(s):
-              </label>
-              <ReactSelect
-                id="tagIds"
-                isMulti
-                className="basic-multi-select w-full"
-                classNamePrefix="select"
-                value={tagOptions.filter((tag) =>
-                  watch("tagIds").includes(tag.value)
+                {errors.reading_time && (
+                  <span className="text-sm text-red-500">
+                    {errors.reading_time.message}
+                  </span>
                 )}
-                onChange={(selectedOptions: MultiValue<TagOption>) => {
-                  setValue(
-                    "tagIds",
-                    selectedOptions
-                      ? selectedOptions.map((option) => option.value)
-                      : []
-                  );
-                }}
-                options={tagOptions}
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    borderRadius: "24px",
-                    padding: "0rem 24px",
-                    minHeight: "56px",
-                    marginTop: "6px",
-                    borderWidth: "2px",
-                    borderColor: "#DFEAF6",
-                    "&:hover": {
-                      borderColor: "#DFEAF695",
-                    },
-                  }),
-                  multiValue: (base) => ({
-                    ...base,
-                    backgroundColor: "#3b82f6",
-                    padding: "0.25rem 0.5rem",
-                  }),
-                  multiValueLabel: (base) => ({
-                    ...base,
-                    color: "white",
-                  }),
-                  multiValueRemove: (base) => ({
-                    ...base,
-                    color: "white",
-                    ":hover": {
-                      backgroundColor: "#2563eb",
-                      color: "white",
-                    },
-                  }),
-                  menu: (base) => ({
-                    ...base,
-                    borderRadius: "24px",
-                  }),
-                  menuList: (base) => ({
-                    ...base,
-                    borderRadius: "20px",
-                  }),
-                }}
-              />
-              {errors.tagIds && (
-                <p className="text-red-500">{errors.tagIds.message}</p>
-              )}
-            </div>
-            <div className="basis-1/2 gap-1 flex flex-col">
-              <CustomInput
-                id="reading_time"
-                label="Tempo de leitura"
-                type="number"
-                {...register("reading_time", {
-                  setValueAs: (value: string) => Number(value) || undefined,
-                })}
-                onChange={(e) => {
-                  setValue("reading_time", Number(e.target.value));
-                }}
-              />
-              {errors.reading_time && (
-                <span className="text-sm text-red-500">
-                  {errors.reading_time.message}
-                </span>
-              )}
+              </div>
             </div>
           </div>
-
           <div className="flex gap-6">
             <div className="flex flex-col gap-1 w-full">
               <label className="px-6" htmlFor="creator">
                 Criador
               </label>
               <div className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light flex items-center">
-                <span className="text-gray-700">{profile.name || profile.email}</span>
+                <span className="text-gray-700">
+                  {profile.name || profile.email}
+                </span>
               </div>
             </div>
-
-            <div className="flex gap-6 w-full">
-              <div className="w-full">
-                <label
-                  htmlFor="categoryId"
-                  className="block px-6 font-medium text-black"
-                >
-                  Categoria
-                </label>
-                <CustomSelect
-                  onValueChange={(value) => setValue("categoryId", value)}
-                  defaultValue="placeholder"
-                >
-                  <SelectTrigger className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light outline-none focus:border-blue-500 focus:ring-blue-500">
-                    <SelectValue placeholder="Selecione uma categoria" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white rounded-2xl ">
-                    <SelectItem value="placeholder" disabled>
-                      Selecione uma categoria
-                    </SelectItem>
-                    {listCategorys.map((category) => (
-                      <SelectItem
-                        key={category.id}
-                        value={category.id}
-                        className="hover:bg-blue-500 hover:text-white"
-                      >
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </CustomSelect>
-                {errors.categoryId && (
-                  <span className="text-sm text-red-500">
-                    {errors.categoryId.message}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="flex gap-6 w-full">
-              <div className="w-full">
-                <label
-                  htmlFor="cityId"
-                  className="block px-6 font-medium text-black"
-                >
-                  Portal
-                </label>
-                <CustomSelect
-                  defaultValue="placeholder"
-                >
-                  <SelectTrigger className="w-full rounded-[24px] px-6 py-4 mt-2 min-h-14 border-2 border-primary-light outline-none focus:border-blue-500 focus:ring-blue-500">
-                    <SelectValue placeholder="Selecione uma cidade" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white rounded-2xl">
-                    <SelectItem value="placeholder" disabled>
-                      Selecione um Portal
-                    </SelectItem>
-                    <SelectItem
-                      value="palhoca"
-                      className="hover:bg-blue-500 hover:text-white"
-                    >
-                      Palhoça
-                    </SelectItem>
-                    <SelectItem
-                      value="florianopolis"
-                      className="hover:bg-blue-500 hover:text-white"
-                    >
-                      Florianópolis
-                    </SelectItem>
-                    <SelectItem
-                      value="sao-jose"
-                      className="hover:bg-blue-500 hover:text-white"
-                    >
-                      São José
-                    </SelectItem>
-                  </SelectContent>
-                </CustomSelect>
-              </div>
-            </div>
+            <CustomSelect
+              id="categoryId"
+              label="Categoria:"
+              placeholder="Selecione uma categoria"
+              options={categoryOptions}
+              value={categoryId}
+              onChange={(value) =>
+                setValue("categoryId", value as string, {
+                  shouldValidate: true,
+                })
+              }
+              isMulti={false}
+              error={errors.categoryId?.message}
+              noOptionsMessage="Nenhuma categoria disponível"
+            />
+            <CustomSelect
+              id="portalIds"
+              label="Portal:"
+              placeholder="Selecione um ou mais portais"
+              options={portalOptions}
+              value={portalIds}
+              onChange={(value) =>
+                setValue("portalIds", value as string[], {
+                  shouldValidate: true,
+                })
+              }
+              isMulti={true}
+              error={errors.portalIds?.message}
+              noOptionsMessage="Nenhum portal disponível"
+            />
           </div>
-
           <div className="w-full">
             <CustomInput
               id="resume_content"
@@ -449,8 +386,7 @@ export default function FormCreateArticle() {
               </span>
             )}
           </div>
-
-          <div className=" w-full ">
+          <div className="w-full">
             <h1 className="text-xl font-bold text-primary ml-6 pt-4">
               Adicionar conteudo de texto
             </h1>
@@ -466,15 +402,16 @@ export default function FormCreateArticle() {
               )}
             </div>
           </div>
-
           <div className="flex justify-end gap-4">
             <Button
               type="button"
-              onClick={handleSubmit(handleDraftStatus)}
+              onClick={handleSubmit((data) =>
+                submitWithStatus(data, ARTICLE_STATUS.DRAFT)
+              )}
               className="bg-yellow-200 text-[#9c6232] hover:bg-yellow-100 rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
               disabled={isSubmitting}
             >
-              Rascunho
+              {isSubmitting ? "Processando..." : "Rascunho"}
             </Button>
             <Button
               type="button"
@@ -489,7 +426,7 @@ export default function FormCreateArticle() {
               className="rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
               disabled={isSubmitting}
             >
-              Criar Artigo
+              {isSubmitting ? "Processando..." : "Criar Artigo"}
             </Button>
           </div>
         </form>
