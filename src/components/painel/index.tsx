@@ -21,7 +21,7 @@ export default function InfoPainel() {
   }, []);
 
   const count = {
-    published_articles: listArticles?.data.length,
+    published_articles: listArticles?.meta.total,
     inactives_articles: listArticles?.data.filter(
       (item) => item.status === "inactive" || item.status === "blocked"
     ).length,
@@ -32,8 +32,9 @@ export default function InfoPainel() {
     highlight_articles: listArticles?.data.filter((item) => item.highlight)
       .length,
     authors: listUser.length,
-    total_companies: listCompany?.total || 0,
+    total_companies: listCompany?.total,
   };
+  console.log("listCompany", listCompany);
   return (
     <div className="h-full bg-white rounded-[32px] p-10">
       <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 ggxl:grid-cols-4 gap-4">
@@ -85,7 +86,7 @@ export default function InfoPainel() {
 
         <CardInfoPainel
           title="Comércios Cadastrados"
-          value={count.total_companies}
+          value={count.total_companies ? count.total_companies : 0}
           icon={<Building2 size={32} />}
           bgCard="bg-blue-light"
           textColor="text-blue-dark"

@@ -303,11 +303,11 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   const handleImageUpload = (
     file: File,
     previewUrl: string,
-    description: string
+    description?: string
   ) => {
-    setSelectedImage({ file, preview: previewUrl, description });
-    setValue("thumbnailDescription", description, { shouldValidate: true });
-    setThumbnailDescription(description);
+    setSelectedImage({ file, preview: previewUrl, description: description ?? "" });
+    setValue("thumbnailDescription", description ?? "", { shouldValidate: true });
+    setThumbnailDescription(description ?? "");
   };
 
   const handleDescriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {

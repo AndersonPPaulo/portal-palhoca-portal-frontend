@@ -42,54 +42,63 @@ export function NavigationMain() {
 
   const getVisibleTabs = (userRole: string): string[] => {
     const roleName = userRole.toLowerCase();
-    
+
     switch (roleName) {
       case "jornalista":
       case "colunista":
       case "chefe de redação":
-        return ["/dashboard", "/postagens"]; 
-      
+        return ["/dashboard", "/postagens"];
+
       case "gerente comercial":
       case "vendedor":
-        return ["/dashboard", "/banners", "/comercio"]; 
-      
+        return ["/dashboard", "/banners", "/comercio"];
+
       case "administrador":
-        return ["all"]; 
-      
+        return ["all"];
+
       default:
-        return ["/dashboard"]; 
+        return ["/dashboard"];
     }
   };
 
   // Função para verificar se um item deve ser visível
-  const isItemVisible = (itemPath: string | undefined, userRole: string): boolean => {
+  const isItemVisible = (
+    itemPath: string | undefined,
+    userRole: string
+  ): boolean => {
     if (!itemPath) return true;
-    
+
     const visibleTabs = getVisibleTabs(userRole);
-    
-    // Se for administrador, pode ver tudo
+
     if (visibleTabs.includes("all")) return true;
-    
-      itemPath === allowedPath || itemPath.startsWith(allowedPath + "/")
+
+    return visibleTabs.some(
+      (allowedPath) =>
+        itemPath === allowedPath || itemPath.startsWith(allowedPath + "/")
     );
   };
-
-  const filterNavigationByRole = (items: NavigationList, userRole: string): NavigationList => {
+  const filterNavigationByRole = (
+    items: NavigationList,
+    userRole: string
+  ): NavigationList => {
     return items
-      .filter(item => {
-        if (item.path === "/usuarios" && userRole.toLowerCase() !== "administrador") {
+      .filter((item) => {
+        if (
+          item.path === "/usuarios" &&
+          userRole.toLowerCase() !== "administrador"
+        ) {
           return false;
         }
-        
+
         return isItemVisible(item.path, userRole);
       })
-      .map(item => ({
+      .map((item) => ({
         ...item,
-        children: item.children 
+        children: item.children
           ? filterNavigationByRole(item.children, userRole)
-          : undefined
+          : undefined,
       }))
-      .filter(item => {
+      .filter((item) => {
         if (item.children) {
           return item.children.length > 0 || isItemVisible(item.path, userRole);
         }
@@ -112,9 +121,7 @@ export function NavigationMain() {
             <Link
               href={item.path ?? "#"}
               className={`${
-                isActive
-                  ? "bg-primary-light text-primary"
-                  : "hover:bg-zinc-100"
+                isActive ? "bg-primary-light text-primary" : "hover:bg-zinc-100"
               } flex items-center w-full font-[600] py-2 px-6 rounded-[48px] transition duration-300 ease-linear ${
                 isChild ? "pl-10 text-sm" : ""
               }`}
@@ -149,7 +156,10 @@ export function NavigationMain() {
 
   if (!profile) return <NavigationSkeleton />;
 
-  const filteredNavigation = filterNavigationByRole(navigationMain, profile.role.name);
+  const filteredNavigation = filterNavigationByRole(
+    navigationMain,
+    profile.role.name
+  );
 
   return <>{renderLevels(filteredNavigation)}</>;
 }

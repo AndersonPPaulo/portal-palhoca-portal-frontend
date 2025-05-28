@@ -171,11 +171,12 @@ export default function FormCreateArticle() {
   const handleImageUpload = (
     file: File,
     previewUrl: string,
-    description: string
+    description?: string
   ) => {
-    setSelectedImage({ file, preview: previewUrl, description });
-    setValue("thumbnailDescription", description);
-    setThumbnailDescription(description);
+    const desc = description ?? "";
+    setSelectedImage({ file, preview: previewUrl, description: desc });
+    setValue("thumbnailDescription", desc);
+    setThumbnailDescription(desc);
   };
 
   const submitWithStatus = async (data: ArticleFormData, status: string) => {
@@ -288,10 +289,6 @@ export default function FormCreateArticle() {
                 uploadAreaText="Clique para adicionar o Thumbnail"
                 uploadAreaSubtext="SVG, PNG, JPG ou GIF (max. 5MB)"
                 onImageUpload={handleImageUpload}
-                selectedImage={selectedImage}
-                setSelectedImage={setSelectedImage}
-                thumbnailDescription={thumbnailDescription}
-                setThumbnailDescription={setThumbnailDescription}
               />
 
               {/* Campo para a descrição da thumbnail */}
