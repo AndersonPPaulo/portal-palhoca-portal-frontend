@@ -15,8 +15,7 @@ export interface UserProps {
   topic?: string;
   roleId: string;
   chiefEditorId?: string;
-  user_image: string
-
+  user_image?: string;
 }
 
 interface UpdateUserProps {
@@ -27,7 +26,6 @@ interface UpdateUserProps {
   topic?: string;
   roleId?: string;
   chiefEditorId?: string;
-  user_image: string
 }
 
 export interface ResponsePromise {
@@ -42,8 +40,7 @@ export interface ResponsePromise {
   created_at?: string;
   updated_at?: string;
   isActive?: boolean;
-  user_image: string
-  
+  user_image: string;
 }
 
 // Tipo para Role separado
@@ -86,19 +83,20 @@ export const UserProvider = ({ children }: IChildrenReact) => {
 
     try {
       const response = await api.post("/user", data, config);
-      
+
       toast.success("Usuário criado com sucesso!");
-      
+
       // Recarregar lista de usuários após criação
       await ListUser();
-      
+
       setTimeout(() => {
         back();
       }, 1800);
-      
+
       return response.data;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || "Erro ao criar usuário";
+      const errorMessage =
+        err.response?.data?.message || "Erro ao criar usuário";
       toast.error(errorMessage);
       throw err;
     }
@@ -117,11 +115,12 @@ export const UserProvider = ({ children }: IChildrenReact) => {
     try {
       await api.patch("/user", data, config);
       toast.success("Usuário atualizado com sucesso!");
-      
+
       // Recarregar perfil e lista após atualização
       await Promise.all([Profile(), ListUser()]);
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || "Erro ao atualizar usuário";
+      const errorMessage =
+        err.response?.data?.message || "Erro ao atualizar usuário";
       toast.error(errorMessage);
       throw err;
     }
@@ -139,7 +138,8 @@ export const UserProvider = ({ children }: IChildrenReact) => {
       setProfile(response.data.response);
       return response.data.response;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || "Erro ao carregar perfil";
+      const errorMessage =
+        err.response?.data?.message || "Erro ao carregar perfil";
       toast.error(errorMessage);
       throw err;
     }
@@ -157,7 +157,8 @@ export const UserProvider = ({ children }: IChildrenReact) => {
       setListUser(response.data.response);
       return response.data.response;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || "Erro ao carregar usuários";
+      const errorMessage =
+        err.response?.data?.message || "Erro ao carregar usuários";
       toast.error(errorMessage);
       throw err;
     }
@@ -173,7 +174,8 @@ export const UserProvider = ({ children }: IChildrenReact) => {
       const response = await api.get(`/user/${userId}`, config);
       return response.data.response || response.data;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || "Erro ao carregar usuário";
+      const errorMessage =
+        err.response?.data?.message || "Erro ao carregar usuário";
       toast.error(errorMessage);
       throw err;
     }
@@ -181,7 +183,7 @@ export const UserProvider = ({ children }: IChildrenReact) => {
 
   const UploadUserImage = async (file: File, userId: string): Promise<void> => {
     const { "user:token": token } = parseCookies();
-    
+
     const formData = new FormData();
     formData.append("user_image", file);
 
@@ -192,10 +194,11 @@ export const UserProvider = ({ children }: IChildrenReact) => {
           "Content-Type": "multipart/form-data",
         },
       });
-      
+
       toast.success("Imagem do usuário atualizada com sucesso!");
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || "Erro ao fazer upload da imagem";
+      const errorMessage =
+        err.response?.data?.message || "Erro ao fazer upload da imagem";
       toast.error(errorMessage);
       throw err;
     }
@@ -211,11 +214,12 @@ export const UserProvider = ({ children }: IChildrenReact) => {
     try {
       await api.delete("/user", config);
       toast.success("Usuário deletado com sucesso!");
-      
+
       // Recarregar lista após deleção
       await ListUser();
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || "Erro ao deletar usuário";
+      const errorMessage =
+        err.response?.data?.message || "Erro ao deletar usuário";
       toast.error(errorMessage);
       throw err;
     }
@@ -235,7 +239,8 @@ export const UserProvider = ({ children }: IChildrenReact) => {
       setRoles(rolesData);
       return rolesData;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || "Erro ao carregar funções";
+      const errorMessage =
+        err.response?.data?.message || "Erro ao carregar funções";
       toast.error(errorMessage);
       throw err;
     }

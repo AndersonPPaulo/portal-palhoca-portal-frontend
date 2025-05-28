@@ -33,16 +33,17 @@ const authorsSchema = z.object({
 type AuthorsFormData = z.infer<typeof authorsSchema>;
 
 export default function FormCreateAuthors() {
-  const { CreateUser, ListRoles, ListUser, listUser, roles } = useContext(UserContext);
+  const { CreateUser, ListRoles, ListUser, listUser, roles } =
+    useContext(UserContext);
   const { back } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rolesOptions, setRolesOptions] = useState<OptionType[]>([]);
   const [usersOptions, setUsersOptions] = useState<OptionType[]>([]);
   const formSubmittedSuccessfully = useRef(false);
   const [selectedImage, setSelectedImage] = useState<{
-      file: File;
-      preview: string;
-    } | null>(null);
+    file: File;
+    preview: string;
+  } | null>(null);
   const {
     register,
     handleSubmit,
@@ -59,7 +60,7 @@ export default function FormCreateAuthors() {
       roleId: "",
       password: "",
       chiefEditorId: "",
-      topic: ""
+      topic: "",
     },
   });
 
@@ -67,10 +68,7 @@ export default function FormCreateAuthors() {
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        await Promise.all([
-          ListRoles(),
-          ListUser()
-        ]);
+        await Promise.all([ListRoles(), ListUser()]);
       } catch (error) {
         console.error("Erro ao carregar dados iniciais:", error);
       }
@@ -103,46 +101,53 @@ export default function FormCreateAuthors() {
     setSelectedImage({ file, preview: previewUrl });
   };
 
-  useEffect(() => {
-  }, [selectedImage]);
+  useEffect(() => {}, [selectedImage]);
 
   const uploadUserImage = async (file: File, userEmail: string) => {
     try {
-      
-      
       const { "user:token": token } = parseCookies();
-      
+
       const users = await ListUser();
-      
-      
-      const createdUser = users?.find(user => 
-        user.email.toLowerCase() === userEmail.toLowerCase()
+
+      const createdUser = users?.find(
+        (user) => user.email.toLowerCase() === userEmail.toLowerCase()
       );
-      
 
       if (createdUser) {
         const userId = createdUser.id;
 
         if (!file || file.size === 0) {
-          throw new Error('Arquivo inválido ou vazio');
+          throw new Error("Arquivo inválido ou vazio");
         }
 
-        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        const allowedTypes = [
+          "image/jpeg",
+          "image/jpg",
+          "image/png",
+          "image/gif",
+          "image/webp",
+        ];
         if (!allowedTypes.includes(file.type)) {
-          throw new Error(`Tipo de arquivo não suportado: ${file.type}. Use JPEG, PNG, GIF ou WebP.`);
+          throw new Error(
+            `Tipo de arquivo não suportado: ${file.type}. Use JPEG, PNG, GIF ou WebP.`
+          );
         }
 
         // Verificar tamanho (max 5MB)
         const maxSize = 5 * 1024 * 1024; // 5MB
         if (file.size > maxSize) {
-          throw new Error(`Arquivo muito grande: ${(file.size / 1024 / 1024).toFixed(2)}MB. Máximo permitido: 5MB.`);
+          throw new Error(
+            `Arquivo muito grande: ${(file.size / 1024 / 1024).toFixed(
+              2
+            )}MB. Máximo permitido: 5MB.`
+          );
         }
 
         // Criar FormData para enviar o arquivo
         const formData = new FormData();
-        
+
         formData.append("user_image", file, file.name);
-      
+
         // Fazer o upload da foto
         const uploadResponse = await api.post(
           `/user/${userId}/upload-user-image`,
@@ -156,28 +161,30 @@ export default function FormCreateAuthors() {
             maxBodyLength: Infinity,
           }
         );
-        
-        
+
         // Verificar se a resposta contém user_image
         if (uploadResponse.data?.user_image) {
           toast.success("Foto de perfil enviada com sucesso!");
         } else {
-          toast.success("Upload realizado, mas verifique se a foto foi salva corretamente");
+          toast.success(
+            "Upload realizado, mas verifique se a foto foi salva corretamente"
+          );
         }
-        
       } else {
         throw new Error(
           "Usuário criado, mas não foi possível encontrá-lo para adicionar a foto"
         );
       }
     } catch (error: any) {
-      
       if (error.response) {
       } else if (error.request) {
         console.error("Request feito mas sem resposta:", error.request);
       }
-      
-      const errorMessage = error.response?.data?.message || error.message || "Erro ao fazer upload da foto";
+
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Erro ao fazer upload da foto";
       toast.error(errorMessage);
       throw error;
     }
@@ -188,50 +195,46 @@ export default function FormCreateAuthors() {
       setIsSubmitting(true);
       formSubmittedSuccessfully.current = false;
 
-
       const hasImage = selectedImage && selectedImage.file;
 
-      const createdUserResponse = await CreateUser(data);
+      await CreateUser(data);
       formSubmittedSuccessfully.current = true;
-      
-      
+
       // Se há imagem selecionada, fazer upload após criação bem-sucedida
       if (hasImage) {
         const imageFile = selectedImage.file;
         const userEmail = data.email;
-        
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
+
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+
         try {
           await uploadUserImage(imageFile, userEmail);
-          
+
           setTimeout(async () => {
             try {
               await ListUser();
             } catch (reloadError) {
-              console.error('Erro ao recarregar lista:', reloadError);
+              console.error("Erro ao recarregar lista:", reloadError);
             }
           }, 1000);
-          
         } catch (uploadError) {
           console.error("Erro ao fazer upload da foto:", uploadError);
           toast.error("Usuário criado, mas houve erro no upload da foto");
         }
-      } 
+      }
       // Limpar formulário e imagem
       reset();
       setSelectedImage(null);
-      
+
       setTimeout(() => {
         setIsSubmitting(false);
       }, 1000);
-      
     } catch (error) {
       setIsSubmitting(false);
       console.error("Erro ao criar usuário:", error);
       toast.error("Erro ao criar usuário: " + (error as Error).message);
     }
-    console.log('data', data)
+    console.log("data", data);
   };
 
   return (
@@ -254,17 +257,13 @@ export default function FormCreateAuthors() {
               modalWidth="max-w-sm"
               previewHeight="h-32"
               onImageUpload={handleImageUpload}
-              selectedImage={selectedImage}
-              setSelectedImage={setSelectedImage}
               modalTitle="Adicionar Foto de Perfil"
               confirmButtonText="Selecionar Foto"
               uploadAreaText="Clique para adicionar foto"
               uploadAreaSubtext="JPG, PNG ou GIF (max. 5MB)"
             />
             {selectedImage && (
-              <p className="text-green-600 text-xs mt-1">
-                Foto selecionada
-              </p>
+              <p className="text-green-600 text-xs mt-1">Foto selecionada</p>
             )}
           </div>
 
@@ -344,7 +343,12 @@ export default function FormCreateAuthors() {
                   label="Cargo"
                   options={rolesOptions}
                   value={watch("roleId")}
-                  onChange={(value) => setValue("roleId", value)}
+                  onChange={(value) =>
+                    setValue(
+                      "roleId",
+                      Array.isArray(value) ? value[0] ?? "" : value
+                    )
+                  }
                   placeholder="Selecione a função"
                 />
                 {errors.roleId && (
@@ -361,7 +365,12 @@ export default function FormCreateAuthors() {
                   label="Responsável Técnico"
                   options={usersOptions}
                   value={watch("chiefEditorId")}
-                  onChange={(value) => setValue("chiefEditorId", value)}
+                  onChange={(value) =>
+                    setValue(
+                      "chiefEditorId",
+                      Array.isArray(value) ? value[0] ?? "" : value
+                    )
+                  }
                   placeholder="Selecione o responsável"
                 />
                 {errors.chiefEditorId && (
@@ -406,12 +415,12 @@ export default function FormCreateAuthors() {
               {isSubmitting ? (
                 <div className="flex items-center">
                   <div className="animate-spin h-5 w-5 border-2 border-white rounded-full border-t-transparent mr-2"></div>
-                  {selectedImage ? "Criando usuário e enviando foto..." : "Criando..."}
+                  {selectedImage
+                    ? "Criando usuário e enviando foto..."
+                    : "Criando..."}
                 </div>
               ) : (
-                <div className="flex items-center">
-                  Criar Usuário
-                </div>
+                <div className="flex items-center">Criar Usuário</div>
               )}
             </Button>
           </div>

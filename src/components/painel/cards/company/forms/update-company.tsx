@@ -61,6 +61,7 @@ export default function FormUpdateCompany({
   const router = useRouter();
   const { UpdateCompany, SelfCompany, company } = useContext(CompanyContext);
   const { listPortals, ListPortals } = useContext(PortalContext);
+  console.log('listPortals', listPortals);
   const { listCompanyCategory, ListCompanyCategory } = useContext(
     CompanyCategoryContext
   );
@@ -156,6 +157,7 @@ export default function FormUpdateCompany({
 
     const loadData = async () => {
       const data = await SelfCompany(parameter.id as string);
+      console.log("data categoria", data.company_category);
 
       const imageUrl = data?.company_image?.url || data?.companyImage || "";
       if (imageUrl) {
@@ -167,10 +169,7 @@ export default function FormUpdateCompany({
 
       const addressParts = parseAddress(data?.address || "");
 
-      const categoryIds =
-        data?.companyCategories?.map((cat) => cat.id) ||
-        data?.companyCategoryIds?.map((cat) => cat.id) ||
-        [];
+      const categoryIds = data.company_category?.map((cat) => cat.id) || [];
 
       const portalIds =
         data?.portals?.filter((p) => p && p.id).map((p) => p.id) || [];

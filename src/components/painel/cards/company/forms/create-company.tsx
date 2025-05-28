@@ -506,8 +506,6 @@ export default function FormCreateCompany() {
                       uploadAreaText="Clique para adicionar o logo"
                       uploadAreaSubtext="SVG, PNG, JPG ou GIF (max. 5MB)"
                       onImageUpload={handleImageUpload}
-                      selectedImage={selectedImage}
-                      setSelectedImage={setSelectedImage}
                       showDescription={false}
                     />
                     {selectedImage && (
