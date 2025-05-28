@@ -10,7 +10,6 @@ interface PortalProps {
   name: string;
   link_referer: string;
   status: boolean;
-  
 }
 
 interface UpdatePortalProps {
@@ -27,8 +26,6 @@ export type ResponsePromise = {
   created_at: string;
   updated_at: string;
 };
-
-
 
 interface IPortalData {
   CreatePortal(data: PortalProps): Promise<ResponsePromise>;

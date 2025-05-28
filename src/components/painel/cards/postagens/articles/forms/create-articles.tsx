@@ -27,7 +27,7 @@ const articleSchema = z.object({
   slug: z.string().min(1, "Slug é obrigatório"),
   reading_time: z.preprocess(
     (val) => (val === "" ? undefined : Number(val)),
-    z.number().min(1, "Tempo de leitura é obrigatório")
+    z.number().min(0, "Tempo de leitura é obrigatório")
   ),
   resume_content: z
     .string()
@@ -102,11 +102,13 @@ export default function FormCreateArticle() {
   const { ListPortals, listPortals } = useContext(PortalContext);
 
   useEffect(() => {
-    ListTags && ListTags();
-    ListCategorys && ListCategorys();
-    ListAuthorArticles && ListAuthorArticles();
-    ListPortals && ListPortals();
-  }, [ListTags, ListCategorys, ListAuthorArticles, ListPortals]);
+    Promise.all([
+      ListTags(),
+      ListCategorys(),
+      ListAuthorArticles(),
+      ListPortals(),
+    ]);
+  }, []);
 
   const tagOptions: OptionType[] = Array.isArray(listTags)
     ? listTags.map((tag) => ({ value: tag.id, label: tag.name }))
@@ -222,7 +224,7 @@ export default function FormCreateArticle() {
       setSelectedImage(null);
       setEditorContent("");
       setThumbnailDescription("");
-      setTimeout(() => push("/postagens"), 1800);
+      setTimeout(() => push("/postagens"), 1000);
     } catch (error: any) {
       toast.error(
         `Erro ao ${
@@ -280,8 +282,16 @@ export default function FormCreateArticle() {
           <div className="flex gap-6">
             <div className="flex flex-col w-full">
               <ThumbnailUploader
+                label="Thumbnail"
+                modalTitle="Adicionar Thumbnail"
+                confirmButtonText="Selecionar Imagem"
+                uploadAreaText="Clique para adicionar o Thumbnail"
+                uploadAreaSubtext="SVG, PNG, JPG ou GIF (max. 5MB)"
                 onImageUpload={handleImageUpload}
-                initialImage={selectedImage?.preview}
+                selectedImage={selectedImage}
+                setSelectedImage={setSelectedImage}
+                thumbnailDescription={thumbnailDescription}
+                setThumbnailDescription={setThumbnailDescription}
               />
 
               {/* Campo para a descrição da thumbnail */}
@@ -320,6 +330,7 @@ export default function FormCreateArticle() {
                   onChange={(e) =>
                     setValue("reading_time", Number(e.target.value))
                   }
+                  min={1}
                 />
                 {errors.reading_time && (
                   <span className="text-sm text-red-500">

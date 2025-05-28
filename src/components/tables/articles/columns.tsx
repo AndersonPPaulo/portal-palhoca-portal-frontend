@@ -158,34 +158,25 @@ export const columns: ColumnDef<Article>[] = [
     header: "",
     cell: ({ row }) => {
       const article = row?.original;
-      
-      let thumbnailUrl = 'Sem foto' ;
-      
+
+      let thumbnailUrl = "Sem foto";
+
       if (article?.thumbnail) {
-        if (typeof article.thumbnail === 'string') {
-          thumbnailUrl = article.thumbnail;
-        } else if (typeof article.thumbnail === 'object') {
-          const thumbnailObj = article.thumbnail as Record<string, any>;
+          const thumbnailObj = article.thumbnail;
           if (thumbnailObj.url) {
             thumbnailUrl = thumbnailObj.url;
-          } else if (thumbnailObj.key) {
-            thumbnailUrl = `http://localhost:5555/uploads/${thumbnailObj.key}`;
-          } else if (thumbnailObj.Location) {
-            thumbnailUrl = thumbnailObj.Location;
           }
         }
-      }
- 
       
+
       return (
         <TooltipProvider delayDuration={300}>
           <Tooltip>
             <TooltipTrigger asChild>
               <img
-                src={thumbnailUrl }
+                src={thumbnailUrl}
                 alt={"Thumbnail para o artigo:" + article?.title}
-                className="rounded-full h-6 w-6 cursor-pointer mr-2 object-cover"
-              
+                className="rounded-full w-10 h-10 cursor-pointer mr-2 object-cover"
               />
             </TooltipTrigger>
             <TooltipPortal>
@@ -196,10 +187,9 @@ export const columns: ColumnDef<Article>[] = [
                 className="bg-transparent border border-gray-300/50 backdrop-blur-lg p-2 rounded-lg shadow-2xl"
               >
                 <img
-                  src={thumbnailUrl }
+                  src={thumbnailUrl}
                   alt="Imagem ampliada"
                   className="w-56 h-56 object-cover rounded-lg"
-                 
                 />
                 <span className="font-semibold w-56 mt-2 text-body-g flex flex-wrap">
                   {article?.title}
@@ -256,23 +246,23 @@ export const columns: ColumnDef<Article>[] = [
       </div>
     ),
   },
-  {
-    accessorKey: "highlight",
-    header: () => <div className="text-center w-[150px]">Destaque</div>,
-    cell: ({ row }) => (
-      <div className="flex justify-center w-[150px]">
-        {row?.original?.highlight ? (
-          <span className="bg-green text-white px-3 py-1 rounded-full text-sm">
-            Sim
-          </span>
-        ) : (
-          <span className="bg-red text-white px-3 py-1 rounded-full text-sm">
-            Não
-          </span>
-        )}
-      </div>
-    ),
-  },
+  // {
+  //   accessorKey: "highlight",
+  //   header: () => <div className="text-center w-[150px]">Destaque</div>,
+  //   cell: ({ row }) => (
+  //     <div className="flex justify-center w-[150px]">
+  //       {row?.original?.highlight ? (
+  //         <span className="bg-green text-white px-3 py-1 rounded-full text-sm">
+  //           Sim
+  //         </span>
+  //       ) : (
+  //         <span className="bg-red text-white px-3 py-1 rounded-full text-sm">
+  //           Não
+  //         </span>
+  //       )}
+  //     </div>
+  //   ),
+  // },
   {
     id: "actions",
     header: () => <div className="text-center">Ações</div>,

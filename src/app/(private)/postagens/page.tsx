@@ -1,10 +1,10 @@
-import { DynamicTabs } from "@/components/tabs";
-import { tabPostConfigurations } from "@/components/tabs/configuration/tabPostConfiguration";
+import { PostTabs } from "@/components/tabs/configuration/tabsPostConfiguration";
+import { tabPostConfigurations } from "@/components/tabs/configuration/tabsPostConfiguration/tabPostConfiguration";
 
 export default function Postagens() {
   return (
     <div className="bg-primary-light h-full">
-      <DynamicTabs tabs={tabPostConfigurations} />
+      <PostTabs tabs={tabPostConfigurations} />
     </div>
   );
 }

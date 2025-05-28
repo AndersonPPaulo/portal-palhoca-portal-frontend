@@ -5,14 +5,55 @@ import { toast } from "sonner";
 import CustomInput from "../input/custom-input";
 
 interface ThumbnailUploaderProps {
-  onImageUpload?: (imageFile: File, previewUrl: string, description: string) => void;
+  onImageUpload?: (imageFile: File, previewUrl: string, description?: string) => void;
   initialImage?: string;
+  // Props para personalização de textos
+  label?: string;
+  modalTitle?: string;
+  uploadAreaText?: string;
+  uploadAreaSubtext?: string;
+  descriptionLabel?: string;
+  descriptionPlaceholder?: string;
+  confirmButtonText?: string;
+  cancelButtonText?: string;
+  processingText?: string;
+  successMessage?: string;
+  // Props para configurações
+  maxFileSize?: number; 
+  acceptedFormats?: string[];
+  required?: boolean;
+  showDescription?: boolean;
+  // Props para dimensões e estilo
+  width?: string;
+  height?: string;
+  borderRadius?: string;
+  modalWidth?: string;
+  previewHeight?: string;
 }
-
 
 export default function ThumbnailUploader({
   onImageUpload,
   initialImage,
+  label = "Imagem de Thumbnail",
+  modalTitle = "Adicionar Thumbnail",
+  uploadAreaText = "Clique para adicionar uma imagem",
+  uploadAreaSubtext = "SVG, PNG, JPG ou GIF (max. 5MB)",
+  descriptionLabel = "Descrição da imagem",
+  descriptionPlaceholder = "Descrição da imagem",
+  confirmButtonText = "Selecionar",
+  cancelButtonText = "Cancelar",
+  processingText = "Processando...",
+  successMessage = "Imagem selecionada com sucesso!",
+  maxFileSize = 5, 
+  acceptedFormats = ["image/*"],
+  required = false,
+  showDescription = true,
+  // Dimensões e estilo com valores padrão
+  width = "w-full",
+  height = "h-48",
+  borderRadius = "rounded-lg",
+  modalWidth = "max-w-md",
+  previewHeight = "h-48"
 }: ThumbnailUploaderProps) {
   const [showModal, setShowModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -38,7 +79,6 @@ export default function ThumbnailUploader({
     setError(false);
   };
 
-  
   const saveImage = async () => {
     if (!selectedFile) {
       setError(true);
@@ -57,10 +97,10 @@ export default function ThumbnailUploader({
       }
 
       if (onImageUpload) {
-        onImageUpload(selectedFile, previewUrl!, description);
+        onImageUpload(selectedFile, previewUrl!, showDescription ? description : undefined);
       }
 
-      toast.success("Imagem selecionada com sucesso!");
+      toast.success(successMessage);
       closeModal();
     } catch (error: any) {
       console.error("Erro ao processar imagem:", error);
@@ -82,10 +122,10 @@ export default function ThumbnailUploader({
         return;
       }
 
-      // Verificar tamanho do arquivo (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
+      // Verificar tamanho do arquivo
+      if (file.size > maxFileSize * 1024 * 1024) {
         setError(true);
-        toast.error("A imagem deve ter no máximo 5MB");
+        toast.error(`A imagem deve ter no máximo ${maxFileSize}MB`);
         return;
       }
 
@@ -97,24 +137,46 @@ export default function ThumbnailUploader({
     }
   };
 
+  // Formatação dinâmica do subtexto com tamanho máximo
+  const getDynamicSubtext = () => {
+    const formats = acceptedFormats
+      .map(format => format.replace("image/", "").toUpperCase())
+      .join(", ");
+    return uploadAreaSubtext.includes("max") 
+      ? uploadAreaSubtext.replace(/max\. \d+MB/, `max. ${maxFileSize}MB`)
+      : `${formats} (max. ${maxFileSize}MB)`;
+  };
+
+  // Função para obter border radius para imagem (um pouco menor que o container)
+  const getImageBorderRadius = () => {
+    switch(borderRadius) {
+      case 'rounded-full': return 'rounded-full';
+      case 'rounded-xl': return 'rounded-lg';
+      case 'rounded-2xl': return 'rounded-xl';
+      case 'rounded-3xl': return 'rounded-2xl';
+      default: return 'rounded-md';
+    }
+  };
+
   return (
-    <div className="w-full">
+    <div className={width}>
       {/* Área de thumbnail com botão de upload */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Imagem de Thumbnail
+          {label} {required && <span className="text-red-500">*</span>}
         </label>
 
         <div
-          className="border-2 border-dashed  border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+          className={`border-2 border-dashed border-gray-300 ${borderRadius} p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors`}
           onClick={openModal}
+          style={{ minHeight: height === 'h-auto' ? 'auto' : undefined }}
         >
           {previewUrl ? (
-            <div className="relative w-full h-48 mb-2 ">
+            <div className={`relative w-full ${height} mb-2`}>
               <img
                 src={previewUrl}
-                alt="Thumbnail da notícia"
-                className="object-cover rounded-md h-full w-full"
+                alt="Thumbnail selecionada"
+                className={`object-cover ${getImageBorderRadius()} h-full w-full`}
               />
               {selectedFile && (
                 <div className="absolute bottom-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
@@ -123,7 +185,7 @@ export default function ThumbnailUploader({
               )}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-48">
+            <div className={`flex flex-col items-center justify-center ${height}`}>
               <svg
                 className="w-12 h-12 text-gray-400 mb-2"
                 fill="none"
@@ -138,9 +200,9 @@ export default function ThumbnailUploader({
                   d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                 ></path>
               </svg>
-              <p className="text-gray-500">Clique para adicionar uma imagem</p>
+              <p className="text-gray-500">{uploadAreaText}</p>
               <p className="text-sm text-gray-400 mt-1">
-                SVG, PNG, JPG ou GIF (max. 5MB)
+                {getDynamicSubtext()}
               </p>
             </div>
           )}
@@ -150,9 +212,9 @@ export default function ThumbnailUploader({
       {/* Modal de upload de imagem */}
       {showModal && (
         <div className="fixed inset-0 z-50 top-0 left-0 h-full w-full flex flex-col items-center justify-center bg-zinc-900 bg-opacity-50">
-          <div className="flex flex-col bg-white p-6 rounded-lg max-w-md w-full">
+          <div className={`flex flex-col bg-white p-6 ${borderRadius} ${modalWidth} w-full mx-4`}>
             <div className="flex justify-between items-center mb-4">
-              <span className="font-semibold text-xl">Adicionar Thumbnail</span>
+              <span className="font-semibold text-xl">{modalTitle}</span>
               <button
                 onClick={closeModal}
                 className="text-gray-500 hover:text-gray-700"
@@ -177,11 +239,11 @@ export default function ThumbnailUploader({
             {/* Preview da imagem */}
             {previewUrl && (
               <div className="mb-4">
-                <div className="relative w-full h-48 rounded-md overflow-hidden">
+                <div className={`relative w-full ${previewHeight} ${getImageBorderRadius()} overflow-hidden`}>
                   <img
                     src={previewUrl}
                     alt="Preview"
-                    className="object-cover"
+                    className="object-cover w-full h-full"
                   />
                 </div>
               </div>
@@ -194,9 +256,9 @@ export default function ThumbnailUploader({
               </label>
               <input
                 type="file"
-                accept="image/*"
+                accept={acceptedFormats.join(",")}
                 onChange={handleFileChange}
-                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                className={`w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:${borderRadius === 'rounded-lg' ? 'rounded' : borderRadius} file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100`}
               />
               {error && (
                 <p className="mt-1 text-sm text-red-600">
@@ -215,35 +277,40 @@ export default function ThumbnailUploader({
               </div>
             )}
 
-            <CustomInput
-              id="description"
-              label="Descrição da imagem"
-              placeholder="Descrição da imagem"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
+            {/* Campo de descrição - apenas se showDescription for true */}
+            {showDescription && (
+              <div className="mb-4">
+                <CustomInput
+                  id="description"
+                  label={descriptionLabel}
+                  placeholder={descriptionPlaceholder}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              </div>
+            )}
 
             {/* Botões de ação */}
             <div className="flex justify-end gap-2 mt-4">
               <button
                 onClick={closeModal}
-                className="border border-red-300 hover:bg-red-700 hover:text-white text-red-700 px-4 py-2 rounded"
+                className={`border border-red-300 hover:bg-red-700 hover:text-white text-red-700 px-4 py-2 ${borderRadius === 'rounded-lg' ? 'rounded' : borderRadius} transition-colors`}
                 disabled={loading}
               >
-                Cancelar
+                {cancelButtonText}
               </button>
               <button
                 onClick={saveImage}
-                className="bg-green-700 hover:bg-opacity-70 text-white px-4 py-2 rounded flex items-center justify-center min-w-[100px]"
+                className={`bg-green-700 hover:bg-green-600 text-white px-4 py-2 ${borderRadius === 'rounded-lg' ? 'rounded' : borderRadius} flex items-center justify-center min-w-[100px] transition-colors`}
                 disabled={loading || !selectedFile}
               >
                 {loading ? (
                   <>
                     <div className="animate-spin h-5 w-5 border-2 border-white rounded-full border-t-transparent mr-2"></div>
-                    Processando...
+                    {processingText}
                   </>
                 ) : (
-                  "Selecionar"
+                  confirmButtonText
                 )}
               </button>
             </div>

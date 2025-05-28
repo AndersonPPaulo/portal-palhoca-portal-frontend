@@ -88,13 +88,11 @@ export const BannerProvider = ({ children }: ICihldrenReact) => {
     const response = await api
       .post("/banner", formData, config)
       .then((res) => {
-        console.log("res", res);
         toast.success("Banner criado com sucesso!");
         back();
       })
       .catch((err) => {
         toast.error("Erro ao criar o banner");
-        console.log(err);
       });
 
     return response;
@@ -122,12 +120,10 @@ export const BannerProvider = ({ children }: ICihldrenReact) => {
     const response = await api
       .get("/banner", config)
       .then((res) => {
-        console.log("res", res);
         setBanners(res.data.response);
       })
       .catch((err) => {
         toast.error("Erro ao listar os banners");
-        console.log(err);
       });
 
     return response;
@@ -157,13 +153,11 @@ export const BannerProvider = ({ children }: ICihldrenReact) => {
     const response = await api
       .patch(`/banner/${id}`, formData, config)
       .then((res) => {
-        console.log("res", res);
         toast.success("Banner atualizado com sucesso!");
         push("/banners");
       })
       .catch((err) => {
         toast.error("Erro ao atualizar o banner");
-        console.log(err);
       });
 
     return response;
@@ -174,12 +168,10 @@ export const BannerProvider = ({ children }: ICihldrenReact) => {
     const response = await api
       .get(`/banner/${id}`)
       .then((res) => {
-        console.log("res", res.data);
         setBanner(res.data.response);
       })
       .catch((err) => {
         toast.error("Erro ao atualizar o banner");
-        console.log(err);
       });
 
     return response;

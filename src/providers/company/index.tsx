@@ -38,13 +38,31 @@ interface UpdateCompanyProps {
   linkLocationMaps?: string;
   linkLocationWaze?: string;
   address?: string;
+  district?: string;
   status: "active" | "inactive" | "blocked";
+  portalIds?: string[];
+  companyCategoryIds?: string[];
+}
+
+export interface UploadCompanyImageProps {
+  id?: string;
+  key: string;
+  url: string;
+  original_name?: string;
+  mime_type?: string;
+  size?: number;
+  uploaded_at?: Date;
+  company_id: string;
 }
 
 export interface ICompanyProps extends UpdateCompanyProps {
   id: string;
   created_at?: Date;
   update_at?: Date;
+  company_image?: UploadCompanyImageProps;
+  companyImage?: string; 
+  portals?: string[]
+  companyCategories?: string[]
 }
 
 export type CompanyProps = {
@@ -53,18 +71,7 @@ export type CompanyProps = {
   limit: number;
   totalPages: number;
   data: ICompanyProps[];
-};
-
-interface ICompanyData {
-  ListCompany(limit?: number, page?: number): Promise<CompanyProps>;
-  CreateCompany(data: UpdateCompanyProps): Promise<void>;
-  apiCep: GetCEPProps | null;
-  setApiCep: React.Dispatch<React.SetStateAction<GetCEPProps | null>>;
-  UpdateCompany(data: UpdateCompanyProps, id: string): Promise<void>;
-  listCompany: CompanyProps | null;
-  SelfCompany(companyId: string): Promise<CompanyProps>;
-  company: ICompanyProps | null;
-}
+} | ICompanyProps; 
 
 interface GetCEPProps {
   cep: string;
@@ -79,6 +86,23 @@ interface GetCEPProps {
   siafi: string;
 }
 
+interface ICompanyData {
+  ListCompany(limit?: number, page?: number, options?: any): Promise<CompanyProps>;
+  CreateCompany(data: UpdateCompanyProps): Promise<void>;
+  apiCep: GetCEPProps | null;
+  setApiCep: React.Dispatch<React.SetStateAction<GetCEPProps | null>>;
+  UpdateCompany(data: UpdateCompanyProps, id: string): Promise<void>;
+  listCompany: CompanyProps | null;
+  SelfCompany(companyId: string): Promise<ICompanyProps>; 
+  GetCompanyById(companyId: string): Promise<ICompanyProps>; 
+  company: ICompanyProps | null;
+  CreateImageCompany(
+    data: UploadCompanyImageProps,
+    company_id: string
+  ): Promise<void>;
+  UploadCompanyLogo(file: File, company_id: string): Promise<void>;
+}
+
 interface IChildrenReact {
   children: ReactNode;
 }
@@ -87,48 +111,36 @@ export const CompanyContext = createContext<ICompanyData>({} as ICompanyData);
 export const CompanyProvider = ({ children }: IChildrenReact) => {
   const { push } = useRouter();
   const [listCompany, setListCompany] = useState<CompanyProps | null>(null);
+  const [apiCep, setApiCep] = useState<GetCEPProps | null>(null);
 
-  const ListCompany = async (
-    limit: number = 1000,
-    page: number = 1
-  ): Promise<CompanyProps> => {
-    const config = { params: { limit, page } };
-    const response = await api
-      .get("/company", config)
-      .then((res) => {
-        const dataWithStatus = res.data.response.data.map(
-          (company: ICompanyProps) => ({
-            ...company,
-            status: company.status || "active",
-          })
-        );
+  const ListCompany = async (limit = 1000, page = 1, options = {}): Promise<CompanyProps> => {
+    const config = { params: { limit, page, ...options } };
+    try {
+      const res = await api.get("/company", config);
+      const dataWithStatus = res.data.response.data.map(
+        (company: ICompanyProps) => ({
+          ...company,
+          status: company.status || "active",
+        })
+      );
 
-        const formattedResponse = {
-          ...res.data.response,
-          data: dataWithStatus,
-        };
+      const formattedResponse = {
+        ...res.data.response,
+        data: dataWithStatus,
+      };
 
-        setListCompany(formattedResponse);
-        return formattedResponse;
-      })
-      .catch((err) => {
-        toast.error(err.response?.data?.message || "Erro ao listar empresas");
-        return {
-          total: 0,
-          page: 0,
-          limit: 0,
-          totalPages: 0,
-          data: [],
-        };
-      });
-    return response;
+      setListCompany(formattedResponse);
+      return formattedResponse;
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro ao listar empresas");
+      throw err;
+    }
   };
 
   const CreateCompany = async (data: UpdateCompanyProps): Promise<void> => {
     const { "user:token": token } = parseCookies();
     const config = {
       headers: { Authorization: `bearer ${token}` },
-      params: { company },
     };
     try {
       await api.post("/company", data, config);
@@ -136,6 +148,7 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
       push("/comercio");
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Erro ao criar empresa");
+      throw err;
     }
   };
 
@@ -146,7 +159,6 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
     const { "user:token": token } = parseCookies();
     const config = {
       headers: { Authorization: `bearer ${token}` },
-      params: { company },
     };
     try {
       await api.patch(`/company/${id}`, data, config);
@@ -154,55 +166,112 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
       push("/comercio");
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Erro ao atualizar empresa");
+      throw err;
     }
   };
 
-  // API CEP
-  const [apiCep, setApiCep] = useState<GetCEPProps | null>(null);
   const GetByZipcode = async (cep: string) => {
-    const response = await api_cep
-      .get(`/${cep}/json`)
-      .then((res) => {
-        setApiCep(res.data);
-      })
-      .catch((err) => {
-        return err;
-      });
-
-    return response;
+    try {
+      const response = await api_cep.get(`/${cep}/json`);
+      setApiCep(response.data);
+      return response.data;
+    } catch (err) {
+      console.error("Erro ao buscar CEP:", err);
+      throw err;
+    }
   };
 
-  const [company, setCompany] = useState<ICompanyProps | null>(null);
-  const SelfCompany = async (companyId: string): Promise<CompanyProps> => {
-    const response = await api
-      .get(`/company/${companyId}`)
-      .then((res) => {
-        const companyWithStatus = {
-          ...res.data.response,
-          status: res.data.response.status || "inactive",
-        };
-        setCompany(companyWithStatus);
-        return companyWithStatus;
-      })
-      .catch((err) => {
-        toast.error(err.response?.data?.message);
-        return err;
-      });
 
-    return response;
+  const [company, setCompany] = useState<ICompanyProps | null>(null);
+
+  const SelfCompany = async (companyId: string): Promise<ICompanyProps> => {
+    try {
+      const res = await api.get(`/company/${companyId}`);
+      const companyWithStatus = {
+        ...res.data.response,
+        status: res.data.response.status || "inactive",
+      };
+      setCompany(companyWithStatus);
+      return companyWithStatus;
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro ao buscar empresa");
+      throw err;
+    }
+  };
+
+  // Método adicional para buscar empresa pelo ID (similar ao SelfCompany)
+  const GetCompanyById = async (companyId: string): Promise<ICompanyProps> => {
+    try {
+      const res = await api.get(`/company/${companyId}`);
+      return {
+        ...res.data.response,
+        status: res.data.response.status || "inactive",
+      };
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro ao buscar detalhes da empresa");
+      throw err;
+    }
+  };
+
+  const CreateImageCompany = async (
+    data: UploadCompanyImageProps,
+    company_id: string
+  ): Promise<void> => {
+    const { "user:token": token } = parseCookies();
+    const config = {
+      headers: { Authorization: `bearer ${token}` },
+    };
+    try {
+      await api.post(`/company/${company_id}/upload-company-image`, data, config);
+      toast.success("Logo da empresa criada com sucesso!");
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || "Erro ao criar logo da empresa"
+      );
+      throw err;
+    }
+  };
+
+  const UploadCompanyLogo = async (
+    file: File,
+    company_id: string
+  ): Promise<void> => {
+    const { "user:token": token } = parseCookies();
+    const formData = new FormData();
+    formData.append('company_image', file);
+    
+    const config = {
+      headers: { 
+        Authorization: `bearer ${token}`,
+        'Content-Type': 'multipart/form-data'
+      },
+    };
+    
+    try {
+      await api.post(`/company/${company_id}/upload-company-image`, formData, config);
+      toast.success("Logo da empresa enviado com sucesso!");
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || "Erro ao fazer upload do logo"
+      );
+      throw err;
+    }
   };
 
   return (
     <CompanyContext.Provider
       value={{
+        CreateImageCompany,
         ListCompany,
         CreateCompany,
         UpdateCompany,
         listCompany,
         SelfCompany,
+        GetCompanyById,
         company,
         apiCep,
         setApiCep,
+        UploadCompanyLogo
       }}
     >
       {children}

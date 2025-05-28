@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { AlertCircle } from "lucide-react";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
 
@@ -20,37 +20,75 @@ const CustomInput: React.FC<CustomInputProps> = ({
   ...props
 }) => {
   const hasIcon = Boolean(icon);
+  const [isFocused, setIsFocused] = useState(false);
+
+  // Funções para gerenciar o estado de foco
+  const handleFocus = (e: React.FocusEvent) => {
+    setIsFocused(true);
+    if (props.onFocus) {
+      props.onFocus(e as any);
+    }
+  };
+
+  const handleBlur = (e: React.FocusEvent) => {
+    setIsFocused(false);
+    if (props.onBlur) {
+      props.onBlur(e as any);
+    }
+  };
+
+  // Estilos comuns para input e textarea
+  const commonInputStyles = `
+    w-full 
+    text-body-m 
+    text-gray-900 
+    rounded-[24px] 
+    px-6 
+    py-4 
+    outline-none 
+    border-none
+    focus:ring-0
+    ${props.disabled && "cursor-not-allowed"}
+    ${hasIcon ? (iconPosition === "left" ? "pl-11" : "pr-11") : ""}
+    ${error ? "border-red-500" : ""}
+  `;
 
   return (
     <div className={`w-full`}>
       {label && (
-        <label htmlFor={props.id} className="px-6 block text-black ">
+        <label htmlFor={props.id} className="px-6 block text-black">
           {label}
         </label>
       )}
 
       <div
-        className={`${className} relative mt-1 border-2 border-primary-light rounded-[24px]`}
+        className={`
+          ${className} 
+          relative 
+          mt-1 
+          border-2 
+          border-[#DFEAF6] 
+          rounded-[24px]
+          transition-colors
+          duration-200
+          hover:border-[#DFEAF695]
+          ${props.disabled ? "opacity-60" : ""}
+          ${error ? "!border-red-500" : ""}
+          
+          focus-within:!border-[#3b82f6]
+          focus-within:shadow-sm
+          focus-within:shadow-blue-300
+        `}
       >
         {textareaInput ? (
           <textarea
             {...(props as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
-            className={` w-full text-body-m text-gray-900 rounded-[24px] min-h-[128px] px-6 py-4 outline-none focus:border-blue-500 focus:ring-blue-500 resize-none ${
-              error
-                ? "border border-red-500 focus:border-red-500 focus:ring-red-500"
-                : "border-none"
-            } ${hasIcon ? (iconPosition === "left" ? "pl-12" : "pr-12") : ""} `}
+            className={`${commonInputStyles} min-h-[128px] resize-none`}
           />
         ) : (
           <input
             {...props}
-            className={` w-full text-body-m text-gray-900 rounded-[24px] px-6 py-4 outline-none focus:border-blue-950 focus:ring-blue-900 ${
-              error
-                ? "border border-red-500 focus:border-red-500 focus:ring-red-500"
-                : "border-none"
-            } ${props.disabled && "cursor-not-allowed"} ${
-              hasIcon ? (iconPosition === "left" ? "pl-11 pt-5" : "pr-11") : ""
-            } `}
+            className={commonInputStyles}
           />
         )}
 

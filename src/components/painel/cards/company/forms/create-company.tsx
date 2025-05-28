@@ -1,14 +1,22 @@
 "use client";
 
+import axios from "axios";
+import { toast } from "sonner";
+import ThumbnailUploader from "@/components/thumbnail";
+import CustomSelect, { OptionType } from "@/components/select/custom-select";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useContext, useState, useEffect } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import CustomInput from "@/components/input/custom-input";
 import { useRouter } from "next/navigation";
 import { CompanyContext } from "@/providers/company";
 import ReturnPageButton from "@/components/button/returnPage";
 import { Button } from "@/components/ui/button";
+import { PortalContext } from "@/providers/portal";
+import { parseCookies } from "nookies";
+import { api } from "@/service/api";
+import { CompanyCategoryContext } from "@/providers/company-category/index.tsx";
 
 // Interface para os dados retornados pela API de CEP
 interface GetCEPProps {
@@ -44,6 +52,8 @@ const companySchema = z.object({
   state: z.string().min(1, "Estado é obrigatório"),
   address: z.string().min(1, "Endereço é obrigatório"),
   status: z.enum(["active", "inactive", "blocked"]),
+  portalIds: z.array(z.string()).min(1, "Selecione pelo menos um portal"),
+  companyCategoryIds: z.array(z.string()).min(1, "Selecione pelo menos uma categoria"),
 });
 
 type CompanyFormData = z.infer<typeof companySchema>;
@@ -54,19 +64,29 @@ const statusLabels: Record<CompanyFormData["status"], string> = {
   blocked: "Bloqueado",
 };
 
-// Importando API de CEP
-import axios from "axios";
-import { toast } from "sonner";
 const api_cep = axios.create({
   baseURL: "https://viacep.com.br/ws",
 });
 
 export default function FormCreateCompany() {
   const { back } = useRouter();
-  const { CreateCompany } = useContext(CompanyContext);
+  const { CreateCompany, ListCompany } = useContext(CompanyContext);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
   const [apiCep, setApiCep] = useState<GetCEPProps | null>(null);
+  const { listPortals, ListPortals } = useContext(PortalContext);
+  const [selectedImage, setSelectedImage] = useState<{
+    file: File;
+    preview: string;
+  } | null>(null);
+  const { 
+    listCompanyCategory, 
+    ListCompanyCategory 
+  } = useContext(CompanyCategoryContext);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+
+  // Ref para determinar se o formulário foi enviado com sucesso
+  const formSubmittedSuccessfully = useRef(false);
 
   const {
     register,
@@ -95,6 +115,8 @@ export default function FormCreateCompany() {
       state: "",
       address: "",
       status: "active",
+      portalIds: [],
+      companyCategoryIds: [],
     },
   });
 
@@ -108,6 +130,8 @@ export default function FormCreateCompany() {
   const district = watch("district");
   const city = watch("city");
   const state = watch("state");
+  const portalIds = watch("portalIds");
+  const categoryIds = watch("companyCategoryIds");
 
   // Função para buscar dados do CEP
   const GetByZipcode = async (cep: string) => {
@@ -167,10 +191,12 @@ export default function FormCreateCompany() {
       if (city && state) {
         fullAddress += ` - ${city}/${state}`;
       }
-
+      if (apiCep) {
+        fullAddress += ` - ${apiCep.cep}`;
+      }
       setValue("address", fullAddress);
     }
-  }, [street, number, complement, district, city, state, setValue]);
+  }, [street, number, complement, district, city, state, apiCep, setValue]);
 
   // Efeito para buscar CEP quando o usuário parar de digitar
   useEffect(() => {
@@ -178,14 +204,108 @@ export default function FormCreateCompany() {
       if (cep && cep.length >= 8) {
         GetByZipcode(cep);
       }
-    }, 1000);
+    }, 500);
 
     return () => clearTimeout(timeoutId);
   }, [cep]);
 
+  // Listar portais disponíveis ao carregar o componente
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Carregar portais
+        await ListPortals();
+        
+        // Carregar categorias
+        setIsLoadingCategories(true);
+        await ListCompanyCategory(100, 1); // Carregar até 100 categorias na página 1
+        setIsLoadingCategories(false);
+      } catch (error) {
+        console.error("Erro ao carregar dados iniciais:", error);
+        toast.error("Erro ao carregar dados. Por favor, recarregue a página.");
+        setIsLoadingCategories(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Função para lidar com o upload da imagem
+  const handleImageUpload = (file: File, previewUrl: string) => {
+    setSelectedImage({ file, preview: previewUrl });
+  };
+
+  const uploadCompanyLogo = async (file: File, companyName: string) => {
+    try {
+      const { "user:token": token } = parseCookies();
+      const config = {
+        headers: { Authorization: `bearer ${token}` },
+      };
+
+      try {
+        const response = await ListCompany(1, 1, {
+          name: companyName,
+          order: "DESC", 
+          orderBy: "created_at",
+        });
+
+        // Verificar se encontrou a empresa
+        if (response?.data?.length > 0) {
+          const companyId = response.data[0].id;
+
+          // Criar FormData para enviar o arquivo
+          const formData = new FormData();
+          formData.append("company_image", file);
+
+          // Fazer o upload do logo
+          await api.post(
+            `/company/${companyId}/upload-company-image`,
+            formData,
+            {
+              headers: {
+                ...config.headers,
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+
+          toast.success("Logo da empresa enviado com sucesso!");
+        } else {
+          throw new Error(
+            "Empresa criada, mas não foi possível encontrá-la para adicionar o logo"
+          );
+        }
+      } catch (error: any) {
+        console.error("Erro ao buscar empresa:", error);
+        toast.error(
+          "Empresa criada, mas não foi possível encontrar seu ID para adicionar o logo"
+        );
+      }
+    } catch (error: any) {
+      console.error("Erro ao fazer upload do logo:", error);
+      toast.error(error.message || "Erro ao fazer upload do logo");
+    }
+  };
+
+  // Converter portais para opções de select
+  const portalOptions: OptionType[] = Array.isArray(listPortals)
+    ? listPortals.map((portal) => ({ value: portal.id, label: portal.name }))
+    : [];
+
+  // Converter categorias para opções de select
+  const categoryOptions: OptionType[] = 
+    listCompanyCategory && Array.isArray(listCompanyCategory.data)
+      ? listCompanyCategory.data.map((category) => ({
+          value: category.id,
+          label: category.name,
+        }))
+      : [];
+
+  // Modificar o onSubmit para usar a abordagem de envio separado da imagem
   const onSubmit = async (data: CompanyFormData) => {
     try {
       setIsSubmitting(true);
+      formSubmittedSuccessfully.current = false;
 
       // Preparar os dados para envio
       const companyData = {
@@ -198,23 +318,51 @@ export default function FormCreateCompany() {
         linkLocationMaps: data.linkLocationMaps || "",
         linkLocationWaze: data.linkLocationWaze || "",
         address: data.address,
-        district: data.district, // Adicionando o bairro para filtros
+        district: data.district,
         status: data.status,
+        portalIds: data.portalIds,
+        companyCategoryIds: data.companyCategoryIds,
       };
+      
+      console.log('data.companyCategoryIds', data.companyCategoryIds)
+      console.log("Dados enviados:", companyData);
 
-      await CreateCompany(companyData);
-      toast.success("Empresa criada com sucesso!");
-      reset(); // Limpar o formulário após o envio bem-sucedido
-      back(); // Voltar para a página anterior
-    } catch (error) {
+      const hasImage = selectedImage && selectedImage.file;
+
+      if (hasImage) {
+        const imageFile = selectedImage.file;
+        const companyName = data.name;
+
+        // Criar a empresa
+        await CreateCompany(companyData);
+        formSubmittedSuccessfully.current = true;
+
+        try {
+          setTimeout(async () => {
+            try {
+              await uploadCompanyLogo(imageFile, companyName);
+            } catch (error) {
+              console.error("Erro no upload do logo no setTimeout:", error);
+            }
+          }, 0);
+        } catch (error) {
+          console.error("Erro ao fazer upload do logo:", error);
+        }
+      } else {
+        await CreateCompany(companyData);
+        formSubmittedSuccessfully.current = true;
+      }
+
+      reset();
+      setSelectedImage(null);
+    } catch (error: any) {
       console.error("Erro ao criar empresa:", error);
-      toast.error("Erro ao criar empresa. Tente novamente.");
+      toast.error(error.message || "Erro ao criar empresa. Tente novamente.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Formatar o CEP enquanto o usuário digita
   const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
 
@@ -255,12 +403,12 @@ export default function FormCreateCompany() {
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-white rounded-[24px]">
+    <div className="w-full h-full flex flex-col bg-white rounded-[24px] scroll-hidden">
       <div className="flex-1 overflow-y-auto no-scrollbar">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 p-6">
+          {/* Header com botão de voltar e status */}
           <div className="flex justify-between items-center">
             <ReturnPageButton />
-
             <div className="flex flex-col">
               <label htmlFor="status" className="text-gray-500 mb-1">
                 Status
@@ -282,243 +430,353 @@ export default function FormCreateCompany() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <div>
-              <CustomInput
-                id="name"
-                label="Nome da Empresa"
-                {...register("name")}
-                placeholder="Digite o nome"
-              />
-              {errors.name && (
-                <span className="text-red-500 text-sm">
-                  {errors.name.message}
-                </span>
-              )}
-            </div>
+          {/* Grid de 3 colunas */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Coluna 1: Dados da Empresa */}
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
+                  Dados da Empresa
+                </h3>
 
-            <div>
-              <CustomInput
-                id="phone"
-                label="Telefone"
-                placeholder="(00) 00000-0000"
-                value={watch("phone")}
-                onChange={handlePhoneChange}
-              />
-              {errors.phone && (
-                <span className="text-red-500 text-sm">
-                  {errors.phone.message}
-                </span>
-              )}
-            </div>
-
-            <div>
-              <CustomInput
-                id="openingHours"
-                label="Horário de Funcionamento"
-                {...register("openingHours")}
-                placeholder="Seg a Sab - 09h às 18h"
-              />
-              {errors.openingHours && (
-                <span className="text-red-500 text-sm">
-                  {errors.openingHours.message}
-                </span>
-              )}
-            </div>
-
-            {/* Campo CEP com busca automática */}
-            <div>
-              <div className="relative">
-                <CustomInput
-                  id="cep"
-                  label="CEP"
-                  placeholder="00000-000"
-                  value={watch("cep")}
-                  onChange={handleCepChange}
-                />
-                {loadingCep && (
-                  <div className="absolute right-3 top-9">
-                    <div className="animate-spin h-5 w-5 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+                <div className="space-y-4">
+                  <div>
+                    <CustomInput
+                      id="name"
+                      label="Nome da Empresa"
+                      {...register("name")}
+                      placeholder="Digite o nome"
+                    />
+                    {errors.name && (
+                      <span className="text-red-500 text-sm">
+                        {errors.name.message}
+                      </span>
+                    )}
                   </div>
-                )}
+
+                  <div>
+                    <CustomInput
+                      id="phone"
+                      label="Telefone"
+                      placeholder="(00) 00000-0000"
+                      value={watch("phone")}
+                      onChange={handlePhoneChange}
+                    />
+                    {errors.phone && (
+                      <span className="text-red-500 text-sm">
+                        {errors.phone.message}
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <CustomInput
+                      id="openingHours"
+                      label="Horário de Funcionamento"
+                      {...register("openingHours")}
+                      placeholder="Seg a Sab - 09h às 18h"
+                    />
+                    {errors.openingHours && (
+                      <span className="text-red-500 text-sm">
+                        {errors.openingHours.message}
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <CustomInput
+                      id="description"
+                      label="Descrição"
+                      textareaInput
+                      {...register("description")}
+                      placeholder="Descreva a empresa, produtos ou serviços"
+                    />
+                    {errors.description && (
+                      <span className="text-red-500 text-sm">
+                        {errors.description.message}
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <ThumbnailUploader
+                      label="Logo da Empresa"
+                      modalTitle="Adicionar Logo"
+                      confirmButtonText="Selecionar Logo"
+                      uploadAreaText="Clique para adicionar o logo"
+                      uploadAreaSubtext="SVG, PNG, JPG ou GIF (max. 5MB)"
+                      onImageUpload={handleImageUpload}
+                      selectedImage={selectedImage}
+                      setSelectedImage={setSelectedImage}
+                      showDescription={false}
+                    />
+                    {selectedImage && (
+                      <p className="text-green-600 text-sm ml-2 mt-1">
+                        Logo selecionado com sucesso
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
-              {errors.cep && (
-                <span className="text-red-500 text-sm">
-                  {errors.cep.message}
-                </span>
-              )}
             </div>
 
-            {/* Campos preenchidos pelo CEP */}
-            <div>
-              <CustomInput
-                id="street"
-                label="Rua"
-                {...register("street")}
-                placeholder="Nome da rua"
-              />
-              {errors.street && (
-                <span className="text-red-500 text-sm">
-                  {errors.street.message}
-                </span>
-              )}
-            </div>
+            {/* Coluna 2 e 3: Container para endereço, links e categorias */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Container de Endereço e Links de Contato */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Coluna de Endereço */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
+                    Endereço
+                  </h3>
 
-            <div>
-              <CustomInput
-                id="number"
-                label="Número"
-                {...register("number")}
-                placeholder="Número"
-              />
-              {errors.number && (
-                <span className="text-red-500 text-sm">
-                  {errors.number.message}
-                </span>
-              )}
-            </div>
+                  <div className="space-y-4">
+                    {/* Campo CEP com busca automática */}
+                    <div>
+                      <div className="relative">
+                        <CustomInput
+                          id="cep"
+                          label="CEP"
+                          placeholder="00000-000"
+                          value={watch("cep")}
+                          onChange={handleCepChange}
+                        />
+                        {loadingCep && (
+                          <div className="absolute right-3 top-9">
+                            <div className="animate-spin h-5 w-5 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+                          </div>
+                        )}
+                      </div>
+                      {errors.cep && (
+                        <span className="text-red-500 text-sm">
+                          {errors.cep.message}
+                        </span>
+                      )}
+                    </div>
 
-            <div>
-              <CustomInput
-                id="complement"
-                label="Complemento (opcional)"
-                {...register("complement")}
-                placeholder="Apto, Bloco, etc."
-              />
-            </div>
+                    <div>
+                      <CustomInput
+                        id="street"
+                        label="Rua"
+                        {...register("street")}
+                        placeholder="Nome da rua"
+                      />
+                      {errors.street && (
+                        <span className="text-red-500 text-sm">
+                          {errors.street.message}
+                        </span>
+                      )}
+                    </div>
 
-            <div>
-              <CustomInput
-                id="district"
-                label="Bairro"
-                {...register("district")}
-                placeholder="Bairro"
-              />
-              {errors.district && (
-                <span className="text-red-500 text-sm">
-                  {errors.district.message}
-                </span>
-              )}
-            </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <CustomInput
+                          id="number"
+                          label="Número"
+                          {...register("number")}
+                          placeholder="Número"
+                        />
+                        {errors.number && (
+                          <span className="text-red-500 text-sm">
+                            {errors.number.message}
+                          </span>
+                        )}
+                      </div>
 
-            <div>
-              <CustomInput
-                id="city"
-                label="Cidade"
-                {...register("city")}
-                placeholder="Cidade"
-              />
-              {errors.city && (
-                <span className="text-red-500 text-sm">
-                  {errors.city.message}
-                </span>
-              )}
-            </div>
+                      <div>
+                        <CustomInput
+                          id="complement"
+                          label="Complemento (opcional)"
+                          {...register("complement")}
+                          placeholder="Apto, Bloco, etc."
+                        />
+                      </div>
+                    </div>
 
-            <div>
-              <CustomInput
-                id="state"
-                label="Estado"
-                {...register("state")}
-                placeholder="UF"
-              />
-              {errors.state && (
-                <span className="text-red-500 text-sm">
-                  {errors.state.message}
-                </span>
-              )}
-            </div>
+                    {/* Cidade, Bairro e Estado na mesma linha */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <CustomInput
+                          id="city"
+                          label="Cidade"
+                          {...register("city")}
+                          placeholder="Cidade"
+                        />
+                        {errors.city && (
+                          <span className="text-red-500 text-sm">
+                            {errors.city.message}
+                          </span>
+                        )}
+                      </div>
 
-            {/* Campo de endereço completo (preenchido automaticamente) */}
-            <div className="xl:col-span-2">
-              <CustomInput
-                className="cursor-not-allowed"
-                id="address"
-                label="Endereço completo"
-                {...register("address")}
-                placeholder="Endereço completo (preenchido automaticamente)"
-                readOnly
-              />
-              {errors.address && (
-                <span className="text-red-500 text-sm">
-                  {errors.address.message}
-                </span>
-              )}
-            </div>
+                      <div>
+                        <CustomInput
+                          id="district"
+                          label="Bairro"
+                          {...register("district")}
+                          placeholder="Bairro"
+                        />
+                        {errors.district && (
+                          <span className="text-red-500 text-sm">
+                            {errors.district.message}
+                          </span>
+                        )}
+                      </div>
 
-            <div>
-              <CustomInput
-                id="linkLocationMaps"
-                label="Link Google Maps"
-                {...register("linkLocationMaps")}
-                placeholder="https://maps.google.com/..."
-              />
-              {errors.linkLocationMaps && (
-                <span className="text-red-500 text-sm">
-                  {errors.linkLocationMaps.message}
-                </span>
-              )}
-            </div>
+                      <div>
+                        <CustomInput
+                          id="state"
+                          label="Estado"
+                          {...register("state")}
+                          placeholder="UF"
+                        />
+                        {errors.state && (
+                          <span className="text-red-500 text-sm">
+                            {errors.state.message}
+                          </span>
+                        )}
+                      </div>
+                    </div>
 
-            <div>
-              <CustomInput
-                id="linkLocationWaze"
-                label="Link Waze"
-                {...register("linkLocationWaze")}
-                placeholder="https://waze.com/..."
-              />
-              {errors.linkLocationWaze && (
-                <span className="text-red-500 text-sm">
-                  {errors.linkLocationWaze.message}
-                </span>
-              )}
-            </div>
+                    {/* Campo de endereço completo (preenchido automaticamente) */}
+                    <div>
+                      <CustomInput
+                        className="cursor-not-allowed"
+                        id="address"
+                        label="Endereço completo"
+                        {...register("address")}
+                        placeholder="Endereço completo (preenchido automaticamente)"
+                        readOnly
+                        disabled
+                      />
+                      {errors.address && (
+                        <span className="text-red-500 text-sm">
+                          {errors.address.message}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-            <div>
-              <CustomInput
-                id="linkInstagram"
-                label="Instagram"
-                {...register("linkInstagram")}
-                placeholder="https://instagram.com/..."
-              />
-              {errors.linkInstagram && (
-                <span className="text-red-500 text-sm">
-                  {errors.linkInstagram.message}
-                </span>
-              )}
-            </div>
+                {/* Coluna de Links e Contato */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
+                    Links e Contato
+                  </h3>
 
-            <div>
-              <CustomInput
-                id="linkWhatsapp"
-                label="WhatsApp"
-                {...register("linkWhatsapp")}
-                placeholder="https://wa.me/..."
-              />
-              {errors.linkWhatsapp && (
-                <span className="text-red-500 text-sm">
-                  {errors.linkWhatsapp.message}
-                </span>
-              )}
+                  <div className="space-y-4">
+                    <div>
+                      <CustomInput
+                        id="linkLocationMaps"
+                        label="Link Google Maps"
+                        {...register("linkLocationMaps")}
+                        placeholder="https://maps.google.com/..."
+                      />
+                      {errors.linkLocationMaps && (
+                        <span className="text-red-500 text-sm">
+                          {errors.linkLocationMaps.message}
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <CustomInput
+                        id="linkLocationWaze"
+                        label="Link Waze"
+                        {...register("linkLocationWaze")}
+                        placeholder="https://waze.com/..."
+                      />
+                      {errors.linkLocationWaze && (
+                        <span className="text-red-500 text-sm">
+                          {errors.linkLocationWaze.message}
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <CustomInput
+                        id="linkInstagram"
+                        label="Instagram"
+                        {...register("linkInstagram")}
+                        placeholder="https://instagram.com/..."
+                      />
+                      {errors.linkInstagram && (
+                        <span className="text-red-500 text-sm">
+                          {errors.linkInstagram.message}
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <CustomInput
+                        id="linkWhatsapp"
+                        label="WhatsApp"
+                        {...register("linkWhatsapp")}
+                        placeholder="https://wa.me/..."
+                      />
+                      {errors.linkWhatsapp && (
+                        <span className="text-red-500 text-sm">
+                          {errors.linkWhatsapp.message}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Portais e Categorias  */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
+                    Portais
+                  </h3>
+                  <div className="mb-2">
+                    <CustomSelect
+                      id="portalIds"
+                      label="Portais Disponíveis"
+                      placeholder="Selecione um ou mais portais"
+                      options={portalOptions}
+                      value={portalIds}
+                      onChange={(value) =>
+                        setValue("portalIds", value as string[], {
+                          shouldValidate: true,
+                        })
+                      }
+                      isMulti={true}
+                      error={errors.portalIds?.message}
+                      noOptionsMessage="Nenhum portal disponível"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
+                    Categorias
+                  </h3>
+                  <div className="mb-2">
+                    <CustomSelect
+                      id="companyCategoryIds"
+                      label="Categorias Disponíveis"
+                      placeholder="Selecione uma ou mais categorias"
+                      options={categoryOptions}
+                      value={categoryIds}
+                      onChange={(value) =>
+                        setValue("companyCategoryIds", value as string[], {
+                          shouldValidate: true,
+                        })
+                      }
+                      isMulti={true}
+                      error={errors.companyCategoryIds?.message}
+                      noOptionsMessage="Nenhuma categoria disponível"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div>
-            <CustomInput
-              id="description"
-              label="Descrição"
-              textareaInput
-              {...register("description")}
-              placeholder="Descreva a empresa, produtos ou serviços"
-            />
-            {errors.description && (
-              <span className="text-red-500 text-sm">
-                {errors.description.message}
-              </span>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-4">
+          {/* Footer com botões de ação */}
+          <div className="flex justify-end gap-4 pt-6 border-t border-gray-200">
             <Button
               type="button"
               onClick={back}
@@ -530,7 +788,7 @@ export default function FormCreateCompany() {
             <Button
               type="submit"
               className="rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isLoadingCategories || categoryOptions.length === 0}
             >
               {isSubmitting ? (
                 <div className="flex items-center">

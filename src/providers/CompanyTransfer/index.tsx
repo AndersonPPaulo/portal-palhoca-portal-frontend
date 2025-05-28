@@ -24,10 +24,6 @@ export interface TransferListItem {
   label: string;
 }
 
-
-
-
-
 interface CompanyTransferContextProps {
   // Company data
   companies: CompanyResponseProps;
@@ -78,7 +74,7 @@ export const CompanyTransferProvider: React.FC<{ children: React.ReactNode }> = 
   const [sourceSearchQuery, setSourceSearchQuery] = useState<string>("");
   const [targetSearchQuery, setTargetSearchQuery] = useState<string>("");
 
-  const fetchCompanies = useCallback(async (limit: number = 1000, page: number = 1) => {
+  const fetchCompanies = useCallback(async (limit: number = 9, page: number = 1) => {
     setIsLoading(true);
     try {
       const config = { params: { limit, page } };
