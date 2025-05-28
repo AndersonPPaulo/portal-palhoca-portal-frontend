@@ -40,7 +40,6 @@ export function NavigationMain() {
     setOpenMenus((prev) => ({ ...prev, [path]: !prev[path] }));
   };
 
-  // Função para determinar quais abas o usuário pode ver baseado no role
   const getVisibleTabs = (userRole: string): string[] => {
     const roleName = userRole.toLowerCase();
     
@@ -71,34 +70,26 @@ export function NavigationMain() {
     // Se for administrador, pode ver tudo
     if (visibleTabs.includes("all")) return true;
     
-    // Verifica se o path está na lista de tabs visíveis
-    // Também verifica paths que começam com as rotas permitidas
-    return visibleTabs.some(allowedPath => 
       itemPath === allowedPath || itemPath.startsWith(allowedPath + "/")
     );
   };
 
-  // Função recursiva para filtrar itens baseado no role
   const filterNavigationByRole = (items: NavigationList, userRole: string): NavigationList => {
     return items
       .filter(item => {
-        // Sempre manter usuários apenas para administrador
         if (item.path === "/usuarios" && userRole.toLowerCase() !== "administrador") {
           return false;
         }
         
-        // Verificar se o item é visível para o role
         return isItemVisible(item.path, userRole);
       })
       .map(item => ({
         ...item,
-        // Recursivamente filtrar children se existirem
         children: item.children 
           ? filterNavigationByRole(item.children, userRole)
           : undefined
       }))
       .filter(item => {
-        // Remover itens que ficaram sem children visíveis (se aplicável)
         if (item.children) {
           return item.children.length > 0 || isItemVisible(item.path, userRole);
         }
@@ -158,7 +149,6 @@ export function NavigationMain() {
 
   if (!profile) return <NavigationSkeleton />;
 
-  // Filtrar a navegação baseado no role do usuário
   const filteredNavigation = filterNavigationByRole(navigationMain, profile.role.name);
 
   return <>{renderLevels(filteredNavigation)}</>;

@@ -28,6 +28,7 @@ import { CompanyCategoryContext } from "@/providers/company-category/index.tsx";
 import { BannerContext } from "@/providers/banner";
 import { useRouter } from "next/navigation";
 
+
 interface Props {
   item_id: string;
   item_name: string;
