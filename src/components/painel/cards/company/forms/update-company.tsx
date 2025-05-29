@@ -61,7 +61,6 @@ export default function FormUpdateCompany({
   const router = useRouter();
   const { UpdateCompany, SelfCompany, company } = useContext(CompanyContext);
   const { listPortals, ListPortals } = useContext(PortalContext);
-  console.log('listPortals', listPortals);
   const { listCompanyCategory, ListCompanyCategory } = useContext(
     CompanyCategoryContext
   );
@@ -157,7 +156,6 @@ export default function FormUpdateCompany({
 
     const loadData = async () => {
       const data = await SelfCompany(parameter.id as string);
-      console.log("data categoria", data.company_category);
 
       const imageUrl = data?.company_image?.url || data?.companyImage || "";
       if (imageUrl) {

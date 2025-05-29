@@ -89,7 +89,6 @@ export function CreateBannerForm() {
   }, [image, bannerStyle]);
 
   const onSubmit = async (data: BannerFormData) => {
-    console.log("data", data.banner[0]);
     if (!imageSizeValid) {
       toast.error("As dimensões da imagem estão incorretas.");
       return;

@@ -130,10 +130,8 @@ export function ArticleViewModal({
   const handleEditArticleButton = () => {
     // Redirecionar para a página de edição do artigo
     push(`/postagens/artigos/editar/${article.id}`);
-    console.log("article.id", article.id);
     onOpenChange(false);
   };
-  console.log( article.id);
 
   const updateArticleStatus = async (
     newStatus: "PUBLISHED" | "REJECTED" | "CHANGES_REQUESTED" | "DRAFT",

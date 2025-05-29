@@ -324,8 +324,7 @@ export default function FormCreateCompany() {
         companyCategoryIds: data.companyCategoryIds,
       };
       
-      console.log('data.companyCategoryIds', data.companyCategoryIds)
-      console.log("Dados enviados:", companyData);
+
 
       const hasImage = selectedImage && selectedImage.file;
 
