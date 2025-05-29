@@ -40,7 +40,7 @@ const companySchema = z.object({
   openingHours: z.string().min(1, "Horário de funcionamento é obrigatório"),
   description: z.string().optional(),
   linkInstagram: z.string().url("URL inválida").optional().or(z.literal("")),
-  linkWhatsapp: z.string().url("URL inválida").optional().or(z.literal("")),
+  linkWhatsapp: z.string().optional(),
   linkLocationMaps: z.string().url("URL inválida").optional().or(z.literal("")),
   linkLocationWaze: z.string().url("URL inválida").optional().or(z.literal("")),
   cep: z.string().min(8, "CEP deve ter 8 dígitos").max(9, "CEP inválido"),
@@ -53,7 +53,9 @@ const companySchema = z.object({
   address: z.string().min(1, "Endereço é obrigatório"),
   status: z.enum(["active", "inactive", "blocked"]),
   portalIds: z.array(z.string()).min(1, "Selecione pelo menos um portal"),
-  companyCategoryIds: z.array(z.string()).min(1, "Selecione pelo menos uma categoria"),
+  companyCategoryIds: z
+    .array(z.string())
+    .min(1, "Selecione pelo menos uma categoria"),
 });
 
 type CompanyFormData = z.infer<typeof companySchema>;
@@ -74,15 +76,15 @@ export default function FormCreateCompany() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
   const [apiCep, setApiCep] = useState<GetCEPProps | null>(null);
+  const [whatsappDisplay, setWhatsappDisplay] = useState("");
   const { listPortals, ListPortals } = useContext(PortalContext);
   const [selectedImage, setSelectedImage] = useState<{
     file: File;
     preview: string;
   } | null>(null);
-  const { 
-    listCompanyCategory, 
-    ListCompanyCategory 
-  } = useContext(CompanyCategoryContext);
+  const { listCompanyCategory, ListCompanyCategory } = useContext(
+    CompanyCategoryContext
+  );
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
 
   // Ref para determinar se o formulário foi enviado com sucesso
@@ -174,6 +176,41 @@ export default function FormCreateCompany() {
       setLoadingCep(false);
     }
   };
+  const handleWhatsappChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+
+    // Remover caracteres não numéricos
+    value = value.replace(/\D/g, "");
+
+    // Limitar a 11 dígitos (DDD + 9 dígitos do celular)
+    value = value.substring(0, 11);
+
+    // Formatação visual para o usuário (apenas para display)
+    let formattedDisplay = value;
+    if (value.length > 2) {
+      if (value.length <= 7) {
+        formattedDisplay = `(${value.substring(0, 2)}) ${value.substring(2)}`;
+      } else {
+        formattedDisplay = `(${value.substring(0, 2)}) ${value.substring(
+          2,
+          7
+        )}-${value.substring(7)}`;
+      }
+    }
+
+    // Atualizar o display formatado
+    setWhatsappDisplay(formattedDisplay);
+
+    if (value.length === 11) {
+      const message = encodeURIComponent(
+        "Olá, vi o anúncio no Portal Palhoça e gostaria de informações."
+      );
+      const whatsappLink = `https://wa.me/55${value}?text=${message}`;
+      setValue("linkWhatsapp", whatsappLink);
+    } else {
+      setValue("linkWhatsapp", "");
+    }
+  };
 
   // Atualizar o campo de endereço completo quando os campos individuais mudarem
   useEffect(() => {
@@ -215,7 +252,7 @@ export default function FormCreateCompany() {
       try {
         // Carregar portais
         await ListPortals();
-        
+
         // Carregar categorias
         setIsLoadingCategories(true);
         await ListCompanyCategory(100, 1); // Carregar até 100 categorias na página 1
@@ -245,7 +282,7 @@ export default function FormCreateCompany() {
       try {
         const response = await ListCompany(1, 1, {
           name: companyName,
-          order: "DESC", 
+          order: "DESC",
           orderBy: "created_at",
         });
 
@@ -255,6 +292,7 @@ export default function FormCreateCompany() {
 
           // Criar FormData para enviar o arquivo
           const formData = new FormData();
+          console.log("formData", formData);
           formData.append("company_image", file);
 
           // Fazer o upload do logo
@@ -293,7 +331,7 @@ export default function FormCreateCompany() {
     : [];
 
   // Converter categorias para opções de select
-  const categoryOptions: OptionType[] = 
+  const categoryOptions: OptionType[] =
     listCompanyCategory && Array.isArray(listCompanyCategory.data)
       ? listCompanyCategory.data.map((category) => ({
           value: category.id,
@@ -323,8 +361,6 @@ export default function FormCreateCompany() {
         portalIds: data.portalIds,
         companyCategoryIds: data.companyCategoryIds,
       };
-      
-
 
       const hasImage = selectedImage && selectedImage.file;
 
@@ -708,8 +744,9 @@ export default function FormCreateCompany() {
                       <CustomInput
                         id="linkWhatsapp"
                         label="WhatsApp"
-                        {...register("linkWhatsapp")}
-                        placeholder="https://wa.me/..."
+                        placeholder="(48) 99115-8345"
+                        value={whatsappDisplay}
+                        onChange={handleWhatsappChange}
                       />
                       {errors.linkWhatsapp && (
                         <span className="text-red-500 text-sm">
@@ -745,7 +782,7 @@ export default function FormCreateCompany() {
                     />
                   </div>
                 </div>
-                
+
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
                     Categorias
@@ -785,7 +822,11 @@ export default function FormCreateCompany() {
             <Button
               type="submit"
               className="rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
-              disabled={isSubmitting || isLoadingCategories || categoryOptions.length === 0}
+              disabled={
+                isSubmitting ||
+                isLoadingCategories ||
+                categoryOptions.length === 0
+              }
             >
               {isSubmitting ? (
                 <div className="flex items-center">
