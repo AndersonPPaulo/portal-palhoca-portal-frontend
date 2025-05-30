@@ -44,13 +44,15 @@ const articleSchema = z.object({
 
 type ArticleFormData = z.infer<typeof articleSchema>;
 
-const generateSlug = (text: string) => {
-  return text
+const generateSlug = (text: string) =>
+  text
+    .normalize("NFD") // separa acentos dos caracteres
+    .replace(/[\u0300-\u036f]/g, "") // remove os acentos
+    .replace(/ç/g, "c") // substitui ç por c
+    .replace(/[^a-zA-Z0-9\s-]/g, "") // remove caracteres especiais (exceto espaço e hífen)
+    .trim() // remove espaços do início/fim
     .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^\w-]+/g, "");
-};
+    .replace(/\s+/g, "-"); // substitui espaços por hífen
 
 interface FormEditArticleProps {
   article: Article;
@@ -139,7 +141,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   // Configurar valores iniciais após todos os dados serem carregados
   useEffect(() => {
     if (!tagsLoaded || !portalsLoaded || !categoriesLoaded) {
-      return; 
+      return;
     }
 
     // Configurar tags
@@ -305,8 +307,14 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     previewUrl: string,
     description?: string
   ) => {
-    setSelectedImage({ file, preview: previewUrl, description: description ?? "" });
-    setValue("thumbnailDescription", description ?? "", { shouldValidate: true });
+    setSelectedImage({
+      file,
+      preview: previewUrl,
+      description: description ?? "",
+    });
+    setValue("thumbnailDescription", description ?? "", {
+      shouldValidate: true,
+    });
     setThumbnailDescription(description ?? "");
   };
 
@@ -399,8 +407,6 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     setEditorContent(content);
     setValue("content", content, { shouldValidate: true });
   };
-
- 
 
   return (
     <div className="w-full h-full flex flex-col bg-white rounded-[24px]">
