@@ -27,7 +27,6 @@ const bannerSchema = z.object({
   banner_style: z.enum(["topo", "destaque", "sidebar", "noticia"]),
   date_active: z.string().min(1, "Data de ativação é obrigatória"),
   date_expiration: z.string().min(1, "Data de expiração é obrigatória"),
-  status: z.boolean(),
   company_id: z.string().min(1),
   banner: z.any().refine((file) => file?.length === 1, "Imagem é obrigatória"),
 });
@@ -56,7 +55,10 @@ export function CreateBannerForm() {
   console.log("bannerStyle", bannerStyle);
   const image = watch("banner")?.[0];
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageDimensions, setImageDimensions] = useState<{width: number, height: number} | null>(null);
+  const [imageDimensions, setImageDimensions] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
   const [imageSizeValid, setImageSizeValid] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -73,14 +75,16 @@ export function CreateBannerForm() {
 
         img.onload = () => {
           setImageDimensions({ width: img.width, height: img.height });
-          
+
           const expected = bannerDimensions[bannerStyle as BannerType];
           if (!expected) return;
 
           // Considerar válidas tanto imagens menores quanto as de tamanho exato
-          const isExactMatch = img.width === expected.width && img.height === expected.height;
-          const isSmaller = img.width <= expected.width && img.height <= expected.height;
-          
+          const isExactMatch =
+            img.width === expected.width && img.height === expected.height;
+          const isSmaller =
+            img.width <= expected.width && img.height <= expected.height;
+
           if (!isExactMatch && !isSmaller) {
             // Só mostrar erro se a imagem for maior que o esperado (será cortada)
             setImageSizeValid(false);
@@ -89,7 +93,7 @@ export function CreateBannerForm() {
             );
           } else {
             setImageSizeValid(true);
-            
+
             // Mostrar toast informativo para imagens menores
             if (isSmaller && !isExactMatch) {
               toast.info(
@@ -107,12 +111,6 @@ export function CreateBannerForm() {
   }, [image, bannerStyle]);
 
   const onSubmit = async (data: BannerFormData) => {
-    console.log("data", data.banner[0]);
-    if (!imageSizeValid) {
-      toast.error("As dimensões da imagem estão incorretas.");
-      return;
-    }
-
     try {
       setIsSubmitting(true);
       await CreateBanner({
@@ -132,7 +130,7 @@ export function CreateBannerForm() {
   // Função melhorada para calcular as dimensões do preview
   const calculatePreviewDimensions = () => {
     if (!bannerStyle || !imageDimensions) return null;
-    
+
     const expectedDimensions = bannerDimensions[bannerStyle as BannerType];
     if (!expectedDimensions) return null;
 
@@ -141,30 +139,34 @@ export function CreateBannerForm() {
 
     // Definir tamanho máximo do preview
     const maxPreviewSize = 400;
-    
+
     // Verificar se a imagem é menor que as dimensões esperadas
-    const isImageSmaller = imageWidth < expectedWidth && imageHeight < expectedHeight;
-    
+    const isImageSmaller =
+      imageWidth < expectedWidth && imageHeight < expectedHeight;
+
     if (isImageSmaller) {
       // Para imagens menores, mostrar a imagem em seu tamanho natural
       // sem cortes, apenas centralizando dentro da área esperada
-      
+
       // Calcular escala para o preview mantendo proporções
-      const previewScale = Math.min(maxPreviewSize / expectedWidth, maxPreviewSize / expectedHeight);
-      
+      const previewScale = Math.min(
+        maxPreviewSize / expectedWidth,
+        maxPreviewSize / expectedHeight
+      );
+
       // Dimensões da área do banner no preview
       const previewBannerWidth = expectedWidth * previewScale;
       const previewBannerHeight = expectedHeight * previewScale;
-      
+
       // Dimensões da imagem no preview (mantendo tamanho natural)
       const imageScale = Math.min(previewScale, 1); // Não aumentar se já cabe
       const previewImageWidth = imageWidth * imageScale;
       const previewImageHeight = imageHeight * imageScale;
-      
+
       // Centralizar a imagem dentro da área do banner
       const visibleX = (previewBannerWidth - previewImageWidth) / 2;
       const visibleY = (previewBannerHeight - previewImageHeight) / 2;
-      
+
       return {
         previewImageWidth: previewImageWidth,
         previewImageHeight: previewImageHeight,
@@ -178,15 +180,15 @@ export function CreateBannerForm() {
         willScale: false,
         isSmaller: true,
         expectedWidth,
-        expectedHeight
+        expectedHeight,
       };
     }
-    
+
     // Lógica original para imagens maiores ou iguais às dimensões esperadas
     // Calcular escala para mostrar a imagem completa no preview
     const imageAspectRatio = imageWidth / imageHeight;
     let previewImageWidth, previewImageHeight;
-    
+
     if (imageWidth > imageHeight) {
       previewImageWidth = Math.min(maxPreviewSize, imageWidth);
       previewImageHeight = previewImageWidth / imageAspectRatio;
@@ -196,8 +198,9 @@ export function CreateBannerForm() {
     }
 
     // Verificar se as dimensões são exatamente iguais
-    const isExactMatch = imageWidth === expectedWidth && imageHeight === expectedHeight;
-    
+    const isExactMatch =
+      imageWidth === expectedWidth && imageHeight === expectedHeight;
+
     if (isExactMatch) {
       return {
         previewImageWidth,
@@ -210,25 +213,27 @@ export function CreateBannerForm() {
         willScale: false,
         isSmaller: false,
         expectedWidth,
-        expectedHeight
+        expectedHeight,
       };
     }
 
     // Para imagens maiores - calcular área de corte
     const scaleX = expectedWidth / imageWidth;
     const scaleY = expectedHeight / imageHeight;
-    
+
     // Usar a maior escala para preencher completamente a área esperada
     const scale = Math.max(scaleX, scaleY);
-    
+
     // Calcular dimensões da área visível no preview
-    const visibleWidth = (expectedWidth / scale) * (previewImageWidth / imageWidth);
-    const visibleHeight = (expectedHeight / scale) * (previewImageHeight / imageHeight);
-    
+    const visibleWidth =
+      (expectedWidth / scale) * (previewImageWidth / imageWidth);
+    const visibleHeight =
+      (expectedHeight / scale) * (previewImageHeight / imageHeight);
+
     // Calcular posição da área visível (centralizada)
     const visibleX = (previewImageWidth - visibleWidth) / 2;
     const visibleY = (previewImageHeight - visibleHeight) / 2;
-    
+
     return {
       previewImageWidth,
       previewImageHeight,
@@ -240,7 +245,7 @@ export function CreateBannerForm() {
       willScale: scale !== 1,
       isSmaller: false,
       expectedWidth,
-      expectedHeight
+      expectedHeight,
     };
   };
 
@@ -349,24 +354,6 @@ export function CreateBannerForm() {
             </div>
           </div>
 
-          {/* Status */}
-          <div>
-            <Label className="mb-2 block text-base text-black">Status</Label>
-            <Select onValueChange={(val) => setValue("status", val === "true")}>
-              <SelectTrigger className="bg-white h-[50px] rounded-3xl border">
-                <SelectValue placeholder="Selecione o status" />
-              </SelectTrigger>
-              <SelectContent className="bg-white rounded-xl">
-                <SelectItem key="true" value="true">
-                  Ativo
-                </SelectItem>
-                <SelectItem key="false" value="false">
-                  Inativo
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Empresa */}
           {listCompany && (
             <div>
@@ -417,10 +404,15 @@ export function CreateBannerForm() {
             {bannerStyle && (
               <div className="mb-2 text-sm text-gray-600">
                 Dimensões recomendadas:
-                {` ${bannerDimensions[bannerStyle as BannerType]?.width || ""}x${bannerDimensions[bannerStyle as BannerType]?.height || ""} pixels`}
+                {` ${
+                  bannerDimensions[bannerStyle as BannerType]?.width || ""
+                }x${
+                  bannerDimensions[bannerStyle as BannerType]?.height || ""
+                } pixels`}
                 {imageDimensions && (
                   <span className="block">
-                    Imagem atual: {imageDimensions.width}x{imageDimensions.height} pixels
+                    Imagem atual: {imageDimensions.width}x
+                    {imageDimensions.height} pixels
                   </span>
                 )}
               </div>
@@ -432,22 +424,22 @@ export function CreateBannerForm() {
                   <div className="text-sm font-medium text-gray-700 mb-2">
                     Pré-visualização:
                   </div>
-                  
+
                   {/* Container do preview */}
                   <div className="flex flex-col items-center gap-3">
                     {/* Para imagens menores */}
                     {previewDimensions.isSmaller ? (
-                      <div 
+                      <div
                         className="relative border-2 border-blue-300 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center"
                         style={{
                           width: `${previewDimensions.previewBannerWidth}px`,
                           height: `${previewDimensions.previewBannerHeight}px`,
-                          maxWidth: '100%'
+                          maxWidth: "100%",
                         }}
                       >
                         {/* Área do banner (fundo) */}
                         <div className="absolute inset-0 bg-gray-200 border-2 border-dashed border-gray-400 opacity-50"></div>
-                        
+
                         {/* Imagem centralizada */}
                         <img
                           src={imagePreview}
@@ -458,13 +450,13 @@ export function CreateBannerForm() {
                             height: `${previewDimensions.previewImageHeight}px`,
                           }}
                         />
-                        
+
                         {/* Indicador de imagem menor */}
                         <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
                           <span>ℹ️</span>
                           <span>Imagem menor</span>
                         </div>
-                        
+
                         {/* Labels indicando espaço vazio */}
                         <div className="absolute bottom-2 left-2 bg-gray-500 text-white text-xs px-2 py-1 rounded">
                           Espaço vazio
@@ -472,12 +464,12 @@ export function CreateBannerForm() {
                       </div>
                     ) : (
                       /* Lógica original para imagens maiores ou iguais */
-                      <div 
+                      <div
                         className="relative border-2 border-gray-300 rounded-md overflow-hidden bg-gray-50"
                         style={{
                           width: `${previewDimensions.previewImageWidth}px`,
                           height: `${previewDimensions.previewImageHeight}px`,
-                          maxWidth: '100%'
+                          maxWidth: "100%",
                         }}
                       >
                         {/* Imagem completa */}
@@ -486,7 +478,7 @@ export function CreateBannerForm() {
                           alt="Imagem completa"
                           className="w-full h-full object-contain"
                         />
-                        
+
                         {previewDimensions.willCrop && (
                           <>
                             {/* Área visível (não será cortada) */}
@@ -497,52 +489,61 @@ export function CreateBannerForm() {
                                 top: `${previewDimensions.visibleY}px`,
                                 width: `${previewDimensions.visibleWidth}px`,
                                 height: `${previewDimensions.visibleHeight}px`,
-                                backgroundColor: 'transparent',
-                                boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.6)',
+                                backgroundColor: "transparent",
+                                boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.6)",
                               }}
                             >
                               <div className="absolute -top-8 left-0 bg-green-500 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
                                 ✓ ÁREA VISÍVEL
                               </div>
                             </div>
-                            
+
                             {/* Labels para áreas cortadas */}
                             {previewDimensions.visibleY > 10 && (
                               <div className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-xs px-2 py-1 rounded">
                                 ❌ SERÁ CORTADA
                               </div>
                             )}
-                            
-                            {previewDimensions.visibleY + previewDimensions.visibleHeight < previewDimensions.previewImageHeight - 10 && (
+
+                            {previewDimensions.visibleY +
+                              previewDimensions.visibleHeight <
+                              previewDimensions.previewImageHeight - 10 && (
                               <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-xs px-2 py-1 rounded">
                                 ❌ SERÁ CORTADA
                               </div>
                             )}
-                            
+
                             {previewDimensions.visibleX > 10 && (
                               <div className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-red-500 text-white text-xs px-2 py-1 rounded">
-                                <span className="transform -rotate-90 block">❌ CORTADA</span>
+                                <span className="transform -rotate-90 block">
+                                  ❌ CORTADA
+                                </span>
                               </div>
                             )}
-                            
-                            {previewDimensions.visibleX + previewDimensions.visibleWidth < previewDimensions.previewImageWidth - 10 && (
+
+                            {previewDimensions.visibleX +
+                              previewDimensions.visibleWidth <
+                              previewDimensions.previewImageWidth - 10 && (
                               <div className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-red-500 text-white text-xs px-2 py-1 rounded">
-                                <span className="transform -rotate-90 block">❌ CORTADA</span>
+                                <span className="transform -rotate-90 block">
+                                  ❌ CORTADA
+                                </span>
                               </div>
                             )}
                           </>
                         )}
-                        
+
                         {/* Indicador de dimensões corretas */}
-                        {!previewDimensions.willCrop && !previewDimensions.isSmaller && (
-                          <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
-                            <span>✓</span>
-                            <span>Dimensões perfeitas</span>
-                          </div>
-                        )}
+                        {!previewDimensions.willCrop &&
+                          !previewDimensions.isSmaller && (
+                            <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                              <span>✓</span>
+                              <span>Dimensões perfeitas</span>
+                            </div>
+                          )}
                       </div>
                     )}
-                    
+
                     {/* Informações adicionais */}
                     {previewDimensions.isSmaller ? (
                       <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-sm max-w-md">
@@ -550,10 +551,25 @@ export function CreateBannerForm() {
                           ℹ️ Imagem menor que o banner
                         </div>
                         <div className="text-blue-700 space-y-1">
-                          <div>• Imagem atual: {imageDimensions?.width}×{imageDimensions?.height}px</div>
-                          <div>• Tamanho do banner: {previewDimensions.expectedWidth}×{previewDimensions.expectedHeight}px</div>
-                          <div>• A imagem será <span className="font-medium">centralizada</span> dentro do banner</div>
-                          <div>• <span className="text-gray-600">Áreas cinzas</span>: espaço vazio no banner</div>
+                          <div>
+                            • Imagem atual: {imageDimensions?.width}×
+                            {imageDimensions?.height}px
+                          </div>
+                          <div>
+                            • Tamanho do banner:{" "}
+                            {previewDimensions.expectedWidth}×
+                            {previewDimensions.expectedHeight}px
+                          </div>
+                          <div>
+                            • A imagem será{" "}
+                            <span className="font-medium">centralizada</span>{" "}
+                            dentro do banner
+                          </div>
+                          <div>
+                            •{" "}
+                            <span className="text-gray-600">Áreas cinzas</span>:
+                            espaço vazio no banner
+                          </div>
                         </div>
                       </div>
                     ) : previewDimensions.willCrop ? (
@@ -562,10 +578,29 @@ export function CreateBannerForm() {
                           ⚠️ Atenção: Imagem será redimensionada
                         </div>
                         <div className="text-yellow-700 space-y-1">
-                          <div>• Imagem atual: {imageDimensions?.width}×{imageDimensions?.height}px</div>
-                          <div>• Tamanho necessário: {previewDimensions.expectedWidth}×{previewDimensions.expectedHeight}px</div>
-                          <div>• <span className="text-green-600 font-medium">Área verde</span>: parte que ficará visível</div>
-                          <div>• <span className="text-red-600 font-medium">Áreas escuras</span>: partes que serão cortadas</div>
+                          <div>
+                            • Imagem atual: {imageDimensions?.width}×
+                            {imageDimensions?.height}px
+                          </div>
+                          <div>
+                            • Tamanho necessário:{" "}
+                            {previewDimensions.expectedWidth}×
+                            {previewDimensions.expectedHeight}px
+                          </div>
+                          <div>
+                            •{" "}
+                            <span className="text-green-600 font-medium">
+                              Área verde
+                            </span>
+                            : parte que ficará visível
+                          </div>
+                          <div>
+                            •{" "}
+                            <span className="text-red-600 font-medium">
+                              Áreas escuras
+                            </span>
+                            : partes que serão cortadas
+                          </div>
                         </div>
                       </div>
                     ) : (
