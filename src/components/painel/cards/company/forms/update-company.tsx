@@ -18,7 +18,12 @@ import { parseCookies } from "nookies";
 import { api } from "@/service/api";
 import { CompanyCategoryContext } from "@/providers/company-category/index.tsx";
 
-// Schema de validação
+// Novos imports para o mapa
+import { useMapAddressSync } from "@/hooks/useMapAddressSync";
+import "leaflet/dist/leaflet.css";
+import MapComponent from "@/components/mapCompany";
+
+// Schema de validação atualizado
 const companySchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   phone: z.string().optional(),
@@ -41,6 +46,9 @@ const companySchema = z.object({
   companyCategoryIds: z
     .array(z.string())
     .min(1, "Selecione pelo menos uma categoria"),
+  // Novos campos para coordenadas
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 });
 
 type CompanyFormData = z.infer<typeof companySchema>;
@@ -57,7 +65,6 @@ export default function FormUpdateCompany({
   companyData: any;
 }) {
   const parameter = useParams();
-
   const router = useRouter();
   const { UpdateCompany, SelfCompany, company } = useContext(CompanyContext);
   const { listPortals, ListPortals } = useContext(PortalContext);
@@ -73,7 +80,7 @@ export default function FormUpdateCompany({
     preview: string;
   } | null>(null);
 
-  // Função simplificada para analisar endereço
+  // Função melhorada para analisar endereço
   function parseAddress(address: string) {
     if (!address)
       return {
@@ -135,6 +142,16 @@ export default function FormUpdateCompany({
     resolver: zodResolver(companySchema),
   });
 
+  // Hook para sincronização do mapa
+  const {
+    addressData,
+    handleMapLocationSelect,
+    mapKey,
+    isUpdatingFromMap,
+    isUpdatingFromInputs,
+    fetchCEPData,
+  } = useMapAddressSync(setValue, watch);
+
   // Valores observados do formulário
   const cep = watch("cep");
   const street = watch("street");
@@ -148,7 +165,6 @@ export default function FormUpdateCompany({
 
   useEffect(() => {
     setIsLoading(true);
-
     reset();
     setSelectedImage(null);
 
@@ -166,9 +182,7 @@ export default function FormUpdateCompany({
       }
 
       const addressParts = parseAddress(data?.address || "");
-
       const categoryIds = data.company_category?.map((cat) => cat.id) || [];
-
       const portalIds =
         data?.portals?.filter((p) => p && p.id).map((p) => p.id) || [];
 
@@ -192,6 +206,8 @@ export default function FormUpdateCompany({
         status: data?.status,
         portalIds: portalIds,
         companyCategoryIds: categoryIds,
+        latitude: data?.latitude || undefined,
+        longitude: data?.longitude || undefined,
       });
     };
 
@@ -200,48 +216,29 @@ export default function FormUpdateCompany({
     });
   }, [parameter.id]);
 
-  // Busca de CEP
+  // Busca de CEP otimizada
   const getCepData = async (cepValue: string) => {
     if (cepValue.length < 8) return;
 
-    const cepFormatted = cepValue.replace(/\D/g, "");
-    if (cepFormatted.length !== 8) return;
-
     setLoadingCep(true);
-
     try {
-      const response = await axios.get(
-        `https://viacep.com.br/ws/${cepFormatted}/json`
-      );
-      const data = response.data;
+      const cepData = await fetchCEPData(cepValue);
 
-      if (data.erro) {
+      if (cepData) {
+        setValue("street", cepData.logradouro || "");
+        setValue("district", cepData.bairro || "");
+        setValue("city", cepData.localidade || "");
+        setValue("state", cepData.uf || "");
+        toast.success("CEP encontrado!");
+      } else {
         toast.error("CEP não encontrado");
-        return;
       }
-
-      setValue("street", data.logradouro || "");
-      setValue("district", data.bairro || "");
-      setValue("city", data.localidade || "");
-      setValue("state", data.uf || "");
     } catch (error) {
-      toast.error("Erro ao buscar CEP. Tente novamente.");
+      toast.error("Erro ao buscar CEP");
     } finally {
       setLoadingCep(false);
     }
   };
-
-  // Atualizar endereço completo
-  useEffect(() => {
-    if (street && number) {
-      let fullAddress = `${street}, ${number}`;
-      if (complement) fullAddress += `, ${complement}`;
-      if (district) fullAddress += ` - ${district}`;
-      if (city && state) fullAddress += ` - ${city}/${state}`;
-      if (cep) fullAddress += ` - ${cep}`;
-      setValue("address", fullAddress);
-    }
-  }, [street, number, complement, district, city, state, cep, setValue]);
 
   // Verificar e buscar CEP quando parar de digitar
   useEffect(() => {
@@ -253,6 +250,11 @@ export default function FormUpdateCompany({
 
     return () => clearTimeout(timeoutId);
   }, [cep]);
+
+  // Handler para seleção de localização no mapa
+  const handleLocationSelect = (lat: number, lng: number, address?: string) => {
+    handleMapLocationSelect(lat, lng, address);
+  };
 
   // Upload de imagem
   const handleImageUpload = (file: File, previewUrl: string) => {
@@ -298,9 +300,10 @@ export default function FormUpdateCompany({
         status: data.status,
         portalIds: data.portalIds,
         companyCategoryIds: data.companyCategoryIds,
+        latitude: addressData.latitude || data.latitude,
+        longitude: addressData.longitude || data.longitude,
       };
 
-      // USAR parameter.id EM VEZ DE companyData.id
       const companyId = parameter.id as string;
       await UpdateCompany(companyUpdateData, companyId);
 
@@ -308,7 +311,7 @@ export default function FormUpdateCompany({
         await uploadCompanyLogo(selectedImage.file, companyId);
       }
 
-      toast.success("Empresa atualizada com sucesso!");
+      toast.success("🎉 Empresa atualizada com sucesso!");
       router.back();
     } catch (error) {
       toast.error("Erro ao atualizar empresa. Tente novamente.");
@@ -496,8 +499,15 @@ export default function FormUpdateCompany({
                           placeholder="00000-000"
                           value={watch("cep")}
                           onChange={handleCepChange}
+                          className={
+                            isUpdatingFromMap
+                              ? "bg-green-50 border-green-300"
+                              : ""
+                          }
                         />
-                        {loadingCep && (
+                        {(loadingCep ||
+                          isUpdatingFromInputs ||
+                          isUpdatingFromMap) && (
                           <div className="absolute right-3 top-9">
                             <div className="animate-spin h-5 w-5 border-2 border-blue-500 rounded-full border-t-transparent"></div>
                           </div>
@@ -516,6 +526,11 @@ export default function FormUpdateCompany({
                         label="Rua"
                         {...register("street")}
                         placeholder="Nome da rua"
+                        className={
+                          isUpdatingFromMap
+                            ? "bg-green-50 border-green-300"
+                            : ""
+                        }
                       />
                       {errors.street && (
                         <span className="text-red-500 text-sm">
@@ -531,6 +546,11 @@ export default function FormUpdateCompany({
                           label="Número"
                           {...register("number")}
                           placeholder="Número"
+                          className={
+                            isUpdatingFromMap
+                              ? "bg-green-50 border-green-300"
+                              : ""
+                          }
                         />
                         {errors.number && (
                           <span className="text-red-500 text-sm">
@@ -545,6 +565,11 @@ export default function FormUpdateCompany({
                           label="Complemento (opcional)"
                           {...register("complement")}
                           placeholder="Apto, Bloco, etc."
+                          className={
+                            isUpdatingFromMap
+                              ? "bg-green-50 border-green-300"
+                              : ""
+                          }
                         />
                       </div>
                     </div>
@@ -556,6 +581,11 @@ export default function FormUpdateCompany({
                           label="Cidade"
                           {...register("city")}
                           placeholder="Cidade"
+                          className={
+                            isUpdatingFromMap
+                              ? "bg-green-50 border-green-300"
+                              : ""
+                          }
                         />
                         {errors.city && (
                           <span className="text-red-500 text-sm">
@@ -570,6 +600,11 @@ export default function FormUpdateCompany({
                           label="Bairro"
                           {...register("district")}
                           placeholder="Bairro"
+                          className={
+                            isUpdatingFromMap
+                              ? "bg-green-50 border-green-300"
+                              : ""
+                          }
                         />
                         {errors.district && (
                           <span className="text-red-500 text-sm">
@@ -584,6 +619,11 @@ export default function FormUpdateCompany({
                           label="Estado"
                           {...register("state")}
                           placeholder="UF"
+                          className={
+                            isUpdatingFromMap
+                              ? "bg-green-50 border-green-300"
+                              : ""
+                          }
                         />
                         {errors.state && (
                           <span className="text-red-500 text-sm">
@@ -595,7 +635,7 @@ export default function FormUpdateCompany({
 
                     <div>
                       <CustomInput
-                        className="cursor-not-allowed"
+                        className="cursor-not-allowed bg-gray-50"
                         id="address"
                         label="Endereço completo"
                         {...register("address")}
@@ -624,7 +664,8 @@ export default function FormUpdateCompany({
                         id="linkLocationMaps"
                         label="Link Google Maps"
                         {...register("linkLocationMaps")}
-                        placeholder="https://maps.google.com/..."
+                        placeholder="Gerado automaticamente pelo mapa"
+                        className="bg-blue-50"
                       />
                       {errors.linkLocationMaps && (
                         <span className="text-red-500 text-sm">
@@ -638,7 +679,8 @@ export default function FormUpdateCompany({
                         id="linkLocationWaze"
                         label="Link Waze"
                         {...register("linkLocationWaze")}
-                        placeholder="https://waze.com/..."
+                        placeholder="Gerado automaticamente pelo mapa"
+                        className="bg-blue-50"
                       />
                       {errors.linkLocationWaze && (
                         <span className="text-red-500 text-sm">
@@ -729,6 +771,100 @@ export default function FormUpdateCompany({
             </div>
           </div>
 
+          {/* Seção do Mapa - NOVA */}
+          <div className="mt-6">
+            <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+              Atualizar Localização no Mapa
+              <span className="text-sm text-blue-600 font-normal">
+                (Links do Maps e Waze serão atualizados automaticamente)
+              </span>
+            </h4>
+            <MapComponent
+              key={mapKey}
+              onLocationSelect={handleLocationSelect}
+              initialLat={
+                addressData.latitude || watch("latitude") || -27.644317
+              }
+              initialLng={
+                addressData.longitude || watch("longitude") || -48.669188
+              }
+              height="600px"
+              showSearch={true}
+              showCurrentLocation={true}
+              markerDraggable={false}
+              className="w-full"
+            />
+
+            {/* Info das Coordenadas */}
+            {(addressData.latitude || watch("latitude")) && (
+              <div className="mt-3 p-4 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg">
+                <div className="text-sm">
+                  <div className="flex items-center gap-2 font-medium text-green-700 mb-2">
+                    🎯 <span>Localização Salva!</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+                    <div>
+                      <strong>📍 Coordenadas:</strong>
+                      <br />
+                      <code className="bg-white px-2 py-1 rounded text-xs">
+                        {(addressData.latitude || watch("latitude"))?.toFixed(
+                          6
+                        )}
+                        ,{" "}
+                        {(addressData.longitude || watch("longitude"))?.toFixed(
+                          6
+                        )}
+                      </code>
+                    </div>
+                    <div>
+                      <strong>🗺️ Links:</strong>
+                      <br />
+                      <span className="text-blue-600 text-xs">
+                        ✅ Google Maps &nbsp;&nbsp; ✅ Waze
+                      </span>
+                    </div>
+                  </div>
+                  {addressData.fullAddress && (
+                    <div className="mt-2 pt-2 border-t border-green-200">
+                      <strong className="text-green-700">
+                        📬 Endereço Completo:
+                      </strong>
+                      <br />
+                      <span className="text-gray-700 font-medium">
+                        {addressData.fullAddress}
+                      </span>
+                    </div>
+                  )}
+                  {!addressData.fullAddress && watch("address") && (
+                    <div className="mt-2 pt-2 border-t border-green-200">
+                      <strong className="text-green-700">
+                        📬 Endereço Atual:
+                      </strong>
+                      <br />
+                      <span className="text-gray-700 font-medium">
+                        {watch("address")}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Indicador de Sincronização */}
+            {(isUpdatingFromMap || isUpdatingFromInputs) && (
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2 text-sm text-blue-700">
+                  <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+                  <span>
+                    {isUpdatingFromMap
+                      ? "Atualizando campos a partir do mapa..."
+                      : "Atualizando mapa a partir dos campos..."}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Botões de ação */}
           <div className="flex justify-end gap-4 pt-6 border-t border-gray-200">
             <Button
@@ -750,7 +886,12 @@ export default function FormUpdateCompany({
                   Atualizando...
                 </div>
               ) : (
-                "Atualizar Empresa"
+                <div className="flex items-center gap-2">
+                  <span>Atualizar Empresa</span>
+                  {(addressData.latitude || watch("latitude")) && (
+                    <span className="text-green-200">📍</span>
+                  )}
+                </div>
               )}
             </Button>
           </div>
