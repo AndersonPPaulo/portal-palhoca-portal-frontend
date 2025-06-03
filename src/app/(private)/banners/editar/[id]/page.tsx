@@ -26,7 +26,7 @@ export default function EditBannerPage({ params }: Props) {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-primary-light overflow-hidden ">
+    <div className="flex flex-col min-h-screen bg-primary-light">
       <Header title={`Edita Comercio - ${banner?.name}`} buttonHidden={true} />
       <div className="flex-1 p-6">
         {loading || !banner ? (

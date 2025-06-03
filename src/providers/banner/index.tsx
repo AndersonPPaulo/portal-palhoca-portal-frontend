@@ -35,7 +35,7 @@ export interface BannerItem {
   created_at: string;
   updated_at: string;
   company: Company;
-  banner?: File
+  banner?: File;
 }
 
 interface IBanner {
@@ -50,7 +50,8 @@ interface IBannerData {
   ListBanners(
     page?: number,
     limit?: number,
-    onlyActive?: boolean
+    onlyActive?: boolean,
+    portalAdmin?: boolean
   ): Promise<void>;
   banners: IBanner;
   UpdateBanner(data: BannerItem, id: string): Promise<void>;
@@ -87,12 +88,13 @@ export const BannerProvider = ({ children }: ICihldrenReact) => {
     };
     const response = await api
       .post("/banner", formData, config)
-      .then((res) => {
+      .then(() => {
         toast.success("Banner criado com sucesso!");
         back();
       })
       .catch((err) => {
         toast.error("Erro ao criar o banner");
+        return err;
       });
 
     return response;
@@ -102,7 +104,8 @@ export const BannerProvider = ({ children }: ICihldrenReact) => {
   const ListBanners = async (
     page?: number,
     limit?: number,
-    onlyActive?: boolean
+    onlyActive?: boolean,
+    portalAdmin?:boolean
   ): Promise<void> => {
     const { "user:token": token } = parseCookies();
 
@@ -110,10 +113,11 @@ export const BannerProvider = ({ children }: ICihldrenReact) => {
       headers: {
         Authorization: `bearer ${token}`,
       },
-      query: {
+      params: {
         page,
         limit,
         onlyActive,
+        portalAdmin,
       },
     };
 
@@ -129,10 +133,7 @@ export const BannerProvider = ({ children }: ICihldrenReact) => {
     return response;
   };
 
-  const UpdateBanner = async (
-    data: BannerItem,
-    id: string
-  ): Promise<void> => {
+  const UpdateBanner = async (data: BannerItem, id: string): Promise<void> => {
     const { "user:token": token } = parseCookies();
 
     const config = {

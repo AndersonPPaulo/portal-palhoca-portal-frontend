@@ -272,7 +272,7 @@ export function ArticleViewModal({
                   </div>
                 )}
                 {/* Campo para a descrição da thumbnail */}
-                {article.thumbnail.description && (
+                {article.thumbnail?.description && (
                   <span className="text-gray-800">
                     Descrição da Imagem: {article.thumbnail.description}
                   </span>
