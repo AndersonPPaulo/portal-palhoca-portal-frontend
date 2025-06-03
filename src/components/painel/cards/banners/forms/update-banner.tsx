@@ -24,6 +24,21 @@ interface IBannerFormProps {
   bannerData?: Partial<BannerItem>;
 }
 
+const defaultValues = {
+  name: "",
+  linkDirection: "",
+  bannerStyle: "",
+  dateActive: "",
+  dateExpiration: "",
+  status: "true",
+  companyId: "",
+  bannerFile: null,
+  previewBanner: null,
+  imageDimensions: null,
+  imageSizeValid: true,
+  imageLoadError: false,
+};
+
 export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
   const { back } = useRouter();
 
@@ -146,32 +161,29 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
 
   const resetForm = useCallback(() => {
     if (bannerData) {
-      setName(bannerData?.name ?? "");
-      setLinkDirection(bannerData?.link_direction ?? "");
-      setBannerStyle(bannerData?.banner_style ?? "");
-      setDateActive(formatDateForInput(bannerData?.date_active ?? ""));
-      setDateExpiration(formatDateForInput(bannerData?.date_expiration ?? ""));
-      setStatus(bannerData?.status?.toString() ?? "true");
-      setCompanyId(bannerData?.company?.id ?? "");
-      setBannerFile(null);
-      setPreviewBanner(bannerData?.url ?? null);
-      setImageDimensions(null);
-      setImageSizeValid(true);
-      setImageLoadError(false);
-    } else {
-      setName("");
-      setLinkDirection("");
-      setBannerStyle("");
-      setDateActive("");
-      setDateExpiration("");
-      setStatus("true");
-      setCompanyId("");
-      setBannerFile(null);
-      setPreviewBanner(null);
-      setImageDimensions(null);
-      setImageSizeValid(true);
-      setImageLoadError(false);
+      setName(bannerData.name ?? defaultValues.name);
+      setLinkDirection(
+        bannerData.link_direction ?? defaultValues.linkDirection
+      );
+      setBannerStyle(bannerData.banner_style ?? defaultValues.bannerStyle);
+      setDateActive(
+        formatDateForInput(bannerData.date_active ?? defaultValues.dateActive)
+      );
+      setDateExpiration(
+        formatDateForInput(
+          bannerData.date_expiration ?? defaultValues.dateExpiration
+        )
+      );
+      setStatus(bannerData.status?.toString() ?? defaultValues.status);
+      setCompanyId(bannerData.company?.id ?? defaultValues.companyId);
+      setPreviewBanner(bannerData.url ?? defaultValues.previewBanner);
     }
+
+    // Estados sempre resetados
+    setBannerFile(defaultValues.bannerFile);
+    setImageDimensions(defaultValues.imageDimensions);
+    setImageSizeValid(defaultValues.imageSizeValid);
+    setImageLoadError(defaultValues.imageLoadError);
   }, [bannerData]);
 
   // Use o resetForm no useEffect:
