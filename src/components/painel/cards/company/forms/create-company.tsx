@@ -778,7 +778,8 @@ export default function FormCreateCompany() {
                         id="linkLocationMaps"
                         label="Link Google Maps"
                         {...register("linkLocationMaps")}
-                        placeholder="https://maps.google.com/..."
+                        placeholder="Link será gerado automaticamente após selecionar o local no mapa" 
+                        disabled
                       />
                       {errors.linkLocationMaps && (
                         <span className="text-red-500 text-sm">
@@ -792,7 +793,8 @@ export default function FormCreateCompany() {
                         id="linkLocationWaze"
                         label="Link Waze"
                         {...register("linkLocationWaze")}
-                        placeholder="https://waze.com/..."
+                        placeholder="Link será gerado automaticamente após selecionar o local no mapa"
+                        disabled
                       />
                       {errors.linkLocationWaze && (
                         <span className="text-red-500 text-sm">

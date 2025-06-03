@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { MapPin, Loader2, Target, Search } from "lucide-react";
 import { toast } from "sonner";
+import CustomInput from "../input/custom-input";
+import { Button } from "../ui/button";
 
 // Interfaces para tipagem
 interface MapComponentProps {
@@ -410,13 +412,12 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         <div className="flex gap-3">
           {showSearch && (
             <div className="flex-1 relative">
-              <input
+              <CustomInput
                 type="text"
                 placeholder="Buscar endereço..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && searchAddress(searchTerm)}
-                className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onKeyDown={(e) => e.key === 'Enter' && searchAddress(searchTerm)}
                 disabled={isSearching}
               />
               <button
@@ -434,10 +435,10 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
           )}
           
           {showCurrentLocation && (
-            <button
+            <Button
+            className="rounded-3xl min-h-[48px] text-[16px] pt-3 px-6 mt-1"
               onClick={getCurrentLocation}
               disabled={isGettingLocation}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
             >
               {isGettingLocation ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
@@ -445,7 +446,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
                 <Target className="h-5 w-5" />
               )}
               Minha Localização
-            </button>
+            </Button>
           )}
         </div>
       )}
