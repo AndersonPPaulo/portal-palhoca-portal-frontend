@@ -1,9 +1,9 @@
-// hooks/useMapAddressSync.tsx
-import { useState, useEffect, useCallback } from "react";
-import { toast } from "sonner";
-import axios from "axios";
+import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
+import { UseFormSetValue, UseFormWatch } from 'react-hook-form';
+import axios from 'axios';
 
-// Interface para os dados de endereço
+// Tipos integrados
 interface AddressData {
   cep: string;
   street: string;
@@ -17,7 +17,6 @@ interface AddressData {
   longitude?: number;
 }
 
-// Interface para resposta da API de CEP
 interface CEPResponse {
   cep: string;
   logradouro: string;
@@ -28,14 +27,12 @@ interface CEPResponse {
   erro?: boolean;
 }
 
-// Interface para dados detalhados do Nominatim
 interface NominatimResult {
   display_name: string;
   address?: {
     house_number?: string;
     road?: string;
     street?: string;
-    street_number?: string;
     suburb?: string;
     neighbourhood?: string;
     city?: string;
@@ -48,7 +45,6 @@ interface NominatimResult {
     shop?: string;
     amenity?: string;
     tourism?: string;
-    building?: string;
     name?: string;
     residential?: string;
     commercial?: string;
@@ -56,470 +52,503 @@ interface NominatimResult {
   name?: string;
   lat: string;
   lon: string;
-  type?: string;
-  class?: string;
 }
 
-// Hook customizado para sincronização bidirecional
-export const useMapAddressSync = (
-  setValue: (name: string, value: any) => void,
-  watch: (name: string) => any
-) => {
-  const [addressData, setAddressData] = useState<AddressData>({
-    cep: "",
-    street: "",
-    number: "",
-    complement: "",
-    district: "",
-    city: "",
-    state: "",
-    fullAddress: "",
-    latitude: undefined,
-    longitude: undefined,
-  });
+type FormData = Record<string, any>;
 
-  const [isUpdatingFromMap, setIsUpdatingFromMap] = useState(false);
-  const [isUpdatingFromInputs, setIsUpdatingFromInputs] = useState(false);
-  const [isResettingFields, setIsResettingFields] = useState(false);
-  const [mapKey, setMapKey] = useState(0); // Para forçar re-render do mapa
+// Classe de serviço integrada e otimizada
+class AddressService {
+  private cepAPI = axios.create({ baseURL: 'https://viacep.com.br/ws' });
 
-  // API do CEP
-  const cepAPI = axios.create({
-    baseURL: "https://viacep.com.br/ws",
-  });
+  // Buscar CEP - rápido e simples
+  async fetchCEPData(cep: string): Promise<CEPResponse | null> {
+    if (!cep || cep.length < 8) return null;
+    const cleanCEP = cep.replace(/\D/g, '');
+    if (cleanCEP.length !== 8) return null;
 
-  // Função melhorada para geocodificação reversa com múltiplas consultas
-  const reverseGeocodeDetailed = useCallback(
-    async (lat: number, lng: number): Promise<NominatimResult | null> => {
-      try {
-        // Primeira tentativa: máxima precisão (zoom 18 - nível de casa)
-        let response = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&extratags=1`
-        );
-        let data: NominatimResult = await response.json();
+    try {
+      const response = await this.cepAPI.get(`/${cleanCEP}/json`);
+      return response.data.erro ? null : response.data;
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+      return null;
+    }
+  }
 
-        // Se não encontrou endereço específico, tentar com zoom 17
-        if (!data.address?.house_number && !data.address?.street_number) {
-          response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=17&addressdetails=1&extratags=1`
-          );
-          data = await response.json();
-        }
+  // Geocodificação reversa - FOCO NAS COORDENADAS
+  async reverseGeocode(lat: number, lng: number): Promise<string> {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=pt-BR`
+      );
+      const data: NominatimResult = await response.json();
+      
+      if (data.display_name) {
+        return this.formatAddress(data);
+      }
+      return `Coordenadas: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    } catch (error) {
+      console.error('Erro na geocodificação reversa:', error);
+      return `Coordenadas: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    }
+  }
 
-        // Última tentativa: buscar o ponto mais próximo em um raio pequeno
-        if (!data.address?.house_number && !data.address?.street_number) {
-          const searchResponse = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&lat=${lat}&lon=${lng}&addressdetails=1&limit=5&radius=50`
-          );
-          const searchData = await searchResponse.json();
+  // Geocodificação direta - busca por texto
+  async geocode(address: string): Promise<{lat: number, lng: number} | null> {
+    if (!address.trim()) return null;
 
-          if (searchData && searchData.length > 0) {
-            // Encontrar o resultado mais próximo com número
-            const withNumber = searchData.find(
-              (item: NominatimResult) =>
-                item.address?.house_number || item.address?.street_number
-            );
-            if (withNumber) {
-              data = withNumber;
-            }
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          address + ', Brasil'
+        )}&limit=1&countrycodes=br&addressdetails=1`
+      );
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        return {
+          lat: parseFloat(data[0].lat),
+          lng: parseFloat(data[0].lon)
+        };
+      }
+    } catch (error) {
+      console.error('Erro na geocodificação:', error);
+    }
+    return null;
+  }
+
+  // Buscar endereço por texto
+  async searchAddress(searchTerm: string): Promise<{ coordinates: {lat: number, lng: number}; address: string } | null> {
+    if (!searchTerm.trim()) return null;
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          searchTerm
+        )}&limit=3&countrycodes=br&addressdetails=1&accept-language=pt-BR`
+      );
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        const result = data[0];
+        const coordinates = {
+          lat: parseFloat(result.lat),
+          lng: parseFloat(result.lon)
+        };
+        const address = await this.reverseGeocode(coordinates.lat, coordinates.lng);
+        return { coordinates, address };
+      }
+    } catch (error) {
+      console.error('Erro ao buscar endereço:', error);
+    }
+    return null;
+  }
+
+  // Extrair dados estruturados - TOLERANTE
+  extractStructuredData(data: NominatimResult): Partial<AddressData> {
+    if (!data.address) {
+      return this.parseDisplayNameFallback(data.display_name || '');
+    }
+
+    const addr = data.address;
+    const extracted: Partial<AddressData> = {};
+
+    // CEP (opcional)
+    if (addr.postcode) {
+      const cleanCep = addr.postcode.replace(/\D/g, '');
+      if (cleanCep.length >= 8) {
+        extracted.cep = cleanCep.replace(/(\d{5})(\d{3})/, '$1-$2');
+      }
+    }
+
+    // Dados de endereço (todos opcionais)
+    extracted.street = addr.road || addr.street || '';
+    extracted.number = addr.house_number || '';
+    
+    const neighborhood = addr.suburb || addr.neighbourhood || addr.residential;
+    if (neighborhood && neighborhood !== extracted.street) {
+      extracted.district = neighborhood;
+    }
+    
+    extracted.city = addr.city || addr.town || addr.village || addr.municipality || '';
+    extracted.state = addr.state || '';
+
+    return extracted;
+  }
+
+  // Formatar endereço - ACEITA DADOS PARCIAIS
+  private formatAddress(data: NominatimResult): string {
+    if (!data.address) {
+      return this.filterDisplayName(data.display_name);
+    }
+
+    const addr = data.address;
+    const parts: string[] = [];
+
+    // Nome do estabelecimento
+    const businessName = addr.shop || addr.amenity || addr.tourism || data.name;
+    if (businessName && businessName !== addr.road && businessName !== addr.street) {
+      parts.push(businessName);
+    }
+
+    // Rua + número
+    const street = addr.road || addr.street;
+    const number = addr.house_number;
+    
+    if (street) {
+      let streetAddress = street;
+      if (number) streetAddress += `, ${number}`;
+      parts.push(streetAddress);
+    }
+
+    // Outros dados
+    const neighborhood = addr.suburb || addr.neighbourhood || addr.residential;
+    if (neighborhood && neighborhood !== street) parts.push(neighborhood);
+    
+    const city = addr.city || addr.town || addr.village || addr.municipality;
+    if (city) parts.push(city);
+    
+    if (addr.state) parts.push(addr.state);
+    if (addr.postcode) parts.push(addr.postcode);
+
+    // Aceitar qualquer quantidade de dados
+    return parts.length >= 1 ? parts.join(', ') : this.filterDisplayName(data.display_name);
+  }
+
+  // Fallback para display_name
+  private parseDisplayNameFallback(displayName: string): Partial<AddressData> {
+    const parts = displayName.split(', ').map(part => part.trim());
+    const extracted: Partial<AddressData> = {};
+
+    const cepMatch = displayName.match(/\d{5}-?\d{3}/);
+    if (cepMatch) {
+      extracted.cep = cepMatch[0].replace(/(\d{5})(\d{3})/, '$1-$2');
+    }
+
+    const stateMatches = displayName.match(/\b[A-Z]{2}\b/g);
+    if (stateMatches) {
+      extracted.state = stateMatches[stateMatches.length - 1];
+    }
+
+    const filteredParts = parts.filter(part => 
+      !cepMatch?.test(part) && 
+      !/^[A-Z]{2}$/.test(part) && 
+      !part.toLowerCase().includes('brasil')
+    );
+
+    if (filteredParts.length >= 2) {
+      extracted.city = filteredParts[filteredParts.length - 1];
+      if (filteredParts.length >= 2) {
+        extracted.district = filteredParts[filteredParts.length - 2];
+      }
+      
+      for (let i = 0; i < Math.min(2, filteredParts.length - 2); i++) {
+        const part = filteredParts[i];
+        if (part.toLowerCase().includes('rua') || 
+            part.toLowerCase().includes('avenida') ||
+            /\d+/.test(part)) {
+          
+          const numberMatch = part.match(/(\d+)/);
+          if (numberMatch) {
+            extracted.number = numberMatch[1];
+            extracted.street = part.replace(/,?\s*\d+.*/, '').trim();
+          } else {
+            extracted.street = part;
           }
+          break;
         }
-
-        return data;
-      } catch (error) {
-        console.error("Erro na geocodificação reversa detalhada:", error);
-        return null;
       }
-    },
-    []
-  );
+    }
 
-  // Função melhorada para extrair dados estruturados do Nominatim
-  const extractStructuredData = useCallback(
-    (data: NominatimResult): Partial<AddressData> => {
-      if (!data.address) return {};
+    return extracted;
+  }
 
-      const addr = data.address;
-      const extracted: Partial<AddressData> = {};
-
-      // 1. CEP
-      if (addr.postcode) {
-        extracted.cep = addr.postcode
-          .replace(/\D/g, "")
-          .replace(/(\d{5})(\d{3})/, "$1-$2");
-      }
-
-      // 2. Rua/Logradouro
-      if (addr.road || addr.street) {
-        extracted.street = addr.road || addr.street || "";
-      }
-
-      // 3. Número (várias possibilidades)
-      const houseNumber = addr.house_number || addr.street_number;
-      if (houseNumber) {
-        extracted.number = houseNumber;
-      }
-
-      // 4. Bairro
-      const neighborhood =
-        addr.suburb || addr.neighbourhood || addr.residential;
-      if (neighborhood) {
-        extracted.district = neighborhood;
-      }
-
-      // 5. Cidade
-      const city = addr.city || addr.town || addr.village || addr.municipality;
-      if (city) {
-        extracted.city = city;
-      }
-
-      // 6. Estado
-      if (addr.state) {
-        extracted.state = addr.state;
-      }
-
-      return extracted;
-    },
-    []
-  );
-
-  // Função para formatar endereço completo
-  const formatCompleteAddress = useCallback(
-    (data: Partial<AddressData>, originalAddress?: string): string => {
-      const parts: string[] = [];
-
-      // Usar dados estruturados se disponíveis
-      if (data.street) {
-        let streetPart = data.street;
-        if (data.number) {
-          streetPart += `, ${data.number}`;
-        }
-        parts.push(streetPart);
-      }
-
-      if (data.district) {
-        parts.push(data.district);
-      }
-
-      if (data.city) {
-        parts.push(data.city);
-      }
-
-      if (data.state) {
-        parts.push(data.state);
-      }
-
-      if (data.cep) {
-        parts.push(data.cep);
-      }
-
-      // Se não conseguiu extrair dados estruturados suficientes, usar endereço original filtrado
-      if (parts.length < 3 && originalAddress) {
-        return filterDisplayName(originalAddress);
-      }
-
-      return parts.join(", ");
-    },
-    []
-  );
-
-  // Função para filtrar display_name (mantida da versão original)
-  const filterDisplayName = useCallback((displayName: string): string => {
-    const parts = displayName.split(", ");
+  // Filtrar display_name
+  private filterDisplayName(displayName: string): string {
+    const parts = displayName.split(', ');
     const filtered: string[] = [];
-
+    
     const termsToRemove = [
-      "Região Geográfica Imediata",
-      "Região Geográfica Intermediária",
-      "Região Sul",
-      "Região Norte",
-      "Região Nordeste",
-      "Região Centro-Oeste",
-      "Região Sudeste",
-      "Brasil",
-      "Brazil",
+      'Região Geográfica Imediata', 'Região Geográfica Intermediária', 
+      'Região Sul', 'Região Norte', 'Região Nordeste', 
+      'Região Centro-Oeste', 'Região Sudeste', 'Brasil', 'Brazil'
     ];
 
     for (const part of parts) {
-      const shouldRemove = termsToRemove.some((term) =>
+      const shouldRemove = termsToRemove.some(term => 
         part.toLowerCase().includes(term.toLowerCase())
       );
-
+      
       if (!shouldRemove && filtered.length < 6) {
         filtered.push(part.trim());
       }
     }
 
-    return filtered.join(", ");
-  }, []);
+    return filtered.join(', ');
+  }
 
-  // Função para buscar dados do CEP
-  const fetchCEPData = useCallback(
-    async (cep: string): Promise<CEPResponse | null> => {
-      if (!cep || cep.length < 8) return null;
+  // Formatar endereço completo a partir dos campos do formulário
+  formatCompleteAddress(data: Partial<AddressData>): string {
+    const parts: string[] = [];
 
-      const cleanCEP = cep.replace(/\D/g, "");
-      if (cleanCEP.length !== 8) return null;
+    // Rua + número
+    if (data.street) {
+      let streetPart = data.street;
+      if (data.number) streetPart += `, ${data.number}`;
+      parts.push(streetPart);
+    }
+
+    // Complemento
+    if (data.complement) {
+      parts.push(data.complement);
+    }
+
+    // Bairro
+    if (data.district) {
+      parts.push(data.district);
+    }
+
+    // Cidade/Estado
+    if (data.city && data.state) {
+      parts.push(`${data.city}/${data.state}`);
+    } else if (data.city) {
+      parts.push(data.city);
+    } else if (data.state) {
+      parts.push(data.state);
+    }
+
+    // CEP
+    if (data.cep) {
+      parts.push(data.cep);
+    }
+
+    return parts.join(' - ');
+  }
+
+  // Gerar links de navegação
+  generateNavigationLinks(lat: number, lng: number) {
+    return {
+      googleMaps: `https://maps.google.com/maps?q=${lat},${lng}`,
+      waze: `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`
+    };
+  }
+}
+
+// Instância do serviço
+const addressService = new AddressService();
+
+// Hook principal otimizado
+export const useMapAddressSync = <T extends FormData>(
+  setValue: UseFormSetValue<T>,
+  watch: UseFormWatch<T>
+) => {
+  const [addressData, setAddressData] = useState<AddressData>({
+    cep: '', street: '', number: '', complement: '', district: '',
+    city: '', state: '', fullAddress: '', latitude: undefined, longitude: undefined,
+  });
+
+  const [isUpdatingFromMap, setIsUpdatingFromMap] = useState(false);
+  const [isUpdatingFromInputs, setIsUpdatingFromInputs] = useState(false);
+  const [mapKey, setMapKey] = useState(0);
+
+  // Helpers para setValue/watch com segurança
+  const setValueSafe = useCallback((fieldName: string, value: any) => {
+    try {
+      setValue(fieldName as any, value);
+    } catch (error) {
+      console.warn(`Erro ao setar campo ${fieldName}:`, error);
+    }
+  }, [setValue]);
+
+  const watchSafe = useCallback((fieldName: string): any => {
+    try {
+      return watch(fieldName as any);
+    } catch (error) {
+      console.warn(`Erro ao observar campo ${fieldName}:`, error);
+      return '';
+    }
+  }, [watch]);
+
+  // Função principal - FOCO NAS COORDENADAS EXATAS
+  const handleMapLocationSelect = useCallback(async (lat: number, lng: number, address?: string) => {
+    if (isUpdatingFromInputs) return;
+
+    setIsUpdatingFromMap(true);
+
+    try {
+      // 🎯 PRIORIDADE 1: Salvar coordenadas e gerar links precisos
+      setValueSafe('latitude', lat);
+      setValueSafe('longitude', lng);
+      
+      const links = addressService.generateNavigationLinks(lat, lng);
+      setValueSafe('linkLocationMaps', links.googleMaps);
+      setValueSafe('linkLocationWaze', links.waze);
+
+      // 🧹 Limpar campos de endereço
+      ['cep', 'street', 'number', 'complement', 'district', 'city', 'state', 'address']
+        .forEach(field => setValueSafe(field, ''));
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // 📍 PRIORIDADE 2: Tentar buscar dados de endereço (opcional)
+      let extractedData: Partial<AddressData> = {};
 
       try {
-        const response = await cepAPI.get(`/${cleanCEP}/json`);
-        if (response.data.erro) return null;
-        return response.data;
-      } catch (error) {
-        console.error("Erro ao buscar CEP:", error);
-        return null;
-      }
-    },
-    [cepAPI]
-  );
-
-  // Função para geocodificar endereço (endereço -> coordenadas)
-  const geocodeAddress = useCallback(
-    async (address: string): Promise<{ lat: number; lng: number } | null> => {
-      if (!address.trim()) return null;
-
-      try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-            address + ", Brasil"
-          )}&limit=1&countrycodes=br&addressdetails=1`
-        );
-        const data = await response.json();
-
-        if (data && data.length > 0) {
-          return {
-            lat: parseFloat(data[0].lat),
-            lng: parseFloat(data[0].lon),
-          };
+        if (!address) {
+          address = await addressService.reverseGeocode(lat, lng);
         }
-      } catch (error) {
-        console.error("Erro na geocodificação:", error);
-      }
 
-      return null;
-    },
-    []
-  );
-
-  // Função principal chamada quando o mapa é atualizado - MELHORADA
-  const handleMapLocationSelect = useCallback(
-    async (lat: number, lng: number, address?: string) => {
-      if (isUpdatingFromInputs) return; // Evitar loop infinito
-
-      setIsUpdatingFromMap(true);
-      setIsResettingFields(true);
-
-      try {
-        // PRIMEIRO: Resetar todos os campos de endereço
-        setValue("cep", "");
-        setValue("street", "");
-        setValue("number", "");
-        setValue("complement", "");
-        setValue("district", "");
-        setValue("city", "");
-        setValue("state", "");
-        setValue("address", "");
-
-        // Pequeno delay para feedback visual do reset
-        await new Promise((resolve) => setTimeout(resolve, 300));
-
-        setIsResettingFields(false);
-
-        // Buscar dados detalhados da localização
-        const detailedData = await reverseGeocodeDetailed(lat, lng);
-
-        if (detailedData) {
-          // Extrair dados estruturados
-          const extractedData = extractStructuredData(detailedData);
-
-          // Se não temos número e temos CEP, tentar buscar dados do CEP
-          if (!extractedData.number && extractedData.cep) {
-            const cepData = await fetchCEPData(extractedData.cep);
-            if (cepData) {
-              // Preencher dados faltantes do CEP
-              if (!extractedData.street && cepData.logradouro) {
-                extractedData.street = cepData.logradouro;
+        if (address && !address.startsWith('Coordenadas:')) {
+          // Criar um objeto compatível com NominatimResult
+          const mockResult: NominatimResult = { 
+            display_name: address, 
+            address: undefined,
+            lat: lat.toString(),
+            lon: lng.toString()
+          };
+          extractedData = addressService.extractStructuredData(mockResult);
+          
+          // Se temos CEP, tentar melhorar com dados da API do CEP
+          if (extractedData.cep) {
+            try {
+              const cepData = await addressService.fetchCEPData(extractedData.cep);
+              if (cepData) {
+                extractedData.street = extractedData.street || cepData.logradouro;
+                extractedData.district = extractedData.district || cepData.bairro;
+                extractedData.city = extractedData.city || cepData.localidade;
+                extractedData.state = extractedData.state || cepData.uf;
               }
-              if (!extractedData.district && cepData.bairro) {
-                extractedData.district = cepData.bairro;
-              }
-              if (!extractedData.city && cepData.localidade) {
-                extractedData.city = cepData.localidade;
-              }
-              if (!extractedData.state && cepData.uf) {
-                extractedData.state = cepData.uf;
-              }
+            } catch (cepError) {
+              console.log('CEP lookup falhou, continuando sem CEP');
             }
           }
-
-          // Criar endereço completo formatado
-          const fullAddress = formatCompleteAddress(
-            extractedData,
-            detailedData.display_name
-          );
-
-          const newAddressData: AddressData = {
-            cep: extractedData.cep || "",
-            street: extractedData.street || "",
-            number: extractedData.number || "",
-            complement: "",
-            district: extractedData.district || "",
-            city: extractedData.city || "",
-            state: extractedData.state || "",
-            fullAddress,
-            latitude: lat,
-            longitude: lng,
-          };
-
-          setAddressData(newAddressData);
-
-          // Preencher campos do formulário
-          if (newAddressData.cep) setValue("cep", newAddressData.cep);
-          if (newAddressData.street) setValue("street", newAddressData.street);
-          if (newAddressData.number) setValue("number", newAddressData.number);
-          if (newAddressData.district)
-            setValue("district", newAddressData.district);
-          if (newAddressData.city) setValue("city", newAddressData.city);
-          if (newAddressData.state) setValue("state", newAddressData.state);
-          setValue("address", fullAddress);
-
-          setValue("latitude", lat);
-          setValue("longitude", lng);
-
-          // Gerar links automáticos
-          const googleMapsLink = `https://maps.google.com/maps?q=${lat},${lng}`;
-          const wazeLink = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
-
-          setValue("linkLocationMaps", googleMapsLink);
-          setValue("linkLocationWaze", wazeLink);
-
-          // Feedback para o usuário
-          if (newAddressData.number) {
-            toast.success(
-              `🎯 Endereço encontrado: ${newAddressData.street}, ${newAddressData.number}`
-            );
-          } else if (newAddressData.street) {
-            toast.success(
-              `📍 Rua encontrada: ${newAddressData.street} (número não identificado)`
-            );
-          } else {
-            toast.success(
-              "📍 Localização selecionada - preencha os detalhes manualmente"
-            );
-          }
-        } else {
-          // Se não conseguiu dados detalhados, manter apenas as coordenadas
-          const newAddressData: AddressData = {
-            cep: "",
-            street: "",
-            number: "",
-            complement: "",
-            district: "",
-            city: "",
-            state: "",
-            fullAddress:
-              address || `Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}`,
-            latitude: lat,
-            longitude: lng,
-          };
-
-          setAddressData(newAddressData);
-          setValue("latitude", lat);
-          setValue("longitude", lng);
-
-          toast.warning(
-            "📍 Localização selecionada - preencha o endereço manualmente"
-          );
         }
-      } finally {
-        setIsUpdatingFromMap(false);
-        setIsResettingFields(false);
+      } catch (geocodeError) {
+        console.log('Geocoding falhou, usando apenas coordenadas');
       }
-    },
-    [
-      extractStructuredData,
-      fetchCEPData,
-      formatCompleteAddress,
-      setValue,
-      isUpdatingFromInputs,
-      reverseGeocodeDetailed,
-    ]
-  );
 
-  // Função para atualizar mapa quando inputs mudam (mantida similar)
-  const updateMapFromInputs = useCallback(async () => {
-    if (isUpdatingFromMap) return; // Evitar loop infinito
+      // Montar endereço completo a partir dos dados encontrados (ou vazio se não houver)
+      const fullAddress = addressService.formatCompleteAddress(extractedData);
 
+      // Atualizar estado
+      const newAddressData: AddressData = {
+        cep: extractedData.cep || '',
+        street: extractedData.street || '',
+        number: extractedData.number || '',
+        complement: '',
+        district: extractedData.district || '',
+        city: extractedData.city || '',
+        state: extractedData.state || '',
+        fullAddress: fullAddress, // Endereço real, não coordenadas
+        latitude: lat,
+        longitude: lng,
+      };
+
+      setAddressData(newAddressData);
+
+      // Preencher campos COM DADOS ENCONTRADOS
+      Object.entries(newAddressData).forEach(([key, value]) => {
+        if (value && key !== 'latitude' && key !== 'longitude') {
+          setValueSafe(key, value);
+        }
+      });
+
+      // 🎉 FEEDBACK POSITIVO - foco nas coordenadas salvas
+      const foundData = Object.entries(newAddressData)
+        .filter(([key, value]) => value && ['street', 'number', 'district', 'city'].includes(key))
+        .map(([key]) => key === 'street' ? 'rua' : key === 'number' ? 'número' : 
+                      key === 'district' ? 'bairro' : 'cidade');
+      
+      if (foundData.length >= 2) {
+        toast.success(`📍 Localização exata salva! Encontrado: ${foundData.join(', ')} | Links gerados!`);
+      } else if (foundData.length === 1) {
+        toast.success(`📍 Localização salva! Encontrado: ${foundData[0]} | Complete os outros campos se necessário`);
+      } else {
+        toast.success('📍 Localização exata salva! Links do Maps e Waze gerados | Complete o endereço manualmente');
+      }
+
+    } finally {
+      setIsUpdatingFromMap(false);
+    }
+  }, [isUpdatingFromInputs, setValueSafe]);
+
+  // Função para atualizar endereço completo baseado nos campos do formulário
+  const updateFullAddress = useCallback(() => {
     const currentData = {
-      cep: watch("cep") || "",
-      street: watch("street") || "",
-      number: watch("number") || "",
-      district: watch("district") || "",
-      city: watch("city") || "",
-      state: watch("state") || "",
+      cep: watchSafe('cep'),
+      street: watchSafe('street'),
+      number: watchSafe('number'),
+      complement: watchSafe('complement'),
+      district: watchSafe('district'),
+      city: watchSafe('city'),
+      state: watchSafe('state'),
     };
 
-    // Verificar se temos dados suficientes para geocodificar
-    const hasMinimumData =
-      currentData.street && currentData.city && currentData.state;
+    const fullAddress = addressService.formatCompleteAddress(currentData);
+    
+    setAddressData(prev => ({
+      ...prev,
+      ...currentData,
+      fullAddress: fullAddress
+    }));
+
+    setValueSafe('address', fullAddress);
+  }, [watchSafe, setValueSafe]);
+
+  // Atualizar mapa quando inputs mudam
+  const updateMapFromInputs = useCallback(async () => {
+    if (isUpdatingFromMap) return;
+
+    const currentData = {
+      street: watchSafe('street'),
+      number: watchSafe('number'),
+      district: watchSafe('district'),
+      city: watchSafe('city'),
+      state: watchSafe('state'),
+    };
+
+    const hasMinimumData = currentData.street && currentData.city && currentData.state;
     if (!hasMinimumData) return;
 
     setIsUpdatingFromInputs(true);
 
     try {
-      // Construir endereço para geocodificação
-      const addressParts = [
-        currentData.street,
-        currentData.number,
-        currentData.district,
-        currentData.city,
-        currentData.state,
-      ].filter(Boolean);
-
-      const fullAddress = addressParts.join(", ");
-
-      // Geocodificar para obter coordenadas
-      const coordinates = await geocodeAddress(fullAddress);
-
+      const addressParts = Object.values(currentData).filter(Boolean);
+      const searchAddress = addressParts.join(', ');
+      
+      const coordinates = await addressService.geocode(searchAddress);
+      
       if (coordinates) {
-        const newAddressData: AddressData = {
-          ...currentData,
-          complement: watch("complement") || "",
-          fullAddress,
+        setValueSafe('latitude', coordinates.lat);
+        setValueSafe('longitude', coordinates.lng);
+        
+        // Atualizar estado com coordenadas, mantendo dados dos campos
+        setAddressData(prev => ({
+          ...prev,
           latitude: coordinates.lat,
           longitude: coordinates.lng,
-        };
-
-        setAddressData(newAddressData);
-        setValue("latitude", coordinates.lat);
-        setValue("longitude", coordinates.lng);
-
-        // Forçar atualização do mapa
-        setMapKey((prev) => prev + 1);
-
-        toast.success("🗺️ Mapa atualizado a partir do endereço!");
+        }));
+        
+        setMapKey(prev => prev + 1);
+        toast.success('🗺️ Mapa atualizado a partir do endereço!');
       }
     } catch (error) {
-      console.error("Erro ao atualizar mapa:", error);
+      console.error('Erro ao atualizar mapa:', error);
     } finally {
       setIsUpdatingFromInputs(false);
     }
-  }, [watch, geocodeAddress, isUpdatingFromMap, setValue]);
+  }, [watchSafe, isUpdatingFromMap, setValueSafe]);
 
-  // Debounce para atualizar mapa quando inputs mudam
+  // Debounce para inputs - atualizar mapa
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      updateMapFromInputs();
-    }, 1000); // Aguardar 1 segundo após última mudança
-
+    const timeoutId = setTimeout(updateMapFromInputs, 1000);
     return () => clearTimeout(timeoutId);
-  }, [
-    watch("street"),
-    watch("number"),
-    watch("district"),
-    watch("city"),
-    watch("state"),
-  ]);
+  }, [watchSafe('street'), watchSafe('number'), watchSafe('district'), watchSafe('city'), watchSafe('state')]);
+
+  // Atualizar endereço completo sempre que campos mudarem
+  useEffect(() => {
+    updateFullAddress();
+  }, [updateFullAddress, watchSafe('cep'), watchSafe('street'), watchSafe('number'), watchSafe('complement'), watchSafe('district'), watchSafe('city'), watchSafe('state')]);
 
   return {
     addressData,
@@ -527,6 +556,9 @@ export const useMapAddressSync = (
     mapKey,
     isUpdatingFromMap,
     isUpdatingFromInputs,
-    isResettingFields,
+    updateFullAddress, // Exportar para uso no formulário
+    // Exportar funções úteis
+    searchAddress: addressService.searchAddress.bind(addressService),
+    fetchCEPData: addressService.fetchCEPData.bind(addressService),
   };
 };
