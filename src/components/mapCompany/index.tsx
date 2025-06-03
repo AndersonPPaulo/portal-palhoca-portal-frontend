@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { MapPin,  Loader2 } from "lucide-react";
+import { MapPin, Loader2, Target, Search } from "lucide-react";
 import { toast } from "sonner";
 
 // Interfaces para tipagem
@@ -28,6 +28,8 @@ interface NominatimResult {
   address?: {
     house_number?: string;
     road?: string;
+    street?: string;
+    street_number?: string;
     suburb?: string;
     neighbourhood?: string;
     city?: string;
@@ -42,13 +44,50 @@ interface NominatimResult {
     tourism?: string;
     building?: string;
     name?: string;
+    residential?: string;
+    commercial?: string;
   };
   name?: string;
   lat: string;
   lon: string;
+  type?: string;
+  class?: string;
 }
 
-// Função para formatar endereço de forma limpa
+// Função para geocodificação reversa - FLEXÍVEL (aceita resultados parciais)
+const reverseGeocodeDetailed = async (lat: number, lng: number): Promise<string> => {
+  try {
+    // Primeira tentativa: precisão alta (zoom 18)
+    let response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=pt-BR`
+    );
+    let data: NominatimResult = await response.json();
+
+    // Se não tiver dados suficientes, tentar zoom 16 (área mais ampla)
+    if (!data.address || Object.keys(data.address).length < 3) {
+      try {
+        response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1&accept-language=pt-BR`
+        );
+        const data16 = await response.json();
+        
+        // Usar dados do zoom 16 se tiver mais informações
+        if (data16.address && Object.keys(data16.address).length > Object.keys(data.address || {}).length) {
+          data = data16;
+        }
+      } catch (error) {
+        console.log('Zoom 16 falhou, usando dados existentes');
+      }
+    }
+
+    return formatCleanAddress(data);
+  } catch (error) {
+    console.error("Erro na geocodificação reversa:", error);
+    return "";
+  }
+};
+
+// Função para formatar endereço - FLEXÍVEL (monta endereço com dados disponíveis)
 const formatCleanAddress = (data: NominatimResult): string => {
   if (!data.address) {
     return filterDisplayName(data.display_name);
@@ -57,45 +96,53 @@ const formatCleanAddress = (data: NominatimResult): string => {
   const addr = data.address;
   const parts: string[] = [];
 
-  // 1. Nome do estabelecimento (se for comércio)
+  // 1. Nome do estabelecimento (se relevante)
   const businessName = addr.shop || addr.amenity || addr.tourism || data.name;
-  if (businessName && businessName !== addr.road) {
+  if (businessName && businessName !== addr.road && businessName !== addr.street) {
     parts.push(businessName);
   }
 
-  // 2. Endereço (Rua/Avenida + número)
-  let streetAddress = "";
-  if (addr.road) {
-    streetAddress = addr.road;
-    if (addr.house_number) {
-      streetAddress += `, ${addr.house_number}`;
+  // 2. Endereço (Rua + número se disponível)
+  const street = addr.road || addr.street;
+  const number = addr.house_number || addr.street_number;
+  
+  if (street) {
+    let streetAddress = street;
+    if (number) {
+      streetAddress += `, ${number}`;
     }
     parts.push(streetAddress);
   }
 
-  // 3. Bairro
-  const neighborhood = addr.suburb || addr.neighbourhood;
-  if (neighborhood) {
+  // 3. Bairro (se disponível e diferente da rua)
+  const neighborhood = addr.suburb || addr.neighbourhood || addr.residential;
+  if (neighborhood && neighborhood !== street) {
     parts.push(neighborhood);
   }
 
-  // 4. Cidade
+  // 4. Cidade (priorizar opções mais específicas)
   const city = addr.city || addr.town || addr.village || addr.municipality;
   if (city) {
     parts.push(city);
   }
 
-  // 5. Estado
+  // 5. Estado (se disponível)
   if (addr.state) {
     parts.push(addr.state);
   }
 
-  // 6. CEP
+  // 6. CEP (se disponível)
   if (addr.postcode) {
     parts.push(addr.postcode);
   }
 
-  return parts.join(', ');
+  // Se conseguiu montar pelo menos 2 partes, usar estruturado
+  if (parts.length >= 2) {
+    return parts.join(', ');
+  }
+
+  // Fallback: usar display_name filtrado
+  return filterDisplayName(data.display_name);
 };
 
 // Função para filtrar display_name quando não há dados estruturados
@@ -128,14 +175,16 @@ const filterDisplayName = (displayName: string): string => {
   return filtered.join(', ');
 };
 
-// Componente interno do Leaflet (só renderiza no client-side)
+// Componente interno do Leaflet
 const LeafletMap: React.FC<LeafletMapProps> = ({
   onLocationSelect,
-  initialLat =  -27.644317,
+  initialLat = -27.644317,
   initialLng = -48.669188,
-  initialZoom = 16,
+  initialZoom = 16, // Zoom balanceado para boa visualização
   height = "400px",
   markerDraggable = true,
+  showSearch = true,
+  showCurrentLocation = true,
 }) => {
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
@@ -146,6 +195,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
   const [leafletComponents, setLeafletComponents] = useState<any>(null);
+  const [isProcessingLocation, setIsProcessingLocation] = useState(false);
 
   useEffect(() => {
     const loadLeaflet = async () => {
@@ -190,9 +240,9 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [map, isMapReady]);
 
-  // Função para buscar endereço - MODIFICADA para retornar dados estruturados
+  // Função melhorada para buscar endereço
   const searchAddress = async (address: string) => {
     if (!address.trim()) return;
 
@@ -201,27 +251,30 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
           address
-        )}&limit=1&countrycodes=br&addressdetails=1`
+        )}&limit=5&countrycodes=br&addressdetails=1&accept-language=pt-BR`
       );
       const data = await response.json();
 
       if (data && data.length > 0) {
-        const result: NominatimResult = data[0];
-        const lat = parseFloat(result.lat);
-        const lng = parseFloat(result.lon);
+        // Pegar o primeiro resultado com melhor precisão
+        const bestResult = data.find((result: NominatimResult) => 
+          result.address?.house_number || result.address?.street_number
+        ) || data[0];
+
+        const lat = parseFloat(bestResult.lat);
+        const lng = parseFloat(bestResult.lon);
         
-        // Formatar endereço de forma limpa
-        const cleanAddress = formatCleanAddress(result);
+        const cleanAddress = await reverseGeocodeDetailed(lat, lng);
         
         if (map) {
-          map.setView([lat, lng], 16);
+          map.setView([lat, lng], 17); // Zoom balanceado
           
           if (marker) {
             marker.setLatLng([lat, lng]);
           }
           
           onLocationSelect(lat, lng, cleanAddress);
-          toast.success("Endereço encontrado!");
+          toast.success("📍 Endereço encontrado!");
         }
       } else {
         toast.error("Endereço não encontrado");
@@ -246,16 +299,16 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         const { latitude, longitude } = position.coords;
         
         if (map) {
-          map.setView([latitude, longitude], 16);
+          map.setView([latitude, longitude], 17); // Zoom balanceado
           
           if (marker) {
             marker.setLatLng([latitude, longitude]);
           }
           
-          // Buscar endereço para a localização atual
-          const address = await reverseGeocode(latitude, longitude);
+          // Buscar endereço detalhado para a localização atual
+          const address = await reverseGeocodeDetailed(latitude, longitude);
           onLocationSelect(latitude, longitude, address);
-          toast.success("Localização atual obtida!");
+          toast.success("📍 Localização atual obtida!");
         }
         setIsGettingLocation(false);
       },
@@ -272,19 +325,21 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     );
   };
 
-  // Função para geocodificação reversa - MODIFICADA para retornar endereço limpo
-  const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
+  // Função para processar seleção de localização com feedback flexível
+  const processLocationSelection = async (lat: number, lng: number) => {
+    setIsProcessingLocation(true);
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
-      );
-      const data: NominatimResult = await response.json();
+      const address = await reverseGeocodeDetailed(lat, lng);
+      onLocationSelect(lat, lng, address);
       
-      // Usar função de formatação limpa
-      return formatCleanAddress(data);
-    } catch (error) {
-      console.error("Erro na geocodificação reversa:", error);
-      return "";
+      // Feedback sempre positivo - foca no que foi encontrado
+      if (address && address.length > 10) {
+        toast.success("📍 Localização salva com endereço!");
+      } else {
+        toast.success("📍 Localização salva! Complete os dados se necessário");
+      }
+    } finally {
+      setIsProcessingLocation(false);
     }
   };
 
@@ -302,9 +357,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
           marker.setLatLng([lat, lng]);
         }
         
-        // Buscar endereço limpo para as coordenadas
-        const address = await reverseGeocode(lat, lng);
-        onLocationSelect(lat, lng, address);
+        await processLocationSelection(lat, lng);
       },
     });
     
@@ -352,6 +405,51 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
 
   return (
     <div className="w-full space-y-4">
+      {/* Barra de busca e botão de localização atual */}
+      {(showSearch || showCurrentLocation) && (
+        <div className="flex gap-3">
+          {showSearch && (
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                placeholder="Buscar endereço..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && searchAddress(searchTerm)}
+                className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={isSearching}
+              />
+              <button
+                onClick={() => searchAddress(searchTerm)}
+                disabled={isSearching || !searchTerm.trim()}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-gray-500 hover:text-blue-600 disabled:opacity-50"
+              >
+                {isSearching ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Search className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+          )}
+          
+          {showCurrentLocation && (
+            <button
+              onClick={getCurrentLocation}
+              disabled={isGettingLocation}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+            >
+              {isGettingLocation ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Target className="h-5 w-5" />
+              )}
+              Minha Localização
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Container do mapa */}
       <div 
         className="relative rounded-lg overflow-hidden border border-gray-300 shadow-sm"
@@ -380,8 +478,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
             eventHandlers={{
               dragend: async (e: any) => {
                 const { lat, lng } = e.target.getLatLng();
-                const address = await reverseGeocode(lat, lng);
-                onLocationSelect(lat, lng, address);
+                await processLocationSelection(lat, lng);
               },
               add: (e: any) => {
                 setMarker(e.target);
@@ -394,22 +491,24 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         </MapContainer>
         
         {/* Instruções de uso */}
-        <div className="absolute bottom-4 left-4 bg-white bg-opacity-90 px-3 py-2 rounded-lg shadow-sm text-xs text-gray-600 max-w-xs">
-          <div className="flex items-center gap-1">
-            <MapPin className="h-3 w-3 flex-shrink-0" />
-            <span>Clique no mapa para selecionar</span>
+        <div className="absolute bottom-4 left-4 bg-white bg-opacity-95 px-3 py-2 rounded-lg shadow-lg text-xs text-gray-700 max-w-xs">
+          <div className="flex items-center gap-1 font-medium">
+            <MapPin className="h-3 w-3 flex-shrink-0 text-blue-600" />
+            <span>Clique para selecionar localização exata</span>
           </div>
           {markerDraggable && (
-            <div className="mt-1">Arraste o marcador para ajustar</div>
+            <div className="mt-1 text-gray-600">Arraste o marcador para ajustar</div>
           )}
         </div>
 
         {/* Loading overlay */}
-        {!isMapReady && (
+        {(!isMapReady || isProcessingLocation) && (
           <div className="absolute inset-0 bg-gray-100 bg-opacity-75 flex items-center justify-center">
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
-              <span className="text-sm text-gray-600">Carregando mapa...</span>
+              <span className="text-sm text-gray-600">
+                {isProcessingLocation ? "Processando localização..." : "Carregando mapa..."}
+              </span>
             </div>
           </div>
         )}

@@ -160,17 +160,17 @@ export default function FormCreateCompany() {
   const handleLocationSelect = (lat: number, lng: number, address?: string) => {
     setSelectedCoordinates({ lat, lng, address });
     handleMapLocationSelect(lat, lng, address);
-    
+
     // Gerar links automáticos
     const googleMapsLink = `https://maps.google.com/maps?q=${lat},${lng}`;
     const wazeLink = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
-    
-    if (!watch('linkLocationMaps')) {
-      setValue('linkLocationMaps', googleMapsLink);
+
+    if (!watch("linkLocationMaps")) {
+      setValue("linkLocationMaps", googleMapsLink);
     }
-    
-    if (!watch('linkLocationWaze')) {
-      setValue('linkLocationWaze', wazeLink);
+
+    if (!watch("linkLocationWaze")) {
+      setValue("linkLocationWaze", wazeLink);
     }
   };
 
@@ -202,8 +202,6 @@ export default function FormCreateCompany() {
       setValue("district", data.bairro || "");
       setValue("city", data.localidade || "");
       setValue("state", data.uf || "");
-
-     
     } catch (error) {
       console.error("Erro ao buscar CEP:", error);
       toast.error("Erro ao buscar CEP. Tente novamente.");
@@ -613,9 +611,15 @@ export default function FormCreateCompany() {
                           placeholder="00000-000"
                           value={watch("cep")}
                           onChange={handleCepChange}
-                          className={isUpdatingFromMap ? "bg-green-50 border-green-300" : ""}
+                          className={
+                            isUpdatingFromMap
+                              ? "bg-green-50 border-green-300"
+                              : ""
+                          }
                         />
-                        {(loadingCep || isUpdatingFromInputs || isUpdatingFromMap) && (
+                        {(loadingCep ||
+                          isUpdatingFromInputs ||
+                          isUpdatingFromMap) && (
                           <div className="absolute right-3 top-9">
                             <div className="animate-spin h-5 w-5 border-2 border-blue-500 rounded-full border-t-transparent"></div>
                           </div>
@@ -634,7 +638,11 @@ export default function FormCreateCompany() {
                         label="Rua"
                         {...register("street")}
                         placeholder="Nome da rua"
-                        className={isUpdatingFromMap ? "bg-green-50 border-green-300" : ""}
+                        className={
+                          isUpdatingFromMap
+                            ? "bg-green-50 border-green-300"
+                            : ""
+                        }
                       />
                       {errors.street && (
                         <span className="text-red-500 text-sm">
@@ -650,7 +658,11 @@ export default function FormCreateCompany() {
                           label="Número"
                           {...register("number")}
                           placeholder="Número"
-                          className={isUpdatingFromMap ? "bg-green-50 border-green-300" : ""}
+                          className={
+                            isUpdatingFromMap
+                              ? "bg-green-50 border-green-300"
+                              : ""
+                          }
                         />
                         {errors.number && (
                           <span className="text-red-500 text-sm">
@@ -665,7 +677,11 @@ export default function FormCreateCompany() {
                           label="Complemento (opcional)"
                           {...register("complement")}
                           placeholder="Apto, Bloco, etc."
-                          className={isUpdatingFromMap ? "bg-green-50 border-green-300" : ""}
+                          className={
+                            isUpdatingFromMap
+                              ? "bg-green-50 border-green-300"
+                              : ""
+                          }
                         />
                       </div>
                     </div>
@@ -678,7 +694,11 @@ export default function FormCreateCompany() {
                           label="Cidade"
                           {...register("city")}
                           placeholder="Cidade"
-                          className={isUpdatingFromMap ? "bg-green-50 border-green-300" : ""}
+                          className={
+                            isUpdatingFromMap
+                              ? "bg-green-50 border-green-300"
+                              : ""
+                          }
                         />
                         {errors.city && (
                           <span className="text-red-500 text-sm">
@@ -693,7 +713,11 @@ export default function FormCreateCompany() {
                           label="Bairro"
                           {...register("district")}
                           placeholder="Bairro"
-                          className={isUpdatingFromMap ? "bg-green-50 border-green-300" : ""}
+                          className={
+                            isUpdatingFromMap
+                              ? "bg-green-50 border-green-300"
+                              : ""
+                          }
                         />
                         {errors.district && (
                           <span className="text-red-500 text-sm">
@@ -708,7 +732,11 @@ export default function FormCreateCompany() {
                           label="Estado"
                           {...register("state")}
                           placeholder="UF"
-                          className={isUpdatingFromMap ? "bg-green-50 border-green-300" : ""}
+                          className={
+                            isUpdatingFromMap
+                              ? "bg-green-50 border-green-300"
+                              : ""
+                          }
                         />
                         {errors.state && (
                           <span className="text-red-500 text-sm">
@@ -800,11 +828,12 @@ export default function FormCreateCompany() {
                           {errors.linkWhatsapp.message}
                         </span>
                       )}
-                      {watch("linkWhatsapp") && whatsappDisplay.length >= 14 && (
-                        <p className="text-green-600 text-xs mt-1">
-                          ✓ Link do WhatsApp gerado automaticamente
-                        </p>
-                      )}
+                      {watch("linkWhatsapp") &&
+                        whatsappDisplay.length >= 14 && (
+                          <p className="text-green-600 text-xs mt-1">
+                            ✓ Link do WhatsApp gerado automaticamente
+                          </p>
+                        )}
                     </div>
                   </div>
                 </div>
@@ -860,7 +889,7 @@ export default function FormCreateCompany() {
               </div>
             </div>
           </div>
-          
+
           {/* Seção do Mapa com Sincronização */}
           <div className="mt-6">
             <h4 className="font-medium text-gray-700 mb-3">
@@ -869,8 +898,12 @@ export default function FormCreateCompany() {
             <MapComponent
               key={mapKey} // Força re-render quando endereço muda
               onLocationSelect={handleLocationSelect}
-              initialLat={addressData.latitude || selectedCoordinates?.lat || -27.644317}
-              initialLng={addressData.longitude || selectedCoordinates?.lng || -48.669188}
+              initialLat={
+                addressData.latitude || selectedCoordinates?.lat || -27.644317
+              }
+              initialLng={
+                addressData.longitude || selectedCoordinates?.lng || -48.669188
+              }
               height="400px"
               showSearch={true}
               showCurrentLocation={true}
@@ -883,13 +916,21 @@ export default function FormCreateCompany() {
                 <h3 className="text-sm text-green-500">
                   <strong>Coordenadas selecionadas:</strong>
                   <br />
-                  Latitude: {(addressData.latitude || selectedCoordinates?.lat)?.toFixed(6)}
+                  Latitude:{" "}
+                  {(addressData.latitude || selectedCoordinates?.lat)?.toFixed(
+                    6
+                  )}
                   <br />
-                  Longitude: {(addressData.longitude || selectedCoordinates?.lng)?.toFixed(6)}
-                  {(addressData.fullAddress || selectedCoordinates?.address) && (
+                  Longitude:{" "}
+                  {(addressData.longitude || selectedCoordinates?.lng)?.toFixed(
+                    6
+                  )}
+                  {(addressData.fullAddress ||
+                    selectedCoordinates?.address) && (
                     <>
                       <br />
-                      <strong>Endereço:</strong> {addressData.fullAddress || selectedCoordinates?.address}
+                      <strong>Endereço:</strong>{" "}
+                      {addressData.fullAddress || selectedCoordinates?.address}
                     </>
                   )}
                 </h3>
@@ -902,7 +943,9 @@ export default function FormCreateCompany() {
                 <div className="flex items-center gap-2 text-sm text-blue-700">
                   <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
                   <span>
-                    {isUpdatingFromMap ? '🔄 Resetando campos e carregando novo endereço do mapa...' : '📍 Atualizando mapa a partir dos campos...'}
+                    {isUpdatingFromMap
+                      ? "🔄 Resetando campos e carregando novo endereço do mapa..."
+                      : "📍 Atualizando mapa a partir dos campos..."}
                   </span>
                 </div>
               </div>
