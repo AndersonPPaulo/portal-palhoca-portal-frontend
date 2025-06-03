@@ -148,13 +148,13 @@ export default function FormCreateCompany() {
         setValue("district", cepData.bairro || "");
         setValue("city", cepData.localidade || "");
         setValue("state", cepData.uf || "");
-        toast.success("✅ CEP encontrado!");
+        toast.success("CEP encontrado!");
       } else {
-        toast.error("❌ CEP não encontrado");
+        toast.error("CEP não encontrado");
       }
     } catch (error) {
       console.error("Erro ao buscar CEP:", error);
-      toast.error("❌ Erro ao buscar CEP");
+      toast.error("Erro ao buscar CEP");
     } finally {
       setLoadingCep(false);
     }
@@ -242,11 +242,11 @@ export default function FormCreateCompany() {
           }
         );
 
-        toast.success("📸 Logo enviado com sucesso!");
+        toast.success("Logo enviado com sucesso!");
       }
     } catch (error: any) {
       console.error("Erro no upload do logo:", error);
-      toast.error("❌ Erro ao fazer upload do logo");
+      toast.error("Erro ao fazer upload do logo");
     }
   };
 
@@ -271,7 +271,6 @@ export default function FormCreateCompany() {
         status: data.status,
         portalIds: data.portalIds,
         companyCategoryIds: data.companyCategoryIds,
-        // Usar coordenadas exatas do addressData
         latitude: addressData.latitude,
         longitude: addressData.longitude,
       };
@@ -290,10 +289,10 @@ export default function FormCreateCompany() {
       setSelectedImage(null);
       setWhatsappDisplay("");
 
-      toast.success("🎉 Empresa criada com sucesso!");
+      toast.success("Empresa criada com sucesso!");
     } catch (error: any) {
       console.error("Erro ao criar empresa:", error);
-      toast.error(error.message || "❌ Erro ao criar empresa");
+      toast.error(error.message || "Erro ao criar empresa");
     } finally {
       setIsSubmitting(false);
     }
@@ -316,7 +315,7 @@ export default function FormCreateCompany() {
         setIsLoadingCategories(false);
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
-        toast.error("❌ Erro ao carregar dados");
+        toast.error("Erro ao carregar dados");
         setIsLoadingCategories(false);
       }
     };
@@ -441,7 +440,7 @@ export default function FormCreateCompany() {
                   />
                   {selectedImage && (
                     <p className="text-green-600 text-sm ml-2 mt-1">
-                      📸 Logo selecionado
+                      Logo selecionado
                     </p>
                   )}
                 </div>
@@ -627,7 +626,7 @@ export default function FormCreateCompany() {
                         label="Link Google Maps"
                         {...register("linkLocationMaps")}
                         disabled
-                        placeholder="📍 Gerado automaticamente pelo mapa"
+                        placeholder="Gerado automaticamente pelo mapa"
                         className="bg-blue-50 cursor-not-allowed"
                       />
                       {errors.linkLocationMaps && (
@@ -643,7 +642,7 @@ export default function FormCreateCompany() {
                         label="Link Waze"
                         {...register("linkLocationWaze")}
                         disabled
-                        placeholder="🚗 Gerado automaticamente pelo mapa"
+                        placeholder="Gerado automaticamente pelo mapa"
                         className="bg-blue-50 cursor-not-allowed"
                       />
                       {errors.linkLocationWaze && (
@@ -683,7 +682,7 @@ export default function FormCreateCompany() {
                       {watch("linkWhatsapp") &&
                         whatsappDisplay.length >= 14 && (
                           <p className="text-green-600 text-xs mt-1">
-                            ✅ Link do WhatsApp gerado automaticamente
+                            Link do WhatsApp gerado automaticamente
                           </p>
                         )}
                     </div>
@@ -736,10 +735,10 @@ export default function FormCreateCompany() {
             </div>
           </div>
 
-          {/* Seção do Mapa - FOCO NAS COORDENADAS EXATAS */}
+          {/* Seção do Mapa - */}
           <div className="mt-6">
             <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
-              📍 Localização Exata no Mapa
+              Localização no Mapa
               <span className="text-sm text-blue-600 font-normal">
                 (Links do Maps e Waze serão gerados automaticamente)
               </span>
@@ -752,7 +751,7 @@ export default function FormCreateCompany() {
               height="600px"
               showSearch={true}
               showCurrentLocation={true}
-              markerDraggable={false}
+              markerDraggable={true}
               className="w-full"
             />
 
@@ -761,11 +760,11 @@ export default function FormCreateCompany() {
               <div className="mt-3 p-4 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg">
                 <div className="text-sm">
                   <div className="flex items-center gap-2 font-medium text-green-700 mb-2">
-                    🎯 <span>Localização Exata Salva!</span>
+                    🎯<span>Localização Exata Salva!</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
                     <div>
-                      <strong>📍 Coordenadas:</strong>
+                      <strong>Coordenadas:</strong>
                       <br />
                       <code className="bg-white px-2 py-1 rounded text-xs">
                         {addressData.latitude.toFixed(6)},{" "}
@@ -813,8 +812,8 @@ export default function FormCreateCompany() {
                   <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
                   <span>
                     {isUpdatingFromMap
-                      ? "🔄 Atualizando campos a partir do mapa..."
-                      : "📍 Atualizando mapa a partir dos campos..."}
+                      ? "Atualizando campos a partir do mapa..."
+                      : "Atualizando mapa a partir dos campos..."}
                   </span>
                 </div>
               </div>
@@ -849,9 +848,6 @@ export default function FormCreateCompany() {
               ) : (
                 <div className="flex items-center gap-2">
                   <span>Criar Empresa</span>
-                  {addressData.latitude && (
-                    <span className="text-green-200">📍</span>
-                  )}
                 </div>
               )}
             </Button>

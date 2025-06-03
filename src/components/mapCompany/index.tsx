@@ -44,9 +44,7 @@ class MapAddressService {
   }
 
   // Buscar endereço por texto
-  async searchAddress(
-    searchTerm: string
-  ): Promise<{
+  async searchAddress(searchTerm: string): Promise<{
     coordinates: { lat: number; lng: number };
     address: string;
   } | null> {
@@ -243,13 +241,13 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
 
         // Chamar com coordenadas exatas
         onLocationSelect(coordinates.lat, coordinates.lng, address);
-        toast.success("🎯 Local encontrado! PIN posicionado com precisão!");
+        toast.success(" Local encontrado! PIN posicionado com precisão!");
       } else {
-        toast.error("❌ Local não encontrado - tente outro termo");
+        toast.error(" Local não encontrado - tente outro termo");
       }
     } catch (error) {
       console.error("Erro ao buscar endereço:", error);
-      toast.error("❌ Erro na busca - tente novamente");
+      toast.error(" Erro na busca - tente novamente");
     } finally {
       setIsSearching(false);
     }
@@ -258,7 +256,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   // Obter localização atual - FOCO NAS COORDENADAS EXATAS DO GPS
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
-      toast.error("❌ Geolocalização não suportada pelo navegador");
+      toast.error(" Geolocalização não suportada pelo navegador");
       return;
     }
 
@@ -284,13 +282,13 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
           }
 
           onLocationSelect(latitude, longitude, address);
-          toast.success("🎯 Localização GPS obtida com precisão!");
+          toast.success(" Localização GPS obtida com precisão!");
         }
         setIsGettingLocation(false);
       },
       (error) => {
         console.error("Erro ao obter localização:", error);
-        toast.error("❌ Erro ao acessar GPS - posicione o PIN manualmente");
+        toast.error(" Erro ao acessar GPS - posicione o PIN manualmente");
         setIsGettingLocation(false);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
@@ -319,7 +317,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         !address.startsWith("Coordenadas:") &&
         !address.startsWith("GPS:")
       ) {
-        toast.success("🎯 Localização exata salva + endereço encontrado!");
+        toast.success(" Localização exata salva + endereço encontrado!");
       } else {
         toast.success(
           "📍 Localização exata salva! Links do Maps e Waze gerados!"
@@ -467,23 +465,6 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
           <MapEvents />
           <MapSetup />
         </MapContainer>
-
-        {/* Instruções - FOCO NO PIN EXATO */}
-        <div className="absolute bottom-4 left-4 bg-white bg-opacity-95 px-3 py-2 rounded-lg shadow-lg text-xs text-gray-700 max-w-xs">
-          <div className="flex items-center gap-1 font-medium text-blue-600">
-            <MapPin className="h-3 w-3 flex-shrink-0" />
-            <span>📍 Clique para posicionar o PIN exato</span>
-          </div>
-          <div className="mt-1 text-gray-600">
-            Links do Maps e Waze serão gerados automaticamente
-          </div>
-          {markerDraggable && (
-            <div className="mt-1 text-gray-500 text-xs">
-              Arraste o PIN para ajustar a posição
-            </div>
-          )}
-        </div>
-
         {/* Loading do processamento */}
         {(!isMapReady || isProcessingLocation) && (
           <div className="absolute inset-0 bg-gray-100 bg-opacity-75 flex items-center justify-center">
