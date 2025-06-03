@@ -145,7 +145,7 @@ export default function FormCreateArticle() {
       highlight: false,
       categoryId: "",
       tagIds: [],
-      chiefEditorId: profile?.chiefEditor?.id || "999af1d1-61b0-4c68-9a4b-c05583914e75",
+      chiefEditorId: profile?.chiefEditor?.id ,
       portalIds: [],
       thumbnailDescription: "",
     },
@@ -199,7 +199,7 @@ export default function FormCreateArticle() {
         ...data,
         thumbnail: "",
         initialStatus: status,
-        chiefEditorId: profile.chiefEditor?.id || "999af1d1-61b0-4c68-9a4b-c05583914e75",
+        chiefEditorId: profile.chiefEditor?.id || "",
         creator: profile.id,
         portals: data.portalIds,
       };

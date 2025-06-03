@@ -17,6 +17,7 @@ import { UserContext } from "@/providers/user";
 import CustomSelect, { OptionType } from "@/components/select/custom-select";
 import { PortalContext } from "@/providers/portal";
 import ThumbnailUploader from "@/components/thumbnail";
+import { generateSlug } from "@/utils/generateSlug";
 
 const articleSchema = z.object({
   id: z.string().optional(),
@@ -44,15 +45,6 @@ const articleSchema = z.object({
 
 type ArticleFormData = z.infer<typeof articleSchema>;
 
-const generateSlug = (text: string) =>
-  text
-    .normalize("NFD") // separa acentos dos caracteres
-    .replace(/[\u0300-\u036f]/g, "") // remove os acentos
-    .replace(/ç/g, "c") // substitui ç por c
-    .replace(/[^a-zA-Z0-9\s-]/g, "") // remove caracteres especiais (exceto espaço e hífen)
-    .trim() // remove espaços do início/fim
-    .toLowerCase()
-    .replace(/\s+/g, "-"); // substitui espaços por hífen
 
 interface FormEditArticleProps {
   article: Article;
