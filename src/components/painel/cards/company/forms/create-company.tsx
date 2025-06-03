@@ -17,6 +17,9 @@ import { PortalContext } from "@/providers/portal";
 import { parseCookies } from "nookies";
 import { api } from "@/service/api";
 import { CompanyCategoryContext } from "@/providers/company-category/index.tsx";
+import MapComponent from "@/components/mapCompany";
+import { useMapAddressSync } from "@/hooks/useMapAddressSync";
+import "leaflet/dist/leaflet.css";
 
 // Interface para os dados retornados pela API de CEP
 interface GetCEPProps {
@@ -56,6 +59,8 @@ const companySchema = z.object({
   companyCategoryIds: z
     .array(z.string())
     .min(1, "Selecione pelo menos uma categoria"),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 });
 
 type CompanyFormData = z.infer<typeof companySchema>;
@@ -86,6 +91,11 @@ export default function FormCreateCompany() {
     CompanyCategoryContext
   );
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+  const [selectedCoordinates, setSelectedCoordinates] = useState<{
+    lat: number;
+    lng: number;
+    address?: string;
+  } | null>(null);
 
   // Ref para determinar se o formulário foi enviado com sucesso
   const formSubmittedSuccessfully = useRef(false);
@@ -119,8 +129,19 @@ export default function FormCreateCompany() {
       status: "active",
       portalIds: [],
       companyCategoryIds: [],
+      latitude: undefined,
+      longitude: undefined,
     },
   });
+
+  // Hook para sincronização bidirecional mapa-inputs
+  const {
+    addressData,
+    handleMapLocationSelect,
+    mapKey,
+    isUpdatingFromMap,
+    isUpdatingFromInputs,
+  } = useMapAddressSync(setValue, watch);
 
   // Observar o CEP para buscar dados quando alterado
   const cep = watch("cep");
@@ -135,7 +156,25 @@ export default function FormCreateCompany() {
   const portalIds = watch("portalIds");
   const categoryIds = watch("companyCategoryIds");
 
-  // Função para buscar dados do CEP
+  // Função combinada para lidar com seleção de localização
+  const handleLocationSelect = (lat: number, lng: number, address?: string) => {
+    setSelectedCoordinates({ lat, lng, address });
+    handleMapLocationSelect(lat, lng, address);
+    
+    // Gerar links automáticos
+    const googleMapsLink = `https://maps.google.com/maps?q=${lat},${lng}`;
+    const wazeLink = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+    
+    if (!watch('linkLocationMaps')) {
+      setValue('linkLocationMaps', googleMapsLink);
+    }
+    
+    if (!watch('linkLocationWaze')) {
+      setValue('linkLocationWaze', wazeLink);
+    }
+  };
+
+  // Função para buscar dados do CEP (mantendo a lógica original + sincronização)
   const GetByZipcode = async (cep: string) => {
     if (cep.length < 8) return;
 
@@ -164,11 +203,7 @@ export default function FormCreateCompany() {
       setValue("city", data.localidade || "");
       setValue("state", data.uf || "");
 
-      // Focar no campo número após preencher os dados
-      const numberInput = document.getElementById("number");
-      if (numberInput) {
-        numberInput.focus();
-      }
+     
     } catch (error) {
       console.error("Erro ao buscar CEP:", error);
       toast.error("Erro ao buscar CEP. Tente novamente.");
@@ -176,6 +211,7 @@ export default function FormCreateCompany() {
       setLoadingCep(false);
     }
   };
+
   const handleWhatsappChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
 
@@ -292,7 +328,6 @@ export default function FormCreateCompany() {
 
           // Criar FormData para enviar o arquivo
           const formData = new FormData();
-          console.log("formData", formData);
           formData.append("company_image", file);
 
           // Fazer o upload do logo
@@ -339,13 +374,13 @@ export default function FormCreateCompany() {
         }))
       : [];
 
-  // Modificar o onSubmit para usar a abordagem de envio separado da imagem
+  // Modificar o onSubmit para incluir as coordenadas da sincronização
   const onSubmit = async (data: CompanyFormData) => {
     try {
       setIsSubmitting(true);
       formSubmittedSuccessfully.current = false;
 
-      // Preparar os dados para envio
+      // Preparar os dados para envio incluindo coordenadas
       const companyData = {
         name: data.name,
         phone: data.phone || "",
@@ -360,6 +395,9 @@ export default function FormCreateCompany() {
         status: data.status,
         portalIds: data.portalIds,
         companyCategoryIds: data.companyCategoryIds,
+        // Incluir coordenadas da sincronização
+        latitude: addressData.latitude || selectedCoordinates?.lat,
+        longitude: addressData.longitude || selectedCoordinates?.lng,
       };
 
       const hasImage = selectedImage && selectedImage.file;
@@ -390,6 +428,8 @@ export default function FormCreateCompany() {
 
       reset();
       setSelectedImage(null);
+      setSelectedCoordinates(null);
+      setWhatsappDisplay("");
     } catch (error: any) {
       console.error("Erro ao criar empresa:", error);
       toast.error(error.message || "Erro ao criar empresa. Tente novamente.");
@@ -573,8 +613,9 @@ export default function FormCreateCompany() {
                           placeholder="00000-000"
                           value={watch("cep")}
                           onChange={handleCepChange}
+                          className={isUpdatingFromMap ? "bg-green-50 border-green-300" : ""}
                         />
-                        {loadingCep && (
+                        {(loadingCep || isUpdatingFromInputs || isUpdatingFromMap) && (
                           <div className="absolute right-3 top-9">
                             <div className="animate-spin h-5 w-5 border-2 border-blue-500 rounded-full border-t-transparent"></div>
                           </div>
@@ -593,6 +634,7 @@ export default function FormCreateCompany() {
                         label="Rua"
                         {...register("street")}
                         placeholder="Nome da rua"
+                        className={isUpdatingFromMap ? "bg-green-50 border-green-300" : ""}
                       />
                       {errors.street && (
                         <span className="text-red-500 text-sm">
@@ -608,6 +650,7 @@ export default function FormCreateCompany() {
                           label="Número"
                           {...register("number")}
                           placeholder="Número"
+                          className={isUpdatingFromMap ? "bg-green-50 border-green-300" : ""}
                         />
                         {errors.number && (
                           <span className="text-red-500 text-sm">
@@ -622,6 +665,7 @@ export default function FormCreateCompany() {
                           label="Complemento (opcional)"
                           {...register("complement")}
                           placeholder="Apto, Bloco, etc."
+                          className={isUpdatingFromMap ? "bg-green-50 border-green-300" : ""}
                         />
                       </div>
                     </div>
@@ -634,6 +678,7 @@ export default function FormCreateCompany() {
                           label="Cidade"
                           {...register("city")}
                           placeholder="Cidade"
+                          className={isUpdatingFromMap ? "bg-green-50 border-green-300" : ""}
                         />
                         {errors.city && (
                           <span className="text-red-500 text-sm">
@@ -648,6 +693,7 @@ export default function FormCreateCompany() {
                           label="Bairro"
                           {...register("district")}
                           placeholder="Bairro"
+                          className={isUpdatingFromMap ? "bg-green-50 border-green-300" : ""}
                         />
                         {errors.district && (
                           <span className="text-red-500 text-sm">
@@ -662,6 +708,7 @@ export default function FormCreateCompany() {
                           label="Estado"
                           {...register("state")}
                           placeholder="UF"
+                          className={isUpdatingFromMap ? "bg-green-50 border-green-300" : ""}
                         />
                         {errors.state && (
                           <span className="text-red-500 text-sm">
@@ -753,6 +800,11 @@ export default function FormCreateCompany() {
                           {errors.linkWhatsapp.message}
                         </span>
                       )}
+                      {watch("linkWhatsapp") && whatsappDisplay.length >= 14 && (
+                        <p className="text-green-600 text-xs mt-1">
+                          ✓ Link do WhatsApp gerado automaticamente
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -807,6 +859,54 @@ export default function FormCreateCompany() {
                 </div>
               </div>
             </div>
+          </div>
+          
+          {/* Seção do Mapa com Sincronização */}
+          <div className="mt-6">
+            <h4 className="font-medium text-gray-700 mb-3">
+              Localização no Mapa
+            </h4>
+            <MapComponent
+              key={mapKey} // Força re-render quando endereço muda
+              onLocationSelect={handleLocationSelect}
+              initialLat={addressData.latitude || selectedCoordinates?.lat || -27.644317}
+              initialLng={addressData.longitude || selectedCoordinates?.lng || -48.669188}
+              height="400px"
+              showSearch={true}
+              showCurrentLocation={true}
+              markerDraggable={false}
+              className="w-full"
+            />
+
+            {(addressData.latitude || selectedCoordinates) && (
+              <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <h3 className="text-sm text-green-500">
+                  <strong>Coordenadas selecionadas:</strong>
+                  <br />
+                  Latitude: {(addressData.latitude || selectedCoordinates?.lat)?.toFixed(6)}
+                  <br />
+                  Longitude: {(addressData.longitude || selectedCoordinates?.lng)?.toFixed(6)}
+                  {(addressData.fullAddress || selectedCoordinates?.address) && (
+                    <>
+                      <br />
+                      <strong>Endereço:</strong> {addressData.fullAddress || selectedCoordinates?.address}
+                    </>
+                  )}
+                </h3>
+              </div>
+            )}
+
+            {/* Indicador de sincronização */}
+            {(isUpdatingFromMap || isUpdatingFromInputs) && (
+              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2 text-sm text-blue-700">
+                  <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+                  <span>
+                    {isUpdatingFromMap ? '🔄 Resetando campos e carregando novo endereço do mapa...' : '📍 Atualizando mapa a partir dos campos...'}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Footer com botões de ação */}
