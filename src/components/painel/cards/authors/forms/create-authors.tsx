@@ -234,7 +234,6 @@ export default function FormCreateAuthors() {
       console.error("Erro ao criar usuário:", error);
       toast.error("Erro ao criar usuário: " + (error as Error).message);
     }
-    console.log("data", data);
   };
 
   return (

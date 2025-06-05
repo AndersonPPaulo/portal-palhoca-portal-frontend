@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   Eye,
   Calendar,
-  RefreshCw,
   Check,
   X,
   MessageSquare,
@@ -26,6 +25,7 @@ import { parseCookies } from "nookies";
 import { toast } from "sonner";
 import { UserContext } from "@/providers/user";
 import { useRouter } from "next/navigation";
+import HighlightModal from "../highlightModal";
 
 interface ArticleViewModalProps {
   open: boolean;
@@ -49,14 +49,17 @@ export function ArticleViewModal({
     article.status_history || []
   );
 
+  // Estado para controlar o modal de highlight
+  const [showHighlightModal, setShowHighlightModal] = useState(false);
+
   useEffect(() => {
     if (!open) {
       setShowRejectForm(false);
       setShowChangesForm(false);
       setRejectReason("");
       setChangeRequest("");
+      setShowHighlightModal(false); // Reset highlight modal state
     } else if (article.status_history && article.status_history.length > 0) {
-      // Ordenar o histórico de status pela data (do mais recente para o mais antigo)
       const sorted = [...article.status_history].sort(
         (a, b) =>
           new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
@@ -124,9 +127,20 @@ export function ArticleViewModal({
   const currentStatus = getCurrentStatus();
   const { push } = useRouter();
 
+  const handleEditArticleButton = () => {
+    // Redirecionar para a página de edição do artigo
+    push(`/postagens/artigos/editar/${article.id}`);
+    onOpenChange(false);
+  };
+
   const updateArticleStatus = async (
     newStatus: "PUBLISHED" | "REJECTED" | "CHANGES_REQUESTED" | "DRAFT",
-    options?: { reason_reject?: string; change_request_description?: string }
+    options?: {
+      reason_reject?: string;
+      change_request_description?: string;
+      isHighlight?: boolean;
+      highlightPosition?: number;
+    }
   ) => {
     try {
       setIsSubmitting(true);
@@ -151,10 +165,20 @@ export function ArticleViewModal({
         payload.change_request_description = options.change_request_description;
       }
 
+      // Adicionar informações de destaque se fornecidas
+      if (newStatus === "PUBLISHED") {
+        if (options?.isHighlight) {
+          payload.isHighlight = options.isHighlight;
+          payload.highlightPosition = options.highlightPosition;
+        }
+      }
+
       await api.patch(`/article-status-review/${article.id}`, payload, config);
 
       const successMessage = {
-        PUBLISHED: "Artigo publicado com sucesso!",
+        PUBLISHED: options?.isHighlight
+          ? `Artigo publicado com destaque (posição ${options.highlightPosition}) com sucesso!`
+          : "Artigo publicado com sucesso!",
         REJECTED: "Artigo rejeitado com sucesso!",
         CHANGES_REQUESTED: "Solicitação de alterações enviada com sucesso!",
         DRAFT: "Artigo retornado para rascunho com sucesso!",
@@ -164,7 +188,8 @@ export function ArticleViewModal({
 
       await ListAuthorArticles();
 
-      // Fechar o modal
+      // Fechar ambos os modais
+      setShowHighlightModal(false);
       onOpenChange(false);
     } catch (error: any) {
       toast.error(
@@ -179,8 +204,21 @@ export function ArticleViewModal({
     }
   };
 
+  // Modificar a função handleApproveArticle para abrir o modal de highlight
   const handleApproveArticle = () => {
-    updateArticleStatus("PUBLISHED");
+    setShowHighlightModal(true);
+  };
+
+  // Função para lidar com a publicação vinda do modal de highlight
+  const handlePublishFromHighlight = async (
+    isHighlight: boolean,
+    highlightPosition?: number
+  ) => {
+    await updateArticleStatus("PUBLISHED", {
+      isHighlight,
+      highlightPosition,
+    });
+
     setTimeout(() => {
       push("/postagens?tab=PUBLISHED");
     }, 500);
@@ -221,52 +259,76 @@ export function ArticleViewModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[90vw] max-w-[90vw] h-[90vh] max-h-[90vh] m-0 p-0 rounded-lg overflow-hidden dialog-content">
-        <div className="flex flex-col h-full">
-          {/* Cabeçalho fixo */}
-          <DialogHeader className="article-review-modal-header bg-[#333] text-white py-4 px-6 border-b border-gray-600 flex-shrink-0">
-            <div className="flex items-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onOpenChange(false)}
-                className="mr-4 text-white hover:bg-gray-700"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <DialogTitle className="text-xl font-semibold truncate">
-                Revisão para publicação da notícia
-              </DialogTitle>
-            </div>
-          </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="w-[90vw] max-w-[90vw] h-[90vh] max-h-[90vh] m-0 p-0 rounded-lg overflow-hidden dialog-content">
+          <div className="flex flex-col h-full">
+            {/* Cabeçalho fixo */}
+            <DialogHeader className="article-review-modal-header bg-[#333] text-white py-4 px-6 border-b border-gray-600 flex-shrink-0">
+              <div className="flex items-center">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onOpenChange(false)}
+                  className="mr-4 text-white hover:bg-gray-700"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <DialogTitle className="text-xl font-semibold truncate">
+                  Revisão para publicação da notícia
+                </DialogTitle>
+              </div>
+            </DialogHeader>
 
-          {/* Conteúdo principal com scroll */}
-          <div className="article-review-modal-content flex-1 overflow-y-auto overflow-x-hidden bg-white">
-            <div className="w-full max-w-4xl mx-auto p-6">
-              <div className="space-y-6">
-                {/* Título principal */}
-                <div className="bg-gray-100 p-4 rounded-md">
-                  <h2 className="text-xl font-bold mb-2">{article.title}</h2>
-                  <div className="flex flex-wrap items-center text-sm text-gray-500 gap-4">
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-1" />
-                      <span>{formatDate(article.created_at)}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Eye className="h-4 w-4 mr-1" />
-                      <span>{article.clicks_view} visualizações</span>
+            {/* Conteúdo principal com scroll */}
+            <div className="article-review-modal-content flex-1 overflow-y-auto overflow-x-hidden bg-white">
+              <div className="w-full max-w-4xl mx-auto p-6">
+                <div className="space-y-6">
+                  {/* Título principal */}
+                  <div className="bg-gray-100 p-4 rounded-md">
+                    <h2 className="text-xl font-bold mb-2">{article.title}</h2>
+                    <div className="flex flex-wrap items-center text-sm text-gray-500 gap-4">
+                      <div className="flex items-center">
+                        <Calendar className="h-4 w-4 mr-1" />
+                        <span>{formatDate(article.created_at)}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Eye className="h-4 w-4 mr-1" />
+                        <span>{article.clicks_view} visualizações</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                {/* Thumbnail se disponível */}
-                {article.thumbnail && (
-                  <div className="rounded-md overflow-hidden">
-                    <div className="relative w-full h-64">
-                      <img
-                        src={article.thumbnail.url}
-                        alt="Thumbnail"
-                        className="object-cover w-full h-full"
+                  {/* Thumbnail se disponível */}
+                  {article.thumbnail && (
+                    <div className="rounded-md overflow-hidden">
+                      <div className="relative w-full h-64">
+                        <img
+                          src={article.thumbnail.url}
+                          alt="Thumbnail"
+                          className="object-cover w-full h-full"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {/* Campo para a descrição da thumbnail */}
+                  {article.thumbnail?.description && (
+                    <span className="text-gray-800">
+                      Descrição da Imagem: {article.thumbnail.description}
+                    </span>
+                  )}
+                  {/* Resumo */}
+                  <div className="bg-gray-100 p-4 rounded-md">
+                    <h3 className="font-semibold mb-2">Resumo</h3>
+                    <p className="whitespace-pre-wrap break-words">
+                      {article.resume_content}
+                    </p>
+                  </div>
+                  {/* Conteúdo */}
+                  <div className="bg-gray-100 p-4 rounded-md">
+                    <h3 className="font-semibold mb-2">Conteúdo</h3>
+                    <div className="prose max-w-none overflow-y-auto overflow-x-hidden break-words">
+                      <div
+                        dangerouslySetInnerHTML={{ __html: article.content }}
                       />
                     </div>
                   </div>
@@ -318,199 +380,232 @@ export function ArticleViewModal({
                       ))}
                     </div>
 
-                    <h3 className="font-semibold mt-4 mb-2">
-                      Tempo de leitura
-                    </h3>
-                    <p>{article.reading_time} minutos</p>
-                  </div>
-
-                  {/* Coluna 3 */}
-                  <div className="overflow-hidden">
-                    <h3 className="font-semibold mb-2">Portais</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {article.portals &&
-                        article.portals.map((portal) => (
+                    {/* Coluna 2 */}
+                    <div className="overflow-hidden">
+                      <h3 className="font-semibold mb-2">Tags</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {article.tags.map((tag) => (
                           <span
-                            key={portal.id}
+                            key={tag.id}
                             className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs truncate max-w-full"
                           >
-                            {portal.name}
+                            {tag.name}
                           </span>
                         ))}
+                      </div>
+
+                      <h3 className="font-semibold mt-4 mb-2">
+                        Tempo de leitura
+                      </h3>
+                      <p>{article.reading_time} minutos</p>
                     </div>
 
-                    <h3 className="font-semibold mt-4 mb-2">Status</h3>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
-                        currentStatus
-                      )}`}
-                    >
-                      {currentStatus}
-                    </span>
-                  </div>
-                </div>
-                {/* Histórico de Status - com tabela responsiva */}
-                {sortedStatusHistory.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold mb-2">Histórico de Status</h3>
-                    <div className="overflow-x-auto w-full">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-200">
-                          <tr>
-                            <th
-                              scope="col"
-                              className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/6"
+                    {/* Coluna 3 */}
+                    <div className="overflow-hidden">
+                      <h3 className="font-semibold mb-2">Portais</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {article.portals &&
+                          article.portals.map((portal) => (
+                            <span
+                              key={portal.id}
+                              className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs truncate max-w-full"
                             >
-                              Status
-                            </th>
-                            <th
-                              scope="col"
-                              className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/5"
-                            >
-                              Data
-                            </th>
-                            <th
-                              scope="col"
-                              className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/3"
-                            >
-                              Descrição
-                            </th>
-                            <th
-                              scope="col"
-                              className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/4"
-                            >
-                              Motivo de Rejeição
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sortedStatusHistory.map((history, idx) => (
-                            <tr
-                              key={history.id || idx}
-                              className={
-                                idx % 2 === 0 ? "bg-white" : "bg-gray-50"
-                              }
-                            >
-                              <td className="px-3 py-2 whitespace-nowrap text-sm w-1/6">
-                                <span
-                                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                                    history.status
-                                  )}`}
-                                >
-                                  {history.status}
-                                </span>
-                              </td>
-                              <td className="px-3 py-2 text-sm text-gray-700 w-1/5">
-                                {formatDate(history.changed_at)}
-                              </td>
-                              <td className="px-3 py-2 text-sm text-gray-700 w-1/3 break-words">
-                                {history.change_request_description || "-"}
-                              </td>
-                              <td className="px-3 py-2 text-sm text-gray-700 w-1/4 break-words">
-                                {history.reason_reject || "-"}
-                              </td>
-                            </tr>
+                              {portal.name}
+                            </span>
                           ))}
-                        </tbody>
-                      </table>
+                      </div>
+
+                      <h3 className="font-semibold mt-4 mb-2">Status</h3>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
+                          currentStatus
+                        )}`}
+                      >
+                        {currentStatus}
+                      </span>
                     </div>
                   </div>
-                )}
-                {/* Formulário de solicitação de alterações */}
-                {showChangesForm && (
-                  <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
-                    <h3 className="font-semibold mb-2 flex items-center">
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Solicitação de Alterações
-                    </h3>
-                    <Textarea
-                      placeholder="Descreva as alterações necessárias..."
-                      value={changeRequest}
-                      onChange={(e) => setChangeRequest(e.target.value)}
-                      rows={4}
-                      className="w-full mt-2"
-                    />
-                  </div>
-                )}
-                {/* Formulário de rejeição */}
-                {showRejectForm && (
-                  <div className="bg-red-50 p-4 rounded-md border border-red-200">
-                    <h3 className="font-semibold mb-2 flex items-center">
-                      <X className="h-4 w-4 mr-2" />
-                      Motivo da Rejeição
-                    </h3>
-                    <Textarea
-                      placeholder="Informe o motivo da rejeição..."
-                      value={rejectReason}
-                      onChange={(e) => setRejectReason(e.target.value)}
-                      rows={4}
-                      className="w-full mt-2"
-                    />
-                  </div>
-                )}
+                  {/* Histórico de Status - com tabela responsiva */}
+                  {sortedStatusHistory.length > 0 && (
+                    <div>
+                      <h3 className="font-semibold mb-2">
+                        Histórico de Status
+                      </h3>
+                      <div className="overflow-x-auto w-full">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-200">
+                            <tr>
+                              <th
+                                scope="col"
+                                className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/6"
+                              >
+                                Status
+                              </th>
+                              <th
+                                scope="col"
+                                className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/5"
+                              >
+                                Data
+                              </th>
+                              <th
+                                scope="col"
+                                className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/3"
+                              >
+                                Descrição
+                              </th>
+                              <th
+                                scope="col"
+                                className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/4"
+                              >
+                                Motivo de Rejeição
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sortedStatusHistory.map((history, idx) => (
+                              <tr
+                                key={history.id || idx}
+                                className={
+                                  idx % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                }
+                              >
+                                <td className="px-3 py-2 whitespace-nowrap text-sm w-1/6">
+                                  <span
+                                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                                      history.status
+                                    )}`}
+                                  >
+                                    {history.status}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-sm text-gray-700 w-1/5">
+                                  {formatDate(history.changed_at)}
+                                </td>
+                                <td className="px-3 py-2 text-sm text-gray-700 w-1/3 break-words">
+                                  {history.change_request_description || "-"}
+                                </td>
+                                <td className="px-3 py-2 text-sm text-gray-700 w-1/4 break-words">
+                                  {history.reason_reject || "-"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {/* Formulário de solicitação de alterações */}
+                  {showChangesForm && (
+                    <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
+                      <h3 className="font-semibold mb-2 flex items-center">
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Solicitação de Alterações
+                      </h3>
+                      <Textarea
+                        placeholder="Descreva as alterações necessárias..."
+                        value={changeRequest}
+                        onChange={(e) => setChangeRequest(e.target.value)}
+                        rows={4}
+                        className="w-full mt-2"
+                      />
+                    </div>
+                  )}
+                  {/* Formulário de rejeição */}
+                  {showRejectForm && (
+                    <div className="bg-red-50 p-4 rounded-md border border-red-200">
+                      <h3 className="font-semibold mb-2 flex items-center">
+                        <X className="h-4 w-4 mr-2" />
+                        Motivo da Rejeição
+                      </h3>
+                      <Textarea
+                        placeholder="Informe o motivo da rejeição..."
+                        value={rejectReason}
+                        onChange={(e) => setRejectReason(e.target.value)}
+                        rows={4}
+                        className="w-full mt-2"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Rodapé fixo com ações */}
-          <div className="article-review-modal-footer bg-gray-200 py-4 px-6 flex justify-end space-x-4 flex-shrink-0 border-t border-gray-300">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm"
-              disabled={isSubmitting}
-            >
-              Cancelar
-            </Button>
+            {/* Rodapé fixo com ações */}
 
-            {!showRejectForm && !showChangesForm && (
+            <div className="article-review-modal-footer bg-gray-200 py-4 px-6 flex justify-end space-x-4 flex-shrink-0 border-t border-gray-300">
               <Button
                 variant="outline"
-                onClick={handleRequestChanges}
-                className="bg-yellow-500 text-white hover:bg-yellow-600 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm"
+                onClick={() => onOpenChange(false)}
+                className="bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm"
                 disabled={isSubmitting}
               >
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Solicitar Alterações
+                Cancelar
               </Button>
-            )}
-
-            <Button
-              variant={showRejectForm ? "default" : "outline"}
-              onClick={handleRejectArticle}
-              className={`${
-                showRejectForm ? "bg-red-600" : "bg-red-500"
-              } text-white hover:bg-red-600 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm`}
-              disabled={isSubmitting}
-            >
-              <X className="mr-2 h-4 w-4" />
-              {showRejectForm ? "Confirmar Rejeição" : "Rejeitar"}
-            </Button>
-
-            {!showRejectForm && !showChangesForm && (
               <Button
-                onClick={handleApproveArticle}
-                className="bg-green-500 text-white hover:bg-green-600 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm"
+                variant="outline"
+                onClick={handleEditArticleButton}
+                className="bg-blue-600 text-white hover:bg-blue-800 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm"
                 disabled={isSubmitting}
               >
-                <Check className="mr-2 h-4 w-4" />
-                Aprovar
+                Efetuar Edição
               </Button>
-            )}
+              {!showRejectForm && !showChangesForm && (
+                <Button
+                  variant="outline"
+                  onClick={handleRequestChanges}
+                  className="bg-yellow-500 text-white hover:bg-yellow-600 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm"
+                  disabled={isSubmitting}
+                >
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Solicitar Alterações
+                </Button>
+              )}
 
-            {showChangesForm && (
               <Button
-                onClick={handleRequestChanges}
-                className="bg-yellow-600 text-white hover:bg-yellow-700 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm"
+                variant={showRejectForm ? "default" : "outline"}
+                onClick={handleRejectArticle}
+                className={`${
+                  showRejectForm ? "bg-red-600" : "bg-red-500"
+                } text-white hover:bg-red-600 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm`}
                 disabled={isSubmitting}
               >
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Enviar Solicitação
+                <X className="mr-2 h-4 w-4" />
+                {showRejectForm ? "Confirmar Rejeição" : "Rejeitar"}
               </Button>
-            )}
+
+              {!showRejectForm && !showChangesForm && (
+                <Button
+                  onClick={handleApproveArticle}
+                  className="bg-green-500 text-white hover:bg-green-600 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm"
+                  disabled={isSubmitting}
+                >
+                  <Check className="mr-2 h-4 w-4" />
+                  Aprovar
+                </Button>
+              )}
+
+              {showChangesForm && (
+                <Button
+                  onClick={handleRequestChanges}
+                  className="bg-yellow-600 text-white hover:bg-yellow-700 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm"
+                  disabled={isSubmitting}
+                >
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Enviar Solicitação
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de configuração de destaque */}
+      <HighlightModal
+        open={showHighlightModal}
+        onOpenChange={setShowHighlightModal}
+        onPublish={handlePublishFromHighlight}
+        newsTitle={article.title}
+      />
+    </>
   );
 }

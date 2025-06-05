@@ -49,7 +49,6 @@ export default function FormCreateTag() {
       setTimeout(() => {
         setIsSubmitting(false);
         reset();
-        replace(`/postagens?tab=tags`);
       }, 2000);
     } catch (error) {
       setIsSubmitting(false);

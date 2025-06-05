@@ -34,7 +34,7 @@ export default function InfoPainel() {
     authors: listUser.length,
     total_companies: listCompany?.total,
   };
-  console.log("listCompany", listCompany);
+  
   return (
     <div className="h-full bg-white rounded-[32px] p-10">
       <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 ggxl:grid-cols-4 gap-4">

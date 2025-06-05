@@ -111,6 +111,7 @@ export function CreateBannerForm() {
   }, [image, bannerStyle]);
 
   const onSubmit = async (data: BannerFormData) => {
+
     try {
       setIsSubmitting(true);
       await CreateBanner({
