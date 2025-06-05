@@ -47,10 +47,13 @@ type ArticleFormData = z.infer<typeof articleSchema>;
 
 const generateSlug = (text: string) =>
   text
+    .normalize("NFD") // separa acentos dos caracteres
+    .replace(/[\u0300-\u036f]/g, "") // remove os acentos
+    .replace(/ç/g, "c") // substitui ç por c
+    .replace(/[^a-zA-Z0-9\s-]/g, "") // remove caracteres especiais (exceto espaço e hífen)
+    .trim() // remove espaços do início/fim
     .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^\w-]+/g, "");
+    .replace(/\s+/g, "-"); // substitui espaços por hífen
 
 const uploadThumbnailToServer = async (
   file: File,
@@ -142,11 +145,12 @@ export default function FormCreateArticle() {
       highlight: false,
       categoryId: "",
       tagIds: [],
-      chiefEditorId: profile?.chiefEditor?.id || "",
+      chiefEditorId: profile?.chiefEditor?.id ,
       portalIds: [],
       thumbnailDescription: "",
     },
   });
+  console.log("profile", profile);
 
   const title = watch("title");
   const categoryId = watch("categoryId");
@@ -254,7 +258,7 @@ export default function FormCreateArticle() {
           )}
           className="space-y-6 p-6"
         >
-          <div className="flex justify-between items-center -mb-4">
+          <div className="flex justify-between items-center -mb-4 text-4xl">
             <ReturnPageButton />
           </div>
           <div className="flex gap-6">

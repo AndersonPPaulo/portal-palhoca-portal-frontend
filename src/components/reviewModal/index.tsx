@@ -332,15 +332,52 @@ export function ArticleViewModal({
                       />
                     </div>
                   </div>
-                  {/* Grid de informações com 3 colunas que se adaptam em telas menores */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Coluna 1 */}
-                    <div className="overflow-hidden">
-                      <h3 className="font-semibold mb-2">Criador</h3>
-                      <p className="truncate">{article.creator.name}</p>
+                )}
+                {/* Campo para a descrição da thumbnail */}
+                {article.thumbnail?.description && (
+                  <span className="text-gray-800">
+                    Descrição da Imagem: {article.thumbnail.description}
+                  </span>
+                )}
+                {/* Resumo */}
+                <div className="bg-gray-100 p-4 rounded-md">
+                  <h3 className="font-semibold mb-2">Resumo</h3>
+                  <p className="whitespace-pre-wrap break-words">
+                    {article.resume_content}
+                  </p>
+                </div>
+                {/* Conteúdo */}
+                <div className="bg-gray-100 p-4 rounded-md">
+                  <h3 className="font-semibold mb-2">Conteúdo</h3>
+                  <div className="prose max-w-none overflow-y-auto overflow-x-hidden break-words">
+                    <div
+                      dangerouslySetInnerHTML={{ __html: article.content }}
+                    />
+                  </div>
+                </div>
+                {/* Grid de informações com 3 colunas que se adaptam em telas menores */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Coluna 1 */}
+                  <div className="overflow-hidden">
+                    <h3 className="font-semibold mb-2">Criador</h3>
+                    <p className="truncate">{article.creator.name}</p>
 
-                      <h3 className="font-semibold mt-4 mb-2">Categoria</h3>
-                      <p className="truncate">{article.category.name}</p>
+                    <h3 className="font-semibold mt-4 mb-2">Categoria</h3>
+                    <p className="truncate">{article.category.name}</p>
+                  </div>
+
+                  {/* Coluna 2 */}
+                  <div className="overflow-hidden">
+                    <h3 className="font-semibold mb-2">Tags</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {article.tags.map((tag) => (
+                        <span
+                          key={tag.id}
+                          className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs truncate max-w-full"
+                        >
+                          {tag.name}
+                        </span>
+                      ))}
                     </div>
 
                     {/* Coluna 2 */}
