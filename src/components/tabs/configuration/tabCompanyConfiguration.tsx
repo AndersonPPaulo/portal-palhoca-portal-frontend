@@ -1,6 +1,6 @@
 import React, { useContext, useEffect } from "react";
 import Comercio from "../cards/company/company";
-import CategoriaComercio from "../cards/company-category/companyCategory";
+import Leads from "../cards/new-leads/newLeads";
 
 
 
@@ -16,15 +16,26 @@ export const tabCompanyConfigurations = [
     path: "/comercio/criar",
 
   },
-  {
-    value: "categoria",
-    title: "Categorias",
-    name: "Categorias",
-    label: "Categorias de comércios",
+  // {
+  //   value: "categoria",
+  //   title: "Categorias",
+  //   name: "Categorias",
+  //   label: "Categorias de comércios",
+  //   description:
+  //     "Gerencie, edite e monitore as categorias dos comércios cadastrados do seu site.",
+  //   component: <CategoriaComercio/>,
+  //   path: "/comercio/categoria/criar",
+    
+  // },
+   {
+    value: "new_leads",
+    title: "Leads",
+    name: "Comércios",
+    label: "Leads de comércios",
     description:
-      "Gerencie, edite e monitore as categorias dos comércios cadastrados do seu site.",
-    component: <CategoriaComercio/>,
-    path: "/comercio/categoria/criar",
+      "Leads que foram gerados pelos comércios cadastrados do seu site.",
+    component: <Leads/>,
+    path: "/comercio/criar",
     
   },
 ];

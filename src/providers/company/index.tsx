@@ -42,6 +42,8 @@ interface UpdateCompanyProps {
   status: "active" | "inactive" | "blocked";
   portalIds?: string[];
   companyCategoryIds?: string[];
+  email: string;
+  responsibleName: string;
 }
 
 export interface UploadCompanyImageProps {
