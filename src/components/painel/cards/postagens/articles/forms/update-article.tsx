@@ -17,6 +17,7 @@ import { UserContext } from "@/providers/user";
 import CustomSelect, { OptionType } from "@/components/select/custom-select";
 import { PortalContext } from "@/providers/portal";
 import ThumbnailUploader from "@/components/thumbnail";
+import { generateSlug } from "@/utils/generateSlug";
 
 const articleSchema = z.object({
   id: z.string().optional(),
@@ -44,13 +45,6 @@ const articleSchema = z.object({
 
 type ArticleFormData = z.infer<typeof articleSchema>;
 
-const generateSlug = (text: string) => {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^\w-]+/g, "");
-};
 
 interface FormEditArticleProps {
   article: Article;
@@ -139,7 +133,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   // Configurar valores iniciais após todos os dados serem carregados
   useEffect(() => {
     if (!tagsLoaded || !portalsLoaded || !categoriesLoaded) {
-      return; 
+      return;
     }
 
     // Configurar tags
@@ -305,8 +299,14 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     previewUrl: string,
     description?: string
   ) => {
-    setSelectedImage({ file, preview: previewUrl, description: description ?? "" });
-    setValue("thumbnailDescription", description ?? "", { shouldValidate: true });
+    setSelectedImage({
+      file,
+      preview: previewUrl,
+      description: description ?? "",
+    });
+    setValue("thumbnailDescription", description ?? "", {
+      shouldValidate: true,
+    });
     setThumbnailDescription(description ?? "");
   };
 
@@ -399,8 +399,6 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     setEditorContent(content);
     setValue("content", content, { shouldValidate: true });
   };
-
- 
 
   return (
     <div className="w-full h-full flex flex-col bg-white rounded-[24px]">

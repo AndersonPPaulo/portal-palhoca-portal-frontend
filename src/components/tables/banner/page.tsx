@@ -4,7 +4,12 @@ import { DataTable } from "./data-table";
 import { useContext, useEffect, useState } from "react";
 import { columns } from "./columns";
 import { BannerContext } from "@/providers/banner";
-import { Dialog, DialogContent, DialogOverlay, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogOverlay,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface TableBannersProps {
   filter: string;
@@ -22,7 +27,7 @@ export default function TableBanners({
 
   useEffect(() => {
     const fetch = async () => {
-      await ListBanners(1, 10);
+      await ListBanners(1, 10, false, true);
     };
 
     fetch();
@@ -52,9 +57,7 @@ export default function TableBanners({
           onOpenChange={(open) => !open && setSelectedImage(null)}
         >
           <DialogContent className=" max-w-2xl mx-auto p-4 rounded-xl bg-white shadow-xl z-50">
-            <DialogTitle>
-              Preview Banner
-            </DialogTitle>
+            <DialogTitle>Preview Banner</DialogTitle>
             <img
               src={selectedImage}
               alt="Preview"
