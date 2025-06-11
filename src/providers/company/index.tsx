@@ -14,6 +14,7 @@ export interface Props {
   data: {
     id: string;
     name?: string;
+    email?: string;
     phone?: string;
     openingHours: string;
     description?: string;
@@ -78,6 +79,10 @@ export interface ICompanyProps extends UpdateCompanyProps {
     created_at: string;
     updated_at: string;
   }[];
+  status: "active" | "inactive" | "blocked" | "new_lead" | "in_process";
+  email: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export type CompanyProps = {
