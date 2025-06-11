@@ -22,7 +22,7 @@ export interface Props {
     linkLocationMaps: string;
     linkLocationWaze: string;
     address: string;
-    status: "active" | "inactive" | "blocked";
+    status: "active" | "inactive" | "blocked" | "new_lead";
     created_at: Date;
     update_at: Date;
   }[];
@@ -39,7 +39,7 @@ interface UpdateCompanyProps {
   linkLocationWaze?: string;
   address?: string;
   district?: string;
-  status: "active" | "inactive" | "blocked";
+  status: "active" | "inactive" | "blocked" | "new_lead" | "in_process";
   portalIds?: string[];
   companyCategoryIds?: string[];
   email: string;
@@ -63,6 +63,7 @@ export interface ICompanyProps extends UpdateCompanyProps {
   update_at?: Date;
   company_image?: UploadCompanyImageProps;
   companyImage?: string;
+  companyMessage?: string;
   portals?: {
     id: string;
     name: string;

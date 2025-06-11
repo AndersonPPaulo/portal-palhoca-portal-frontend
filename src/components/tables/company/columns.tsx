@@ -180,7 +180,7 @@ export const columns: ColumnDef<ICompanyProps>[] = [
               : row.original.status === "blocked"
               ? "bg-red"
               : "bg-orange"
-          } px-3 py-1 rounded-full text-sm capitalize`}
+          } px-3 min-w-[130px] py-1 rounded-full text-sm capitalize`}
         >
           {row.original.status === "active"
             ? "Ativo"

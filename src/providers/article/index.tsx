@@ -30,32 +30,39 @@ interface UpdateArticleProps {
   content?: string;
   status?: boolean;
   highlight?: boolean;
+  highlight_position?: number;
   categoryId?: string;
   tagIds?: string[];
   portalIds: string[];
 }
 
+interface ApproveArticleProps {
+  highlight: boolean;
+  highlight_position?: number;
+}
+
+// Interfaces para resposta completa da API
 export interface ArticleResponse {
   message: string;
   data: Article[];
   meta: Meta;
 }
 
-
 export interface Article {
   id: string;
   title: string;
   slug: string;
   reading_time: number;
-  thumbnail: { id: string; url: string; key: string; description: string };
+  thumbnail: Thumbnail | null;
   resume_content: string;
   content: string;
   clicks_view: string;
   highlight: boolean;
+  highlight_position?: number | null;
   created_at: string;
   updated_at: string;
   creator: User;
-  chiefEditor: User;
+  chiefEditor: User | null;
   category: Category;
   tags: Tag[];
   status_history: StatusHistory[];
@@ -63,10 +70,22 @@ export interface Article {
   portals: Portal[];
 }
 
+export interface Thumbnail {
+  id: string;
+  url: string;
+  key: string;
+  description: string;
+  original_name: string;
+  mime_type: string;
+  size: number;
+  uploaded_at: string;
+}
+
 export interface User {
   id: string;
   name: string;
   email: string;
+  isActive: boolean;
 }
 
 export interface Category {
@@ -86,6 +105,7 @@ export interface Tag {
   created_at: string;
   updated_at: string;
 }
+
 export interface Portal {
   id: string;
   name: string;
@@ -100,8 +120,8 @@ export interface StatusHistory {
     | "PUBLISHED"
     | "DRAFT"
     | "REJECTED";
-  change_request_description: string;
-  reason_reject: string;
+  change_request_description: string | null;
+  reason_reject: string | null;
   changed_at: string;
 }
 
@@ -137,6 +157,9 @@ interface IArticleData {
   ): Promise<string>;
   GetPublishedArticles(page?: number, limit?: number): Promise<ArticleResponse>;
   publishedArticles: ArticleResponse | null;
+  ApproveArticle(data: ApproveArticleProps, articleId: string): Promise<Article>;
+  RejectArticle(articleId: string, reason: string): Promise<Article>;
+  RequestChanges(articleId: string, description: string): Promise<Article>;
 }
 
 interface ICihldrenReact {
@@ -258,6 +281,168 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
     }
   };
 
+  // Função de aprovação que retorna dados completos
+  const ApproveArticle = async (
+    data: ApproveArticleProps,
+    articleId: string
+  ): Promise<Article> => {
+    const { "user:token": token } = parseCookies();
+    const config = {
+      headers: { Authorization: `bearer ${token}` },
+    };
+
+    const approvalData = {
+      status: "PUBLISHED",
+      highlight: data.highlight,
+      ...(data.highlight && data.highlight_position && {
+        highlight_position: data.highlight_position
+      })
+    };
+
+    try {
+      const response = await api.patch(`/article-status-review/${articleId}`, approvalData, config);
+      
+      // Extrair dados completos da resposta conforme formato do backend
+      let updatedArticle: Article;
+      
+      if (response.data && response.data.data && response.data.data.length > 0) {
+        updatedArticle = response.data.data[0];
+      } else {
+        // Fallback caso a resposta não tenha o formato esperado
+        updatedArticle = response.data;
+      }
+      
+      // Usar mensagem do backend se disponível
+      const message = response.data?.message || "Artigo aprovado e publicado com sucesso!";
+      toast.success(message);
+      
+      // Atualizar a lista de artigos no contexto
+      if (listArticles) {
+        const updatedArticles = listArticles.data.map(article => 
+          article.id === articleId ? updatedArticle : article
+        );
+        setListArticles({
+          ...listArticles,
+          data: updatedArticles
+        });
+      }
+
+      // Se o artigo individual estiver carregado, atualizá-lo também
+      if (article && article.id === articleId) {
+        setArticle(updatedArticle);
+      }
+
+      return updatedArticle;
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro ao aprovar artigo");
+      throw err;
+    }
+  };
+
+  // Função de rejeição que retorna dados completos
+  const RejectArticle = async (articleId: string, reason: string): Promise<Article> => {
+    const { "user:token": token } = parseCookies();
+    const config = {
+      headers: { Authorization: `bearer ${token}` },
+    };
+
+    const rejectionData = {
+      status: "REJECTED",
+      reason_reject: reason
+    };
+
+    try {
+      const response = await api.patch(`/article-status-review/${articleId}`, rejectionData, config);
+      
+      // Extrair dados completos da resposta conforme formato do backend
+      let updatedArticle: Article;
+      
+      if (response.data && response.data.data && response.data.data.length > 0) {
+        updatedArticle = response.data.data[0];
+      } else {
+        // Fallback caso a resposta não tenha o formato esperado
+        updatedArticle = response.data;
+      }
+      
+      // Usar mensagem do backend se disponível
+      const message = response.data?.message || "Artigo rejeitado com sucesso!";
+      toast.success(message);
+      
+      // Atualizar a lista de artigos no contexto
+      if (listArticles) {
+        const updatedArticles = listArticles.data.map(article => 
+          article.id === articleId ? updatedArticle : article
+        );
+        setListArticles({
+          ...listArticles,
+          data: updatedArticles
+        });
+      }
+
+      // Se o artigo individual estiver carregado, atualizá-lo também
+      if (article && article.id === articleId) {
+        setArticle(updatedArticle);
+      }
+
+      return updatedArticle;
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro ao rejeitar artigo");
+      throw err;
+    }
+  };
+
+  // Função de solicitação de alterações que retorna dados completos
+  const RequestChanges = async (articleId: string, description: string): Promise<Article> => {
+    const { "user:token": token } = parseCookies();
+    const config = {
+      headers: { Authorization: `bearer ${token}` },
+    };
+
+    const changesData = {
+      status: "CHANGES_REQUESTED",
+      change_request_description: description
+    };
+
+    try {
+      const response = await api.patch(`/article-status-review/${articleId}`, changesData, config);
+      
+      // Extrair dados completos da resposta conforme formato do backend
+      let updatedArticle: Article;
+      
+      if (response.data && response.data.data && response.data.data.length > 0) {
+        updatedArticle = response.data.data[0];
+      } else {
+        // Fallback caso a resposta não tenha o formato esperado
+        updatedArticle = response.data;
+      }
+      
+      // Usar mensagem do backend se disponível
+      const message = response.data?.message || "Solicitação de alterações enviada com sucesso!";
+      toast.success(message);
+      
+      // Atualizar a lista de artigos no contexto
+      if (listArticles) {
+        const updatedArticles = listArticles.data.map(article => 
+          article.id === articleId ? updatedArticle : article
+        );
+        setListArticles({
+          ...listArticles,
+          data: updatedArticles
+        });
+      }
+
+      // Se o artigo individual estiver carregado, atualizá-lo também
+      if (article && article.id === articleId) {
+        setArticle(updatedArticle);
+      }
+
+      return updatedArticle;
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro ao solicitar alterações");
+      throw err;
+    }
+  };
+
   const uploadThumbnail = async (
     file: File,
     description: string,
@@ -321,6 +506,9 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
         uploadThumbnail,
         GetPublishedArticles,
         publishedArticles,
+        ApproveArticle,
+        RejectArticle,
+        RequestChanges,
       }}
     >
       {children}

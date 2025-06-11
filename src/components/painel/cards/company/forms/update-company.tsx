@@ -41,7 +41,7 @@ const companySchema = z.object({
   city: z.string().min(1, "Cidade é obrigatória"),
   state: z.string().min(1, "Estado é obrigatório"),
   address: z.string().min(1, "Endereço é obrigatório"),
-  status: z.enum(["active", "inactive", "blocked"]),
+  status: z.enum(["active", "inactive", "blocked", "new_lead", "in_process"],),
   portalIds: z.array(z.string()).min(1, "Selecione pelo menos um portal"),
   companyCategoryIds: z
     .array(z.string())
@@ -57,6 +57,8 @@ const statusLabels = {
   active: "Ativo",
   inactive: "Inativo",
   blocked: "Bloqueado",
+  new_lead: "Novo Lead",
+  in_process: "Em Processo",
 };
 
 export default function FormUpdateCompany({
@@ -889,7 +891,7 @@ export default function FormUpdateCompany({
                 <div className="flex items-center gap-2">
                   <span>Atualizar Empresa</span>
                   {(addressData.latitude || watch("latitude")) && (
-                    <span className="text-green-200">📍</span>
+                    <span className="text-green-200"></span>
                   )}
                 </div>
               )}

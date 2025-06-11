@@ -7,15 +7,45 @@ import {
 import { Tooltip, TooltipArrow, TooltipPortal } from "@radix-ui/react-tooltip";
 import { ColumnDef } from "@tanstack/react-table";
 import React from "react";
+import { ILeadProps } from "./page";
+import { Edit } from "lucide-react";
+import { useRouter } from "next/navigation";
 
-export interface ILeadProps {
-  id: string;
-  name: string;
-  responsibleName: string;
-  email: string;
-  phone: string;
-  status: "active" | "inactive" | "blocked" | "new_lead";
-}
+
+
+const CellActions = (companyId: string) => {
+  const { push } = useRouter();
+
+  return (
+    <div className="flex gap-6">
+      <TooltipProvider delayDuration={600}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Edit
+              onClick={() => push(`/comercio/editar/${companyId}`)}
+              size={20}
+              className="text-primary cursor-pointer"
+            />
+          </TooltipTrigger>
+          <TooltipPortal>
+            <TooltipContent
+              className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
+              sideOffset={5}
+            >
+              <span>Editar Comércio</span>
+              <TooltipArrow
+                className="fill-primary-light"
+                width={11}
+                height={5}
+              />
+            </TooltipContent>
+          </TooltipPortal>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
+  );
+};
+
 
 export const columns: ColumnDef<ILeadProps>[] = [
   {
@@ -24,7 +54,6 @@ export const columns: ColumnDef<ILeadProps>[] = [
     cell: ({ row }) => {
       const lead = row?.original;
 
-      // Para leads, sempre mostra placeholder com iniciais do nome do comércio
       const initials = lead.name
         .split(" ")
         .map((n) => n[0])
@@ -143,7 +172,7 @@ export const columns: ColumnDef<ILeadProps>[] = [
               : row.original.status === "new_lead"
               ? "bg-blue-500"
               : "bg-orange"
-          } px-3 py-1 rounded-full text-sm capitalize`}
+          } px-3 py-1 rounded-full min-w-[130px] text-sm capitalize`}
         >
           {row.original.status === "active"
             ? "Ativo"
@@ -151,9 +180,21 @@ export const columns: ColumnDef<ILeadProps>[] = [
             ? "Bloqueado"
             : row.original.status === "new_lead"
             ? "Novo Lead"
-            : "Inativo"}
+            : "Em processo"}
         </span>
       </div>
     ),
+  },
+  {
+    id: "actions",
+    header: () => <div className="text-center">Ações</div>,
+    size: 150,
+    cell: ({ row }) => {
+      return (
+        <div className="flex justify-center">
+          {CellActions(row.original.id)}
+        </div>
+      );
+    },
   },
 ];

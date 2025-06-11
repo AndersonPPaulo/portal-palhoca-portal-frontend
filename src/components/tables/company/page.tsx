@@ -31,6 +31,9 @@ export default function TableCompany({ filter }: TableCompanyProps) {
     let matchesName = true;
     
     if (filter.name) {
+      if (item.status === "new_lead") {
+          return false;
+        }
       if (Array.isArray(filter.name) && filter.name.length > 0) {
         matchesName = filter.name.some(name => 
           typeof name === 'string' && item.name.toLowerCase().includes(name.toLowerCase())

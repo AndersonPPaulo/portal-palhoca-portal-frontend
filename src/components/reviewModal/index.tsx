@@ -49,8 +49,8 @@ export function ArticleViewModal({
     article.status_history || []
   );
 
-  // Estado para controlar o modal de highlight
-  const [showHighlightModal, setShowHighlightModal] = useState(false);
+  // Estado para controlar o modal de destaque
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -58,7 +58,7 @@ export function ArticleViewModal({
       setShowChangesForm(false);
       setRejectReason("");
       setChangeRequest("");
-      setShowHighlightModal(false); // Reset highlight modal state
+      setShowApprovalModal(false);
     } else if (article.status_history && article.status_history.length > 0) {
       const sorted = [...article.status_history].sort(
         (a, b) =>
@@ -128,7 +128,6 @@ export function ArticleViewModal({
   const { push } = useRouter();
 
   const handleEditArticleButton = () => {
-    // Redirecionar para a página de edição do artigo
     push(`/postagens/artigos/editar/${article.id}`);
     onOpenChange(false);
   };
@@ -138,8 +137,8 @@ export function ArticleViewModal({
     options?: {
       reason_reject?: string;
       change_request_description?: string;
-      isHighlight?: boolean;
-      highlightPosition?: number;
+      highlight?: boolean;
+      highlight_position?: number;
     }
   ) => {
     try {
@@ -150,8 +149,7 @@ export function ArticleViewModal({
       };
 
       const payload: any = {
-        newStatus,
-        reviewerId: profile?.id,
+        status: newStatus,
       };
 
       if (newStatus === "REJECTED" && options?.reason_reject) {
@@ -165,58 +163,72 @@ export function ArticleViewModal({
         payload.change_request_description = options.change_request_description;
       }
 
-      // Adicionar informações de destaque se fornecidas
+      // Adicionar informações de destaque quando for publicação
       if (newStatus === "PUBLISHED") {
-        if (options?.isHighlight) {
-          payload.isHighlight = options.isHighlight;
-          payload.highlightPosition = options.highlightPosition;
+        payload.highlight = options?.highlight || false;
+        if (options?.highlight && options?.highlight_position) {
+          payload.highlight_position = options.highlight_position;
         }
       }
 
-      await api.patch(`/article-status-review/${article.id}`, payload, config);
+      console.log('Payload enviado:', payload);
+
+      const response = await api.patch(`/article-status-review/${article.id}`, payload, config);
+
+      console.log('Resposta da API:', response.data);
+
+      // Processar resposta se existir data array
+      if (response.data && response.data.data && response.data.data.length > 0) {
+        const updatedArticle = response.data.data[0];
+        console.log('Artigo atualizado:', updatedArticle);
+        
+        // Atualizar o contexto com os dados completos
+        await ListAuthorArticles();
+      }
 
       const successMessage = {
-        PUBLISHED: options?.isHighlight
-          ? `Artigo publicado com destaque (posição ${options.highlightPosition}) com sucesso!`
+        PUBLISHED: options?.highlight
+          ? `Artigo publicado com destaque (posição ${options.highlight_position}) com sucesso!`
           : "Artigo publicado com sucesso!",
         REJECTED: "Artigo rejeitado com sucesso!",
         CHANGES_REQUESTED: "Solicitação de alterações enviada com sucesso!",
         DRAFT: "Artigo retornado para rascunho com sucesso!",
       };
 
-      toast.success(successMessage[newStatus]);
-
-      await ListAuthorArticles();
+      toast.success(response.data?.message || successMessage[newStatus]);
 
       // Fechar ambos os modais
-      setShowHighlightModal(false);
+      setShowApprovalModal(false);
       onOpenChange(false);
     } catch (error: any) {
+      console.error('Erro completo:', error);
       toast.error(
         error.response?.data?.message || `Erro ao processar o artigo`
-      );
-      console.error(
-        `Erro ao atualizar status do artigo para ${newStatus}:`,
-        error
       );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Modificar a função handleApproveArticle para abrir o modal de highlight
+  // Modificar a função handleApproveArticle para abrir o modal de destaque
   const handleApproveArticle = () => {
-    setShowHighlightModal(true);
+    setShowApprovalModal(true);
   };
 
-  // Função para lidar com a publicação vinda do modal de highlight
-  const handlePublishFromHighlight = async (
+  // Função para lidar com a aprovação vinda do modal de destaque
+  const handleApproveFromModal = async (
     isHighlight: boolean,
     highlightPosition?: number
   ) => {
+    // Validar se destaque tem posição
+    if (isHighlight && !highlightPosition) {
+      toast.error("Por favor, selecione uma posição para o destaque");
+      return;
+    }
+
     await updateArticleStatus("PUBLISHED", {
-      isHighlight,
-      highlightPosition,
+      highlight: isHighlight,
+      highlight_position: highlightPosition,
     });
 
     setTimeout(() => {
@@ -298,6 +310,7 @@ export function ArticleViewModal({
                       </div>
                     </div>
                   </div>
+
                   {/* Thumbnail se disponível */}
                   {article.thumbnail && (
                     <div className="rounded-md overflow-hidden">
@@ -308,14 +321,15 @@ export function ArticleViewModal({
                           className="object-cover w-full h-full"
                         />
                       </div>
+                      {/* Campo para a descrição da thumbnail */}
+                      {article.thumbnail.description && (
+                        <div className="mt-2 text-sm text-gray-600">
+                          <strong>Descrição da Imagem:</strong> {article.thumbnail.description}
+                        </div>
+                      )}
                     </div>
                   )}
-                  {/* Campo para a descrição da thumbnail */}
-                  {article.thumbnail?.description && (
-                    <span className="text-gray-800">
-                      Descrição da Imagem: {article.thumbnail.description}
-                    </span>
-                  )}
+
                   {/* Resumo */}
                   <div className="bg-gray-100 p-4 rounded-md">
                     <h3 className="font-semibold mb-2">Resumo</h3>
@@ -323,6 +337,7 @@ export function ArticleViewModal({
                       {article.resume_content}
                     </p>
                   </div>
+
                   {/* Conteúdo */}
                   <div className="bg-gray-100 p-4 rounded-md">
                     <h3 className="font-semibold mb-2">Conteúdo</h3>
@@ -332,52 +347,16 @@ export function ArticleViewModal({
                       />
                     </div>
                   </div>
-                )}
-                {/* Campo para a descrição da thumbnail */}
-                {article.thumbnail?.description && (
-                  <span className="text-gray-800">
-                    Descrição da Imagem: {article.thumbnail.description}
-                  </span>
-                )}
-                {/* Resumo */}
-                <div className="bg-gray-100 p-4 rounded-md">
-                  <h3 className="font-semibold mb-2">Resumo</h3>
-                  <p className="whitespace-pre-wrap break-words">
-                    {article.resume_content}
-                  </p>
-                </div>
-                {/* Conteúdo */}
-                <div className="bg-gray-100 p-4 rounded-md">
-                  <h3 className="font-semibold mb-2">Conteúdo</h3>
-                  <div className="prose max-w-none overflow-y-auto overflow-x-hidden break-words">
-                    <div
-                      dangerouslySetInnerHTML={{ __html: article.content }}
-                    />
-                  </div>
-                </div>
-                {/* Grid de informações com 3 colunas que se adaptam em telas menores */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Coluna 1 */}
-                  <div className="overflow-hidden">
-                    <h3 className="font-semibold mb-2">Criador</h3>
-                    <p className="truncate">{article.creator.name}</p>
 
-                    <h3 className="font-semibold mt-4 mb-2">Categoria</h3>
-                    <p className="truncate">{article.category.name}</p>
-                  </div>
+                  {/* Grid de informações com 3 colunas que se adaptam em telas menores */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Coluna 1 */}
+                    <div className="overflow-hidden">
+                      <h3 className="font-semibold mb-2">Criador</h3>
+                      <p className="truncate">{article.creator.name}</p>
 
-                  {/* Coluna 2 */}
-                  <div className="overflow-hidden">
-                    <h3 className="font-semibold mb-2">Tags</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {article.tags.map((tag) => (
-                        <span
-                          key={tag.id}
-                          className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs truncate max-w-full"
-                        >
-                          {tag.name}
-                        </span>
-                      ))}
+                      <h3 className="font-semibold mt-4 mb-2">Categoria</h3>
+                      <p className="truncate">{article.category.name}</p>
                     </div>
 
                     {/* Coluna 2 */}
@@ -425,6 +404,7 @@ export function ArticleViewModal({
                       </span>
                     </div>
                   </div>
+
                   {/* Histórico de Status - com tabela responsiva */}
                   {sortedStatusHistory.length > 0 && (
                     <div>
@@ -494,6 +474,7 @@ export function ArticleViewModal({
                       </div>
                     </div>
                   )}
+
                   {/* Formulário de solicitação de alterações */}
                   {showChangesForm && (
                     <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
@@ -510,6 +491,7 @@ export function ArticleViewModal({
                       />
                     </div>
                   )}
+
                   {/* Formulário de rejeição */}
                   {showRejectForm && (
                     <div className="bg-red-50 p-4 rounded-md border border-red-200">
@@ -531,7 +513,6 @@ export function ArticleViewModal({
             </div>
 
             {/* Rodapé fixo com ações */}
-
             <div className="article-review-modal-footer bg-gray-200 py-4 px-6 flex justify-end space-x-4 flex-shrink-0 border-t border-gray-300">
               <Button
                 variant="outline"
@@ -541,6 +522,7 @@ export function ArticleViewModal({
               >
                 Cancelar
               </Button>
+
               <Button
                 variant="outline"
                 onClick={handleEditArticleButton}
@@ -549,6 +531,7 @@ export function ArticleViewModal({
               >
                 Efetuar Edição
               </Button>
+
               {!showRejectForm && !showChangesForm && (
                 <Button
                   variant="outline"
@@ -601,9 +584,9 @@ export function ArticleViewModal({
 
       {/* Modal de configuração de destaque */}
       <HighlightModal
-        open={showHighlightModal}
-        onOpenChange={setShowHighlightModal}
-        onPublish={handlePublishFromHighlight}
+        open={showApprovalModal}
+        onOpenChange={setShowApprovalModal}
+        onPublish={handleApproveFromModal}
         newsTitle={article.title}
       />
     </>
