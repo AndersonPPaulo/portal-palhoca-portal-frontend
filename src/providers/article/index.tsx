@@ -28,17 +28,27 @@ interface UpdateArticleProps {
   reading_time?: number;
   resume_content?: string;
   content?: string;
-  status?: boolean;
   highlight?: boolean;
   highlight_position?: number;
   categoryId?: string;
   tagIds?: string[];
-  portalIds: string[];
+  portalIds?: string[];
+  setToDraft?: boolean;
+  chiefEditorId?: string;
 }
 
-interface ApproveArticleProps {
+interface UpdateArticleHighlightProps {
   highlight: boolean;
   highlight_position?: number;
+  portalIds?: string[];
+  chiefEditorId?: string;
+}
+
+interface UpdateArticleStatusProps {
+  newStatus: "PUBLISHED" | "REJECTED" | "CHANGES_REQUESTED" | "DRAFT";
+  reason_reject?: string;
+  change_request_description?: string;
+  chiefEditorId?: string;
 }
 
 // Interfaces para resposta completa da API
@@ -157,9 +167,14 @@ interface IArticleData {
   ): Promise<string>;
   GetPublishedArticles(page?: number, limit?: number): Promise<ArticleResponse>;
   publishedArticles: ArticleResponse | null;
-  ApproveArticle(data: ApproveArticleProps, articleId: string): Promise<Article>;
-  RejectArticle(articleId: string, reason: string): Promise<Article>;
-  RequestChanges(articleId: string, description: string): Promise<Article>;
+  UpdateArticleHighlight(
+    data: UpdateArticleHighlightProps,
+    articleId: string
+  ): Promise<void>;
+  UpdateArticleStatus(
+    data: UpdateArticleStatusProps,
+    articleId: string
+  ): Promise<Article>;
 }
 
 interface ICihldrenReact {
@@ -262,6 +277,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
     }
   };
 
+  // Função geral para atualizar dados do artigo (rota /article)
   const UpdateArticle = async (
     data: UpdateArticleProps,
     articleId: string
@@ -276,14 +292,45 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
       const response = await api.patch("/article", data, config);
       toast.success("Artigo atualizado com sucesso!");
     } catch (err: any) {
-      toast.error(err.response.data.message);
+      toast.error(err.response?.data?.message || "Erro ao atualizar artigo");
       throw err;
     }
   };
 
-  // Função de aprovação que retorna dados completos
-  const ApproveArticle = async (
-    data: ApproveArticleProps,
+  // Função específica para atualizar APENAS highlight e highlight_position (rota /article)
+  const UpdateArticleHighlight = async (
+    data: UpdateArticleHighlightProps,
+    articleId: string
+  ): Promise<void> => {
+    const { "user:token": token } = parseCookies();
+    const config = {
+      headers: { Authorization: `bearer ${token}` },
+      params: { articleId },
+    };
+
+    // Preparar dados apenas para highlight
+    const highlightData = {
+      highlight: data.highlight,
+      ...(data.highlight &&
+        data.highlight_position && {
+          highlight_position: data.highlight_position,
+        }),
+      ...(data.portalIds && { portalIds: data.portalIds }),
+      ...(data.chiefEditorId && { chiefEditorId: data.chiefEditorId }),
+    };
+
+    try {
+      const response = await api.patch("/article", highlightData, config);
+      toast.success("Destaque atualizado com sucesso!");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro ao atualizar destaque");
+      throw err;
+    }
+  };
+
+  // Função específica para atualizar APENAS o status (rota /article-status-review/:articleId)
+  const UpdateArticleStatus = async (
+    data: UpdateArticleStatusProps,
     articleId: string
   ): Promise<Article> => {
     const { "user:token": token } = parseCookies();
@@ -291,39 +338,43 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
       headers: { Authorization: `bearer ${token}` },
     };
 
-    const approvalData = {
-      status: "PUBLISHED",
-      highlight: data.highlight,
-      ...(data.highlight && data.highlight_position && {
-        highlight_position: data.highlight_position
-      })
+    // Preparar dados para status
+    const statusData = {
+      newStatus: data.newStatus,
+      ...(data.reason_reject && { reason_reject: data.reason_reject }),
+      ...(data.change_request_description && {
+        change_request_description: data.change_request_description,
+      }),
     };
 
     try {
-      const response = await api.patch(`/article-status-review/${articleId}`, approvalData, config);
-      
+      const response = await api.patch(
+        `/article-status-review/${articleId}`,
+        statusData,
+        config
+      );
+
       // Extrair dados completos da resposta conforme formato do backend
       let updatedArticle: Article;
-      
-      if (response.data && response.data.data && response.data.data.length > 0) {
+
+      if (
+        response.data &&
+        response.data.data &&
+        response.data.data.length > 0
+      ) {
         updatedArticle = response.data.data[0];
       } else {
-        // Fallback caso a resposta não tenha o formato esperado
         updatedArticle = response.data;
       }
-      
-      // Usar mensagem do backend se disponível
-      const message = response.data?.message || "Artigo aprovado e publicado com sucesso!";
-      toast.success(message);
-      
+
       // Atualizar a lista de artigos no contexto
       if (listArticles) {
-        const updatedArticles = listArticles.data.map(article => 
+        const updatedArticles = listArticles.data.map((article) =>
           article.id === articleId ? updatedArticle : article
         );
         setListArticles({
           ...listArticles,
-          data: updatedArticles
+          data: updatedArticles,
         });
       }
 
@@ -334,111 +385,14 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
 
       return updatedArticle;
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Erro ao aprovar artigo");
-      throw err;
-    }
-  };
+      const errorMessages = {
+        PUBLISHED: "Erro ao publicar artigo",
+        REJECTED: "Erro ao rejeitar artigo",
+        CHANGES_REQUESTED: "Erro ao solicitar alterações",
+        DRAFT: "Erro ao retornar artigo para rascunho",
+      };
 
-  // Função de rejeição que retorna dados completos
-  const RejectArticle = async (articleId: string, reason: string): Promise<Article> => {
-    const { "user:token": token } = parseCookies();
-    const config = {
-      headers: { Authorization: `bearer ${token}` },
-    };
-
-    const rejectionData = {
-      status: "REJECTED",
-      reason_reject: reason
-    };
-
-    try {
-      const response = await api.patch(`/article-status-review/${articleId}`, rejectionData, config);
-      
-      // Extrair dados completos da resposta conforme formato do backend
-      let updatedArticle: Article;
-      
-      if (response.data && response.data.data && response.data.data.length > 0) {
-        updatedArticle = response.data.data[0];
-      } else {
-        // Fallback caso a resposta não tenha o formato esperado
-        updatedArticle = response.data;
-      }
-      
-      // Usar mensagem do backend se disponível
-      const message = response.data?.message || "Artigo rejeitado com sucesso!";
-      toast.success(message);
-      
-      // Atualizar a lista de artigos no contexto
-      if (listArticles) {
-        const updatedArticles = listArticles.data.map(article => 
-          article.id === articleId ? updatedArticle : article
-        );
-        setListArticles({
-          ...listArticles,
-          data: updatedArticles
-        });
-      }
-
-      // Se o artigo individual estiver carregado, atualizá-lo também
-      if (article && article.id === articleId) {
-        setArticle(updatedArticle);
-      }
-
-      return updatedArticle;
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Erro ao rejeitar artigo");
-      throw err;
-    }
-  };
-
-  // Função de solicitação de alterações que retorna dados completos
-  const RequestChanges = async (articleId: string, description: string): Promise<Article> => {
-    const { "user:token": token } = parseCookies();
-    const config = {
-      headers: { Authorization: `bearer ${token}` },
-    };
-
-    const changesData = {
-      status: "CHANGES_REQUESTED",
-      change_request_description: description
-    };
-
-    try {
-      const response = await api.patch(`/article-status-review/${articleId}`, changesData, config);
-      
-      // Extrair dados completos da resposta conforme formato do backend
-      let updatedArticle: Article;
-      
-      if (response.data && response.data.data && response.data.data.length > 0) {
-        updatedArticle = response.data.data[0];
-      } else {
-        // Fallback caso a resposta não tenha o formato esperado
-        updatedArticle = response.data;
-      }
-      
-      // Usar mensagem do backend se disponível
-      const message = response.data?.message || "Solicitação de alterações enviada com sucesso!";
-      toast.success(message);
-      
-      // Atualizar a lista de artigos no contexto
-      if (listArticles) {
-        const updatedArticles = listArticles.data.map(article => 
-          article.id === articleId ? updatedArticle : article
-        );
-        setListArticles({
-          ...listArticles,
-          data: updatedArticles
-        });
-      }
-
-      // Se o artigo individual estiver carregado, atualizá-lo também
-      if (article && article.id === articleId) {
-        setArticle(updatedArticle);
-      }
-
-      return updatedArticle;
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Erro ao solicitar alterações");
+      toast.error(err.response?.data?.message || errorMessages[data.newStatus]);
       throw err;
     }
   };
@@ -506,9 +460,8 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
         uploadThumbnail,
         GetPublishedArticles,
         publishedArticles,
-        ApproveArticle,
-        RejectArticle,
-        RequestChanges,
+        UpdateArticleHighlight,
+        UpdateArticleStatus,
       }}
     >
       {children}

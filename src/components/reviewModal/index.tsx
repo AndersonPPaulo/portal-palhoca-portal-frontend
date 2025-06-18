@@ -18,10 +18,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useState, useContext, useEffect } from "react";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { ar, ptBR } from "date-fns/locale";
 import { ArticleContext, Article } from "@/providers/article";
-import { api } from "@/service/api";
-import { parseCookies } from "nookies";
 import { toast } from "sonner";
 import { UserContext } from "@/providers/user";
 import { useRouter } from "next/navigation";
@@ -38,7 +36,9 @@ export function ArticleViewModal({
   onOpenChange,
   article,
 }: ArticleViewModalProps) {
-  const { ListAuthorArticles } = useContext(ArticleContext);
+  const { ListAuthorArticles, UpdateArticle, UpdateArticleStatus } =
+    useContext(ArticleContext);
+
   const { profile } = useContext(UserContext);
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [showChangesForm, setShowChangesForm] = useState(false);
@@ -46,10 +46,8 @@ export function ArticleViewModal({
   const [changeRequest, setChangeRequest] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sortedStatusHistory, setSortedStatusHistory] = useState(
-    article.status_history || []
+    article?.status_history || []
   );
-
-  // Estado para controlar o modal de destaque
   const [showApprovalModal, setShowApprovalModal] = useState(false);
 
   useEffect(() => {
@@ -59,7 +57,7 @@ export function ArticleViewModal({
       setRejectReason("");
       setChangeRequest("");
       setShowApprovalModal(false);
-    } else if (article.status_history && article.status_history.length > 0) {
+    } else if (article?.status_history?.length > 0) {
       const sorted = [...article.status_history].sort(
         (a, b) =>
           new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
@@ -68,7 +66,6 @@ export function ArticleViewModal({
     }
   }, [open, article]);
 
-  // Função para formatar datas
   const formatDate = (dateString: string) => {
     try {
       return format(new Date(dateString), "dd 'de' MMMM 'de' yyyy, HH:mm", {
@@ -79,11 +76,8 @@ export function ArticleViewModal({
     }
   };
 
-  // Função para obter a cor do status
   const getStatusColor = (status: string | undefined) => {
-    if (!status) {
-      return "bg-gray-100 text-gray-800";
-    }
+    if (!status) return "bg-gray-100 text-gray-800";
 
     switch (status.toLowerCase()) {
       case "published":
@@ -106,10 +100,9 @@ export function ArticleViewModal({
     }
   };
 
-  // Obter o status mais recente baseado na data
   const getCurrentStatus = () => {
-    if (!article.status_history || article.status_history.length === 0) {
-      return article.status;
+    if (!article?.status_history?.length) {
+      return article?.status || "UNKNOWN";
     }
 
     if (sortedStatusHistory.length > 0) {
@@ -121,154 +114,155 @@ export function ArticleViewModal({
         new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
     )[0];
 
-    return mostRecent.status;
+    return mostRecent?.status || article?.status || "UNKNOWN";
   };
 
   const currentStatus = getCurrentStatus();
   const { push } = useRouter();
 
   const handleEditArticleButton = () => {
+    if (!article?.id) {
+      toast.error("Artigo não encontrado");
+      return;
+    }
     push(`/postagens/artigos/editar/${article.id}`);
     onOpenChange(false);
   };
 
-  const updateArticleStatus = async (
-    newStatus: "PUBLISHED" | "REJECTED" | "CHANGES_REQUESTED" | "DRAFT",
-    options?: {
-      reason_reject?: string;
-      change_request_description?: string;
-      highlight?: boolean;
-      highlight_position?: number;
-    }
-  ) => {
-    try {
-      setIsSubmitting(true);
-      const { "user:token": token } = parseCookies();
-      const config = {
-        headers: { Authorization: `bearer ${token}` },
-      };
-
-      const payload: any = {
-        status: newStatus,
-      };
-
-      if (newStatus === "REJECTED" && options?.reason_reject) {
-        payload.reason_reject = options.reason_reject;
-      }
-
-      if (
-        newStatus === "CHANGES_REQUESTED" &&
-        options?.change_request_description
-      ) {
-        payload.change_request_description = options.change_request_description;
-      }
-
-      // Adicionar informações de destaque quando for publicação
-      if (newStatus === "PUBLISHED") {
-        payload.highlight = options?.highlight || false;
-        if (options?.highlight && options?.highlight_position) {
-          payload.highlight_position = options.highlight_position;
-        }
-      }
-
-      console.log('Payload enviado:', payload);
-
-      const response = await api.patch(`/article-status-review/${article.id}`, payload, config);
-
-      console.log('Resposta da API:', response.data);
-
-      // Processar resposta se existir data array
-      if (response.data && response.data.data && response.data.data.length > 0) {
-        const updatedArticle = response.data.data[0];
-        console.log('Artigo atualizado:', updatedArticle);
-        
-        // Atualizar o contexto com os dados completos
-        await ListAuthorArticles();
-      }
-
-      const successMessage = {
-        PUBLISHED: options?.highlight
-          ? `Artigo publicado com destaque (posição ${options.highlight_position}) com sucesso!`
-          : "Artigo publicado com sucesso!",
-        REJECTED: "Artigo rejeitado com sucesso!",
-        CHANGES_REQUESTED: "Solicitação de alterações enviada com sucesso!",
-        DRAFT: "Artigo retornado para rascunho com sucesso!",
-      };
-
-      toast.success(response.data?.message || successMessage[newStatus]);
-
-      // Fechar ambos os modais
-      setShowApprovalModal(false);
-      onOpenChange(false);
-    } catch (error: any) {
-      console.error('Erro completo:', error);
-      toast.error(
-        error.response?.data?.message || `Erro ao processar o artigo`
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Modificar a função handleApproveArticle para abrir o modal de destaque
   const handleApproveArticle = () => {
     setShowApprovalModal(true);
   };
 
-  // Função para lidar com a aprovação vinda do modal de destaque
   const handleApproveFromModal = async (
     isHighlight: boolean,
     highlightPosition?: number
   ) => {
-    // Validar se destaque tem posição
     if (isHighlight && !highlightPosition) {
       toast.error("Por favor, selecione uma posição para o destaque");
       return;
     }
 
-    await updateArticleStatus("PUBLISHED", {
-      highlight: isHighlight,
-      highlight_position: highlightPosition,
-    });
+    setIsSubmitting(true);
 
-    setTimeout(() => {
-      push("/postagens?tab=PUBLISHED");
-    }, 500);
+    try {
+      if (isHighlight) {
+        await UpdateArticle(
+          {
+            highlight: true,
+            highlight_position: highlightPosition,
+            chiefEditorId: article.chiefEditor?.id,
+            portalIds: article.portals?.map((portal) => portal.id) || [],
+          },
+          article.id
+        );
+      }
+
+      await UpdateArticleStatus(
+        {
+          newStatus: "PUBLISHED",
+        },
+        article.id
+      );
+
+      setShowApprovalModal(false);
+      onOpenChange(false);
+
+      setTimeout(() => {
+        push("/postagens?tab=PUBLISHED");
+      }, 500);
+    } catch (error) {
+      // Erro já tratado nas funções do contexto
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleRequestChanges = () => {
+  const handleRequestChanges = async () => {
     if (showChangesForm) {
       if (!changeRequest.trim()) {
         toast.error("Por favor, descreva as alterações necessárias");
         return;
       }
-      updateArticleStatus("CHANGES_REQUESTED", {
-        change_request_description: changeRequest,
-      });
-      setTimeout(() => {
-        push("/postagens?tab=CHANGES_REQUESTED");
-      }, 500);
+
+      setIsSubmitting(true);
+
+      try {
+        // Usar rota /article-status-review/:articleId apenas para status
+        await UpdateArticleStatus(
+          {
+            newStatus: "CHANGES_REQUESTED",
+            change_request_description: changeRequest,
+          },
+          article.id
+        );
+
+        onOpenChange(false);
+        setTimeout(() => {
+          push("/postagens?tab=CHANGES_REQUESTED");
+        }, 500);
+      } catch (error) {
+        // Erro já tratado na função do contexto
+      } finally {
+        setIsSubmitting(false);
+      }
     } else {
       setShowChangesForm(true);
       setShowRejectForm(false);
     }
   };
 
-  const handleRejectArticle = () => {
+  const handleRejectArticle = async () => {
     if (showRejectForm) {
       if (!rejectReason.trim()) {
         toast.error("Por favor, informe o motivo da rejeição");
         return;
       }
-      updateArticleStatus("REJECTED", { reason_reject: rejectReason });
-      setTimeout(() => {
-        push("/postagens?tab=REJECTED");
-      }, 500);
+
+      setIsSubmitting(true);
+
+      try {
+        // Usar rota /article-status-review/:articleId apenas para status
+        await UpdateArticleStatus(
+          {
+            newStatus: "REJECTED",
+            reason_reject: rejectReason,
+          },
+          article.id
+        );
+
+        onOpenChange(false);
+        setTimeout(() => {
+          push("/postagens?tab=REJECTED");
+        }, 500);
+      } catch (error) {
+        // Erro já tratado na função do contexto
+      } finally {
+        setIsSubmitting(false);
+      }
     } else {
       setShowRejectForm(true);
       setShowChangesForm(false);
     }
   };
+
+  if (!article?.id) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="w-[400px]">
+          <div className="flex items-center justify-center h-40">
+            <div className="text-center">
+              <p className="text-lg font-semibold text-gray-600">
+                Artigo não encontrado
+              </p>
+              <Button onClick={() => onOpenChange(false)} className="mt-4">
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <>
@@ -321,10 +315,10 @@ export function ArticleViewModal({
                           className="object-cover w-full h-full"
                         />
                       </div>
-                      {/* Campo para a descrição da thumbnail */}
                       {article.thumbnail.description && (
                         <div className="mt-2 text-sm text-gray-600">
-                          <strong>Descrição da Imagem:</strong> {article.thumbnail.description}
+                          <strong>Descrição da Imagem:</strong>{" "}
+                          {article.thumbnail.description}
                         </div>
                       )}
                     </div>
@@ -348,18 +342,15 @@ export function ArticleViewModal({
                     </div>
                   </div>
 
-                  {/* Grid de informações com 3 colunas que se adaptam em telas menores */}
+                  {/* Grid de informações */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Coluna 1 */}
                     <div className="overflow-hidden">
                       <h3 className="font-semibold mb-2">Criador</h3>
                       <p className="truncate">{article.creator.name}</p>
-
                       <h3 className="font-semibold mt-4 mb-2">Categoria</h3>
                       <p className="truncate">{article.category.name}</p>
                     </div>
 
-                    {/* Coluna 2 */}
                     <div className="overflow-hidden">
                       <h3 className="font-semibold mb-2">Tags</h3>
                       <div className="flex flex-wrap gap-2">
@@ -372,28 +363,24 @@ export function ArticleViewModal({
                           </span>
                         ))}
                       </div>
-
                       <h3 className="font-semibold mt-4 mb-2">
                         Tempo de leitura
                       </h3>
                       <p>{article.reading_time} minutos</p>
                     </div>
 
-                    {/* Coluna 3 */}
                     <div className="overflow-hidden">
                       <h3 className="font-semibold mb-2">Portais</h3>
                       <div className="flex flex-wrap gap-2">
-                        {article.portals &&
-                          article.portals.map((portal) => (
-                            <span
-                              key={portal.id}
-                              className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs truncate max-w-full"
-                            >
-                              {portal.name}
-                            </span>
-                          ))}
+                        {article.portals?.map((portal) => (
+                          <span
+                            key={portal.id}
+                            className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs truncate max-w-full"
+                          >
+                            {portal.name}
+                          </span>
+                        ))}
                       </div>
-
                       <h3 className="font-semibold mt-4 mb-2">Status</h3>
                       <span
                         className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
@@ -405,7 +392,7 @@ export function ArticleViewModal({
                     </div>
                   </div>
 
-                  {/* Histórico de Status - com tabela responsiva */}
+                  {/* Histórico de Status */}
                   {sortedStatusHistory.length > 0 && (
                     <div>
                       <h3 className="font-semibold mb-2">
@@ -415,28 +402,16 @@ export function ArticleViewModal({
                         <table className="min-w-full divide-y divide-gray-200">
                           <thead className="bg-gray-200">
                             <tr>
-                              <th
-                                scope="col"
-                                className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/6"
-                              >
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/6">
                                 Status
                               </th>
-                              <th
-                                scope="col"
-                                className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/5"
-                              >
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/5">
                                 Data
                               </th>
-                              <th
-                                scope="col"
-                                className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/3"
-                              >
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/3">
                                 Descrição
                               </th>
-                              <th
-                                scope="col"
-                                className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/4"
-                              >
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/4">
                                 Motivo de Rejeição
                               </th>
                             </tr>
@@ -583,12 +558,14 @@ export function ArticleViewModal({
       </Dialog>
 
       {/* Modal de configuração de destaque */}
-      <HighlightModal
-        open={showApprovalModal}
-        onOpenChange={setShowApprovalModal}
-        onPublish={handleApproveFromModal}
-        newsTitle={article.title}
-      />
+      {article?.id && (
+        <HighlightModal
+          open={showApprovalModal}
+          onOpenChange={setShowApprovalModal}
+          onPublish={handleApproveFromModal}
+          newsTitle={article?.title || ""}
+        />
+      )}
     </>
   );
 }
