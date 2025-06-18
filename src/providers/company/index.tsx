@@ -138,8 +138,8 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
   const [apiCep, setApiCep] = useState<GetCEPProps | null>(null);
 
   const ListCompany = async (
-    limit = 1000,
     page = 1,
+    limit = 10,
     options = {}
   ): Promise<CompanyProps> => {
     const config = { params: { limit, page, ...options } };

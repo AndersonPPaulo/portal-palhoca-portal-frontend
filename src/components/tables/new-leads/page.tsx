@@ -22,7 +22,7 @@ export interface ILeadProps {
   status: "active" | "inactive" | "blocked" | "new_lead" | "in_process";
   companyMessage?: string;
   created_at?: Date;
-  updated_at?:  Date;
+  updated_at?: Date;
 }
 
 export default function TableLeads({ filter }: TableLeadsProps) {
@@ -30,8 +30,17 @@ export default function TableLeads({ filter }: TableLeadsProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    ListCompany();
-    setLoading(false);
+    const fetchCompanies = async () => {
+      setLoading(true);
+      try {
+        await ListCompany(1, 20);
+      } catch (error) {
+        console.error("Error fetching companies:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCompanies();
   }, []);
 
   // Primeiro filtra os dados, depois mapeia para ILeadProps

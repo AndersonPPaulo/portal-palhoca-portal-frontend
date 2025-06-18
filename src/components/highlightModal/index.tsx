@@ -49,9 +49,12 @@ export default function HighlightModal({
 
     setIsSubmitting(true);
     try {
-      console.log('Dados enviados pelo modal:', { isHighlight, highlightPosition });
+      console.log("Dados enviados pelo modal:", {
+        isHighlight,
+        highlightPosition,
+      });
       await onPublish(isHighlight, highlightPosition);
-      
+
       // Reset do estado após publicar
       setIsHighlight(false);
       setHighlightPosition(undefined);
@@ -73,7 +76,7 @@ export default function HighlightModal({
   const toggleHighlight = () => {
     const newHighlightState = !isHighlight;
     setIsHighlight(newHighlightState);
-    
+
     // Se estiver desabilitando o destaque, limpar a posição
     if (!newHighlightState) {
       setHighlightPosition(undefined);
@@ -181,7 +184,8 @@ export default function HighlightModal({
                           </SelectContent>
                         </Select>
                         <p className="text-xs text-gray-500">
-                          * Campo obrigatório. Quanto menor o número, maior a prioridade de exibição.
+                          * Campo obrigatório. Quanto menor o número, maior a
+                          prioridade de exibição.
                         </p>
                         {isHighlight && !highlightPosition && (
                           <p className="text-xs text-red-500">
@@ -192,25 +196,27 @@ export default function HighlightModal({
                     )}
 
                     {/* Informações sobre destaque */}
-                    <div className={`p-4 rounded-md border ${
-                      isHighlight 
-                        ? "bg-yellow-50 border-yellow-200" 
-                        : "bg-blue-50 border-blue-200"
-                    }`}>
-                      <h3 className={`font-semibold mb-2 ${
-                        isHighlight 
-                          ? "text-yellow-800" 
-                          : "text-blue-800"
-                      }`}>
+                    <div
+                      className={`p-4 rounded-md border ${
+                        isHighlight
+                          ? "bg-yellow-50 border-yellow-200"
+                          : "bg-blue-50 border-blue-200"
+                      }`}
+                    >
+                      <h3
+                        className={`font-semibold mb-2 ${
+                          isHighlight ? "text-yellow-800" : "text-blue-800"
+                        }`}
+                      >
                         {isHighlight
                           ? "Notícia será publicada em destaque"
                           : "Notícia será publicada normalmente"}
                       </h3>
-                      <p className={`text-sm ${
-                        isHighlight 
-                          ? "text-yellow-700" 
-                          : "text-blue-700"
-                      }`}>
+                      <p
+                        className={`text-sm ${
+                          isHighlight ? "text-yellow-700" : "text-blue-700"
+                        }`}
+                      >
                         {isHighlight
                           ? highlightPosition
                             ? `Esta notícia aparecerá na seção de destaques na posição ${highlightPosition}.`
