@@ -159,45 +159,55 @@ export const columns: ColumnDef<Article>[] = [
     cell: ({ row }) => {
       const article = row?.original;
 
-      let thumbnailUrl = "Sem foto";
-
+      // Verifica se existe thumbnail personalizada
       if (article?.thumbnail) {
-          const thumbnailObj = article.thumbnail;
-          if (thumbnailObj.url) {
-            thumbnailUrl = thumbnailObj.url;
-          }
+        const thumbnailObj = article.thumbnail;
+        if (thumbnailObj.url) {
+          return (
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <img
+                    src={thumbnailObj.url}
+                    alt={`Thumbnail para o artigo: ${article?.title}`}
+                    className="rounded-full w-10 h-10 cursor-pointer mr-2 object-cover"
+                  />
+                </TooltipTrigger>
+                <TooltipPortal>
+                  <TooltipContent
+                    side="top"
+                    align="center"
+                    sideOffset={10}
+                    className="bg-transparent border border-gray-300/50 backdrop-blur-lg p-2 rounded-lg shadow-2xl"
+                  >
+                    <img
+                      src={thumbnailObj.url}
+                      alt="Imagem ampliada"
+                      className="w-56 h-56 object-cover rounded-lg"
+                    />
+                    <span className="font-semibold w-56 mt-2 text-body-g flex flex-wrap">
+                      {article?.title}
+                    </span>
+                  </TooltipContent>
+                </TooltipPortal>
+              </Tooltip>
+            </TooltipProvider>
+          );
         }
-      
+      }
+
+      // Sem imagem, mostra um placeholder com iniciais do título
+      const initials = article?.title
+        ?.split(" ")
+        .map((n) => n[0])
+        .join("")
+        .substring(0, 2)
+        .toUpperCase() || "AR";
 
       return (
-        <TooltipProvider delayDuration={300}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <img
-                src={thumbnailUrl}
-                alt={"Thumbnail para o artigo:" + article?.title}
-                className="rounded-full w-10 h-10 cursor-pointer mr-2 object-cover"
-              />
-            </TooltipTrigger>
-            <TooltipPortal>
-              <TooltipContent
-                side="top"
-                align="center"
-                sideOffset={10}
-                className="bg-transparent border border-gray-300/50 backdrop-blur-lg p-2 rounded-lg shadow-2xl"
-              >
-                <img
-                  src={thumbnailUrl}
-                  alt="Imagem ampliada"
-                  className="w-56 h-56 object-cover rounded-lg"
-                />
-                <span className="font-semibold w-56 mt-2 text-body-g flex flex-wrap">
-                  {article?.title}
-                </span>
-              </TooltipContent>
-            </TooltipPortal>
-          </Tooltip>
-        </TooltipProvider>
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-semibold mr-2">
+          {initials}
+        </div>
       );
     },
   },
@@ -246,23 +256,6 @@ export const columns: ColumnDef<Article>[] = [
       </div>
     ),
   },
-  // {
-  //   accessorKey: "highlight",
-  //   header: () => <div className="text-center w-[150px]">Destaque</div>,
-  //   cell: ({ row }) => (
-  //     <div className="flex justify-center w-[150px]">
-  //       {row?.original?.highlight ? (
-  //         <span className="bg-green text-white px-3 py-1 rounded-full text-sm">
-  //           Sim
-  //         </span>
-  //       ) : (
-  //         <span className="bg-red text-white px-3 py-1 rounded-full text-sm">
-  //           Não
-  //         </span>
-  //       )}
-  //     </div>
-  //   ),
-  // },
   {
     id: "actions",
     header: () => <div className="text-center">Ações</div>,

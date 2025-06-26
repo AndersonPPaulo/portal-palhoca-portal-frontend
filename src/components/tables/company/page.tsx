@@ -17,7 +17,7 @@ export default function TableCompany({ filter }: TableCompanyProps) {
     const fetchCompanies = async () => {
       setLoading(true);
       try {
-        await ListCompany();
+        await ListCompany(1, 20);
       } catch (error) {
         console.error("Error fetching companies:", error);
       } finally {
@@ -27,21 +27,31 @@ export default function TableCompany({ filter }: TableCompanyProps) {
     fetchCompanies();
   }, []);
 
-  const filteredCompanies = listCompany?.data?.filter((item: ICompanyProps) => {
-    let matchesName = true;
-    
-    if (filter.name) {
-      if (Array.isArray(filter.name) && filter.name.length > 0) {
-        matchesName = filter.name.some(name => 
-          typeof name === 'string' && item.name.toLowerCase().includes(name.toLowerCase())
-        );
-      } else if (typeof filter.name === 'string' && filter.name.trim() !== '') {
-        matchesName = item.name.toLowerCase().includes(filter.name.toLowerCase());
-      }
-    }
-    return matchesName
-  }) || [];
+  const filteredCompanies =
+    listCompany?.data?.filter((item: ICompanyProps) => {
+      let matchesName = true;
 
-  return  <DataTable columns={columns} data={filteredCompanies}/>
-  
+      if (filter.name) {
+        if (item.status === "new_lead") {
+          return false;
+        }
+        if (Array.isArray(filter.name) && filter.name.length > 0) {
+          matchesName = filter.name.some(
+            (name) =>
+              typeof name === "string" &&
+              item.name.toLowerCase().includes(name.toLowerCase())
+          );
+        } else if (
+          typeof filter.name === "string" &&
+          filter.name.trim() !== ""
+        ) {
+          matchesName = item.name
+            .toLowerCase()
+            .includes(filter.name.toLowerCase());
+        }
+      }
+      return matchesName;
+    }) || [];
+
+  return <DataTable columns={columns} data={filteredCompanies} />;
 }

@@ -18,14 +18,12 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useState, useContext, useEffect } from "react";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { ar, ptBR } from "date-fns/locale";
 import { ArticleContext, Article } from "@/providers/article";
-import { api } from "@/service/api";
-import { parseCookies } from "nookies";
 import { toast } from "sonner";
 import { UserContext } from "@/providers/user";
 import { useRouter } from "next/navigation";
-import HighlightModal from "../highlightModal";
+import HighlightModal from "../../highlightModal";
 
 interface ArticleViewModalProps {
   open: boolean;
@@ -38,7 +36,9 @@ export function ArticleViewModal({
   onOpenChange,
   article,
 }: ArticleViewModalProps) {
-  const { ListAuthorArticles } = useContext(ArticleContext);
+  const { ListAuthorArticles, UpdateArticle, UpdateArticleStatus } =
+    useContext(ArticleContext);
+
   const { profile } = useContext(UserContext);
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [showChangesForm, setShowChangesForm] = useState(false);
@@ -46,11 +46,9 @@ export function ArticleViewModal({
   const [changeRequest, setChangeRequest] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sortedStatusHistory, setSortedStatusHistory] = useState(
-    article.status_history || []
+    article?.status_history || []
   );
-
-  // Estado para controlar o modal de highlight
-  const [showHighlightModal, setShowHighlightModal] = useState(false);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -58,8 +56,8 @@ export function ArticleViewModal({
       setShowChangesForm(false);
       setRejectReason("");
       setChangeRequest("");
-      setShowHighlightModal(false); // Reset highlight modal state
-    } else if (article.status_history && article.status_history.length > 0) {
+      setShowApprovalModal(false);
+    } else if (article?.status_history?.length > 0) {
       const sorted = [...article.status_history].sort(
         (a, b) =>
           new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
@@ -68,7 +66,6 @@ export function ArticleViewModal({
     }
   }, [open, article]);
 
-  // Função para formatar datas
   const formatDate = (dateString: string) => {
     try {
       return format(new Date(dateString), "dd 'de' MMMM 'de' yyyy, HH:mm", {
@@ -79,11 +76,8 @@ export function ArticleViewModal({
     }
   };
 
-  // Função para obter a cor do status
   const getStatusColor = (status: string | undefined) => {
-    if (!status) {
-      return "bg-gray-100 text-gray-800";
-    }
+    if (!status) return "bg-gray-100 text-gray-800";
 
     switch (status.toLowerCase()) {
       case "published":
@@ -106,10 +100,9 @@ export function ArticleViewModal({
     }
   };
 
-  // Obter o status mais recente baseado na data
   const getCurrentStatus = () => {
-    if (!article.status_history || article.status_history.length === 0) {
-      return article.status;
+    if (!article?.status_history?.length) {
+      return article?.status || "UNKNOWN";
     }
 
     if (sortedStatusHistory.length > 0) {
@@ -121,142 +114,155 @@ export function ArticleViewModal({
         new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
     )[0];
 
-    return mostRecent.status;
+    return mostRecent?.status || article?.status || "UNKNOWN";
   };
 
   const currentStatus = getCurrentStatus();
   const { push } = useRouter();
 
   const handleEditArticleButton = () => {
-    // Redirecionar para a página de edição do artigo
+    if (!article?.id) {
+      toast.error("Artigo não encontrado");
+      return;
+    }
     push(`/postagens/artigos/editar/${article.id}`);
     onOpenChange(false);
   };
 
-  const updateArticleStatus = async (
-    newStatus: "PUBLISHED" | "REJECTED" | "CHANGES_REQUESTED" | "DRAFT",
-    options?: {
-      reason_reject?: string;
-      change_request_description?: string;
-      isHighlight?: boolean;
-      highlightPosition?: number;
-    }
+  const handleApproveArticle = () => {
+    setShowApprovalModal(true);
+  };
+
+  const handleApproveFromModal = async (
+    isHighlight: boolean,
+    highlightPosition?: number
   ) => {
+    if (isHighlight && !highlightPosition) {
+      toast.error("Por favor, selecione uma posição para o destaque");
+      return;
+    }
+
+    setIsSubmitting(true);
+
     try {
-      setIsSubmitting(true);
-      const { "user:token": token } = parseCookies();
-      const config = {
-        headers: { Authorization: `bearer ${token}` },
-      };
-
-      const payload: any = {
-        newStatus,
-        reviewerId: profile?.id,
-      };
-
-      if (newStatus === "REJECTED" && options?.reason_reject) {
-        payload.reason_reject = options.reason_reject;
+      if (isHighlight) {
+        await UpdateArticle(
+          {
+            highlight: true,
+            highlight_position: highlightPosition,
+            chiefEditorId: article.chiefEditor?.id,
+            portalIds: article.portals?.map((portal) => portal.id) || [],
+          },
+          article.id
+        );
       }
 
-      if (
-        newStatus === "CHANGES_REQUESTED" &&
-        options?.change_request_description
-      ) {
-        payload.change_request_description = options.change_request_description;
-      }
+      await UpdateArticleStatus(
+        {
+          newStatus: "PUBLISHED",
+        },
+        article.id
+      );
 
-      // Adicionar informações de destaque se fornecidas
-      if (newStatus === "PUBLISHED") {
-        if (options?.isHighlight) {
-          payload.isHighlight = options.isHighlight;
-          payload.highlightPosition = options.highlightPosition;
-        }
-      }
-
-      await api.patch(`/article-status-review/${article.id}`, payload, config);
-
-      const successMessage = {
-        PUBLISHED: options?.isHighlight
-          ? `Artigo publicado com destaque (posição ${options.highlightPosition}) com sucesso!`
-          : "Artigo publicado com sucesso!",
-        REJECTED: "Artigo rejeitado com sucesso!",
-        CHANGES_REQUESTED: "Solicitação de alterações enviada com sucesso!",
-        DRAFT: "Artigo retornado para rascunho com sucesso!",
-      };
-
-      toast.success(successMessage[newStatus]);
-
-      await ListAuthorArticles();
-
-      // Fechar ambos os modais
-      setShowHighlightModal(false);
+      setShowApprovalModal(false);
       onOpenChange(false);
-    } catch (error: any) {
-      toast.error(
-        error.response?.data?.message || `Erro ao processar o artigo`
-      );
-      console.error(
-        `Erro ao atualizar status do artigo para ${newStatus}:`,
-        error
-      );
+
+      setTimeout(() => {
+        push("/postagens?tab=PUBLISHED");
+      }, 500);
+    } catch (error) {
+      // Erro já tratado nas funções do contexto
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Modificar a função handleApproveArticle para abrir o modal de highlight
-  const handleApproveArticle = () => {
-    setShowHighlightModal(true);
-  };
-
-  // Função para lidar com a publicação vinda do modal de highlight
-  const handlePublishFromHighlight = async (
-    isHighlight: boolean,
-    highlightPosition?: number
-  ) => {
-    await updateArticleStatus("PUBLISHED", {
-      isHighlight,
-      highlightPosition,
-    });
-
-    setTimeout(() => {
-      push("/postagens?tab=PUBLISHED");
-    }, 500);
-  };
-
-  const handleRequestChanges = () => {
+  const handleRequestChanges = async () => {
     if (showChangesForm) {
       if (!changeRequest.trim()) {
         toast.error("Por favor, descreva as alterações necessárias");
         return;
       }
-      updateArticleStatus("CHANGES_REQUESTED", {
-        change_request_description: changeRequest,
-      });
-      setTimeout(() => {
-        push("/postagens?tab=CHANGES_REQUESTED");
-      }, 500);
+
+      setIsSubmitting(true);
+
+      try {
+        // Usar rota /article-status-review/:articleId apenas para status
+        await UpdateArticleStatus(
+          {
+            newStatus: "CHANGES_REQUESTED",
+            change_request_description: changeRequest,
+          },
+          article.id
+        );
+
+        onOpenChange(false);
+        setTimeout(() => {
+          push("/postagens?tab=CHANGES_REQUESTED");
+        }, 500);
+      } catch (error) {
+        // Erro já tratado na função do contexto
+      } finally {
+        setIsSubmitting(false);
+      }
     } else {
       setShowChangesForm(true);
       setShowRejectForm(false);
     }
   };
 
-  const handleRejectArticle = () => {
+  const handleRejectArticle = async () => {
     if (showRejectForm) {
       if (!rejectReason.trim()) {
         toast.error("Por favor, informe o motivo da rejeição");
         return;
       }
-      updateArticleStatus("REJECTED", { reason_reject: rejectReason });
-      setTimeout(() => {
-        push("/postagens?tab=REJECTED");
-      }, 500);
+
+      setIsSubmitting(true);
+
+      try {
+        // Usar rota /article-status-review/:articleId apenas para status
+        await UpdateArticleStatus(
+          {
+            newStatus: "REJECTED",
+            reason_reject: rejectReason,
+          },
+          article.id
+        );
+
+        onOpenChange(false);
+        setTimeout(() => {
+          push("/postagens?tab=REJECTED");
+        }, 500);
+      } catch (error) {
+        // Erro já tratado na função do contexto
+      } finally {
+        setIsSubmitting(false);
+      }
     } else {
       setShowRejectForm(true);
       setShowChangesForm(false);
     }
   };
+
+  if (!article?.id) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="w-[400px]">
+          <div className="flex items-center justify-center h-40">
+            <div className="text-center">
+              <p className="text-lg font-semibold text-gray-600">
+                Artigo não encontrado
+              </p>
+              <Button onClick={() => onOpenChange(false)} className="mt-4">
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <>
@@ -298,6 +304,7 @@ export function ArticleViewModal({
                       </div>
                     </div>
                   </div>
+
                   {/* Thumbnail se disponível */}
                   {article.thumbnail && (
                     <div className="rounded-md overflow-hidden">
@@ -308,14 +315,15 @@ export function ArticleViewModal({
                           className="object-cover w-full h-full"
                         />
                       </div>
+                      {article.thumbnail.description && (
+                        <div className="mt-2 text-sm text-gray-600">
+                          <strong>Descrição da Imagem:</strong>{" "}
+                          {article.thumbnail.description}
+                        </div>
+                      )}
                     </div>
                   )}
-                  {/* Campo para a descrição da thumbnail */}
-                  {article.thumbnail?.description && (
-                    <span className="text-gray-800">
-                      Descrição da Imagem: {article.thumbnail.description}
-                    </span>
-                  )}
+
                   {/* Resumo */}
                   <div className="bg-gray-100 p-4 rounded-md">
                     <h3 className="font-semibold mb-2">Resumo</h3>
@@ -323,6 +331,7 @@ export function ArticleViewModal({
                       {article.resume_content}
                     </p>
                   </div>
+
                   {/* Conteúdo */}
                   <div className="bg-gray-100 p-4 rounded-md">
                     <h3 className="font-semibold mb-2">Conteúdo</h3>
@@ -332,40 +341,16 @@ export function ArticleViewModal({
                       />
                     </div>
                   </div>
-                  {/* Campo para a descrição da thumbnail */}
-                  {article.thumbnail?.description && (
-                    <span className="text-gray-800">
-                      Descrição da Imagem: {article.thumbnail.description}
-                    </span>
-                  )}
-                  {/* Resumo */}
-                  <div className="bg-gray-100 p-4 rounded-md">
-                    <h3 className="font-semibold mb-2">Resumo</h3>
-                    <p className="whitespace-pre-wrap break-words">
-                      {article.resume_content}
-                    </p>
-                  </div>
-                  {/* Conteúdo */}
-                  <div className="bg-gray-100 p-4 rounded-md">
-                    <h3 className="font-semibold mb-2">Conteúdo</h3>
-                    <div className="prose max-w-none overflow-y-auto overflow-x-hidden break-words">
-                      <div
-                        dangerouslySetInnerHTML={{ __html: article.content }}
-                      />
-                    </div>
-                  </div>
-                  {/* Grid de informações com 3 colunas que se adaptam em telas menores */}
+
+                  {/* Grid de informações */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Coluna 1 */}
                     <div className="overflow-hidden">
                       <h3 className="font-semibold mb-2">Criador</h3>
                       <p className="truncate">{article.creator.name}</p>
-
                       <h3 className="font-semibold mt-4 mb-2">Categoria</h3>
                       <p className="truncate">{article.category.name}</p>
                     </div>
 
-                    {/* Coluna 2 */}
                     <div className="overflow-hidden">
                       <h3 className="font-semibold mb-2">Tags</h3>
                       <div className="flex flex-wrap gap-2">
@@ -378,234 +363,209 @@ export function ArticleViewModal({
                           </span>
                         ))}
                       </div>
+                      <h3 className="font-semibold mt-4 mb-2">
+                        Tempo de leitura
+                      </h3>
+                      <p>{article.reading_time} minutos</p>
+                    </div>
 
-                      {/* Coluna 2 */}
-                      <div className="overflow-hidden">
-                        <h3 className="font-semibold mb-2">Tags</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {article.tags.map((tag) => (
-                            <span
-                              key={tag.id}
-                              className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs truncate max-w-full"
-                            >
-                              {tag.name}
-                            </span>
-                          ))}
-                        </div>
-
-                        <h3 className="font-semibold mt-4 mb-2">
-                          Tempo de leitura
-                        </h3>
-                        <p>{article.reading_time} minutos</p>
+                    <div className="overflow-hidden">
+                      <h3 className="font-semibold mb-2">Portais</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {article.portals?.map((portal) => (
+                          <span
+                            key={portal.id}
+                            className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs truncate max-w-full"
+                          >
+                            {portal.name}
+                          </span>
+                        ))}
                       </div>
+                      <h3 className="font-semibold mt-4 mb-2">Status</h3>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
+                          currentStatus
+                        )}`}
+                      >
+                        {currentStatus}
+                      </span>
+                    </div>
+                  </div>
 
-                      {/* Coluna 3 */}
-                      <div className="overflow-hidden">
-                        <h3 className="font-semibold mb-2">Portais</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {article.portals &&
-                            article.portals.map((portal) => (
-                              <span
-                                key={portal.id}
-                                className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs truncate max-w-full"
+                  {/* Histórico de Status */}
+                  {sortedStatusHistory.length > 0 && (
+                    <div>
+                      <h3 className="font-semibold mb-2">
+                        Histórico de Status
+                      </h3>
+                      <div className="overflow-x-auto w-full">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-200">
+                            <tr>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/6">
+                                Status
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/5">
+                                Data
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/3">
+                                Descrição
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/4">
+                                Motivo de Rejeição
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sortedStatusHistory.map((history, idx) => (
+                              <tr
+                                key={history.id || idx}
+                                className={
+                                  idx % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                }
                               >
-                                {portal.name}
-                              </span>
+                                <td className="px-3 py-2 whitespace-nowrap text-sm w-1/6">
+                                  <span
+                                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                                      history.status
+                                    )}`}
+                                  >
+                                    {history.status}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-sm text-gray-700 w-1/5">
+                                  {formatDate(history.changed_at)}
+                                </td>
+                                <td className="px-3 py-2 text-sm text-gray-700 w-1/3 break-words">
+                                  {history.change_request_description || "-"}
+                                </td>
+                                <td className="px-3 py-2 text-sm text-gray-700 w-1/4 break-words">
+                                  {history.reason_reject || "-"}
+                                </td>
+                              </tr>
                             ))}
-                        </div>
-
-                        <h3 className="font-semibold mt-4 mb-2">Status</h3>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
-                            currentStatus
-                          )}`}
-                        >
-                          {currentStatus}
-                        </span>
+                          </tbody>
+                        </table>
                       </div>
                     </div>
-                    {/* Histórico de Status - com tabela responsiva */}
-                    {sortedStatusHistory.length > 0 && (
-                      <div>
-                        <h3 className="font-semibold mb-2">
-                          Histórico de Status
-                        </h3>
-                        <div className="overflow-x-auto w-full">
-                          <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-200">
-                              <tr>
-                                <th
-                                  scope="col"
-                                  className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/6"
-                                >
-                                  Status
-                                </th>
-                                <th
-                                  scope="col"
-                                  className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/5"
-                                >
-                                  Data
-                                </th>
-                                <th
-                                  scope="col"
-                                  className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/3"
-                                >
-                                  Descrição
-                                </th>
-                                <th
-                                  scope="col"
-                                  className="px-3 py-2 text-left text-xs font-medium text-gray-700 w-1/4"
-                                >
-                                  Motivo de Rejeição
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {sortedStatusHistory.map((history, idx) => (
-                                <tr
-                                  key={history.id || idx}
-                                  className={
-                                    idx % 2 === 0 ? "bg-white" : "bg-gray-50"
-                                  }
-                                >
-                                  <td className="px-3 py-2 whitespace-nowrap text-sm w-1/6">
-                                    <span
-                                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                                        history.status
-                                      )}`}
-                                    >
-                                      {history.status}
-                                    </span>
-                                  </td>
-                                  <td className="px-3 py-2 text-sm text-gray-700 w-1/5">
-                                    {formatDate(history.changed_at)}
-                                  </td>
-                                  <td className="px-3 py-2 text-sm text-gray-700 w-1/3 break-words">
-                                    {history.change_request_description || "-"}
-                                  </td>
-                                  <td className="px-3 py-2 text-sm text-gray-700 w-1/4 break-words">
-                                    {history.reason_reject || "-"}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-                    {/* Formulário de solicitação de alterações */}
-                    {showChangesForm && (
-                      <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
-                        <h3 className="font-semibold mb-2 flex items-center">
-                          <MessageSquare className="h-4 w-4 mr-2" />
-                          Solicitação de Alterações
-                        </h3>
-                        <Textarea
-                          placeholder="Descreva as alterações necessárias..."
-                          value={changeRequest}
-                          onChange={(e) => setChangeRequest(e.target.value)}
-                          rows={4}
-                          className="w-full mt-2"
-                        />
-                      </div>
-                    )}
-                    {/* Formulário de rejeição */}
-                    {showRejectForm && (
-                      <div className="bg-red-50 p-4 rounded-md border border-red-200">
-                        <h3 className="font-semibold mb-2 flex items-center">
-                          <X className="h-4 w-4 mr-2" />
-                          Motivo da Rejeição
-                        </h3>
-                        <Textarea
-                          placeholder="Informe o motivo da rejeição..."
-                          value={rejectReason}
-                          onChange={(e) => setRejectReason(e.target.value)}
-                          rows={4}
-                          className="w-full mt-2"
-                        />
-                      </div>
-                    )}
-                  </div>
+                  )}
+
+                  {/* Formulário de solicitação de alterações */}
+                  {showChangesForm && (
+                    <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
+                      <h3 className="font-semibold mb-2 flex items-center">
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Solicitação de Alterações
+                      </h3>
+                      <Textarea
+                        placeholder="Descreva as alterações necessárias..."
+                        value={changeRequest}
+                        onChange={(e) => setChangeRequest(e.target.value)}
+                        rows={4}
+                        className="w-full mt-2"
+                      />
+                    </div>
+                  )}
+
+                  {/* Formulário de rejeição */}
+                  {showRejectForm && (
+                    <div className="bg-red-50 p-4 rounded-md border border-red-200">
+                      <h3 className="font-semibold mb-2 flex items-center">
+                        <X className="h-4 w-4 mr-2" />
+                        Motivo da Rejeição
+                      </h3>
+                      <Textarea
+                        placeholder="Informe o motivo da rejeição..."
+                        value={rejectReason}
+                        onChange={(e) => setRejectReason(e.target.value)}
+                        rows={4}
+                        className="w-full mt-2"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
+            </div>
 
-              {/* Rodapé fixo com ações */}
+            {/* Rodapé fixo com ações */}
+            <div className="article-review-modal-footer bg-gray-200 py-4 px-6 flex justify-end space-x-4 flex-shrink-0 border-t border-gray-300">
+              <Button
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm"
+                disabled={isSubmitting}
+              >
+                Cancelar
+              </Button>
 
-              <div className="article-review-modal-footer bg-gray-200 py-4 px-6 flex justify-end space-x-4 flex-shrink-0 border-t border-gray-300">
+              <Button
+                variant="outline"
+                onClick={handleEditArticleButton}
+                className="bg-blue-600 text-white hover:bg-blue-800 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm"
+                disabled={isSubmitting}
+              >
+                Efetuar Edição
+              </Button>
+
+              {!showRejectForm && !showChangesForm && (
                 <Button
                   variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  className="bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm"
+                  onClick={handleRequestChanges}
+                  className="bg-yellow-500 text-white hover:bg-yellow-600 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm"
                   disabled={isSubmitting}
                 >
-                  Cancelar
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Solicitar Alterações
                 </Button>
+              )}
+
+              <Button
+                variant={showRejectForm ? "default" : "outline"}
+                onClick={handleRejectArticle}
+                className={`${
+                  showRejectForm ? "bg-red-600" : "bg-red-500"
+                } text-white hover:bg-red-600 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm`}
+                disabled={isSubmitting}
+              >
+                <X className="mr-2 h-4 w-4" />
+                {showRejectForm ? "Confirmar Rejeição" : "Rejeitar"}
+              </Button>
+
+              {!showRejectForm && !showChangesForm && (
                 <Button
-                  variant="outline"
-                  onClick={handleEditArticleButton}
-                  className="bg-blue-600 text-white hover:bg-blue-800 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm"
+                  onClick={handleApproveArticle}
+                  className="bg-green-500 text-white hover:bg-green-600 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm"
                   disabled={isSubmitting}
                 >
-                  Efetuar Edição
+                  <Check className="mr-2 h-4 w-4" />
+                  Aprovar
                 </Button>
-                {!showRejectForm && !showChangesForm && (
-                  <Button
-                    variant="outline"
-                    onClick={handleRequestChanges}
-                    className="bg-yellow-500 text-white hover:bg-yellow-600 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm"
-                    disabled={isSubmitting}
-                  >
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Solicitar Alterações
-                  </Button>
-                )}
+              )}
 
+              {showChangesForm && (
                 <Button
-                  variant={showRejectForm ? "default" : "outline"}
-                  onClick={handleRejectArticle}
-                  className={`${
-                    showRejectForm ? "bg-red-600" : "bg-red-500"
-                  } text-white hover:bg-red-600 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm`}
+                  onClick={handleRequestChanges}
+                  className="bg-yellow-600 text-white hover:bg-yellow-700 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm"
                   disabled={isSubmitting}
                 >
-                  <X className="mr-2 h-4 w-4" />
-                  {showRejectForm ? "Confirmar Rejeição" : "Rejeitar"}
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Enviar Solicitação
                 </Button>
-
-                {!showRejectForm && !showChangesForm && (
-                  <Button
-                    onClick={handleApproveArticle}
-                    className="bg-green-500 text-white hover:bg-green-600 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm"
-                    disabled={isSubmitting}
-                  >
-                    <Check className="mr-2 h-4 w-4" />
-                    Aprovar
-                  </Button>
-                )}
-
-                {showChangesForm && (
-                  <Button
-                    onClick={handleRequestChanges}
-                    className="bg-yellow-600 text-white hover:bg-yellow-700 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm"
-                    disabled={isSubmitting}
-                  >
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Enviar Solicitação
-                  </Button>
-                )}
-              </div>
+              )}
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Modal de configuração de destaque */}
-      <HighlightModal
-        open={showHighlightModal}
-        onOpenChange={setShowHighlightModal}
-        onPublish={handlePublishFromHighlight}
-        newsTitle={article.title}
-      />
+      {article?.id && (
+        <HighlightModal
+          open={showApprovalModal}
+          onOpenChange={setShowApprovalModal}
+          onPublish={handleApproveFromModal}
+          newsTitle={article?.title || ""}
+        />
+      )}
     </>
   );
 }

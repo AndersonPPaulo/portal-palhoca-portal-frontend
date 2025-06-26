@@ -75,7 +75,7 @@ export default function InfoPainel() {
         />
 
         <CardInfoPainel
-          title="Autores"
+          title="Usuários Cadastrados"
           value={count.authors}
           icon={<Users size={32} />}
           bgCard="bg-orange-light"
@@ -93,6 +93,16 @@ export default function InfoPainel() {
           path="/comercio"
           isAdmin={profile?.role.name.toLowerCase() === "administrador"}
         />
+        <CardInfoPainel
+          title="Novos Leads"
+          value={count.total_companies ? count.total_companies : 0}
+          icon={<Building2 size={32} />}
+          bgCard="bg-red"
+          textColor="text-black"
+          path="/comercio?tab=new_leads"
+          isAdmin={profile?.role.name.toLowerCase() === "administrador"}
+        />
+        
       </div>
     </div>
   );

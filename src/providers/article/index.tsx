@@ -28,34 +28,51 @@ interface UpdateArticleProps {
   reading_time?: number;
   resume_content?: string;
   content?: string;
-  status?: boolean;
   highlight?: boolean;
+  highlight_position?: number;
   categoryId?: string;
   tagIds?: string[];
-  portalIds: string[];
+  portalIds?: string[];
+  setToDraft?: boolean;
+  chiefEditorId?: string;
 }
 
+interface UpdateArticleHighlightProps {
+  highlight: boolean;
+  highlight_position?: number;
+  portalIds?: string[];
+  chiefEditorId?: string;
+}
+
+interface UpdateArticleStatusProps {
+  newStatus: "PUBLISHED" | "REJECTED" | "CHANGES_REQUESTED" | "DRAFT";
+  reason_reject?: string;
+  change_request_description?: string;
+  chiefEditorId?: string;
+}
+
+// Interfaces para resposta completa da API
 export interface ArticleResponse {
   message: string;
   data: Article[];
   meta: Meta;
 }
 
-
 export interface Article {
   id: string;
   title: string;
   slug: string;
   reading_time: number;
-  thumbnail: { id: string; url: string; key: string; description: string };
+  thumbnail: Thumbnail | null;
   resume_content: string;
   content: string;
   clicks_view: string;
   highlight: boolean;
+  highlight_position?: number | null;
   created_at: string;
   updated_at: string;
   creator: User;
-  chiefEditor: User;
+  chiefEditor: User | null;
   category: Category;
   tags: Tag[];
   status_history: StatusHistory[];
@@ -63,10 +80,22 @@ export interface Article {
   portals: Portal[];
 }
 
+export interface Thumbnail {
+  id: string;
+  url: string;
+  key: string;
+  description: string;
+  original_name: string;
+  mime_type: string;
+  size: number;
+  uploaded_at: string;
+}
+
 export interface User {
   id: string;
   name: string;
   email: string;
+  isActive: boolean;
 }
 
 export interface Category {
@@ -86,6 +115,7 @@ export interface Tag {
   created_at: string;
   updated_at: string;
 }
+
 export interface Portal {
   id: string;
   name: string;
@@ -100,8 +130,8 @@ export interface StatusHistory {
     | "PUBLISHED"
     | "DRAFT"
     | "REJECTED";
-  change_request_description: string;
-  reason_reject: string;
+  change_request_description: string | null;
+  reason_reject: string | null;
   changed_at: string;
 }
 
@@ -137,6 +167,14 @@ interface IArticleData {
   ): Promise<string>;
   GetPublishedArticles(page?: number, limit?: number): Promise<ArticleResponse>;
   publishedArticles: ArticleResponse | null;
+  UpdateArticleHighlight(
+    data: UpdateArticleHighlightProps,
+    articleId: string
+  ): Promise<void>;
+  UpdateArticleStatus(
+    data: UpdateArticleStatusProps,
+    articleId: string
+  ): Promise<Article>;
 }
 
 interface ICihldrenReact {
@@ -239,6 +277,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
     }
   };
 
+  // Função geral para atualizar dados do artigo (rota /article)
   const UpdateArticle = async (
     data: UpdateArticleProps,
     articleId: string
@@ -253,7 +292,107 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
       const response = await api.patch("/article", data, config);
       toast.success("Artigo atualizado com sucesso!");
     } catch (err: any) {
-      toast.error(err.response.data.message);
+      toast.error(err.response?.data?.message || "Erro ao atualizar artigo");
+      throw err;
+    }
+  };
+
+  // Função específica para atualizar APENAS highlight e highlight_position (rota /article)
+  const UpdateArticleHighlight = async (
+    data: UpdateArticleHighlightProps,
+    articleId: string
+  ): Promise<void> => {
+    const { "user:token": token } = parseCookies();
+    const config = {
+      headers: { Authorization: `bearer ${token}` },
+      params: { articleId },
+    };
+
+    // Preparar dados apenas para highlight
+    const highlightData = {
+      highlight: data.highlight,
+      ...(data.highlight &&
+        data.highlight_position && {
+          highlight_position: data.highlight_position,
+        }),
+      ...(data.portalIds && { portalIds: data.portalIds }),
+      ...(data.chiefEditorId && { chiefEditorId: data.chiefEditorId }),
+    };
+
+    try {
+      const response = await api.patch("/article", highlightData, config);
+      toast.success("Destaque atualizado com sucesso!");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro ao atualizar destaque");
+      throw err;
+    }
+  };
+
+  // Função específica para atualizar APENAS o status (rota /article-status-review/:articleId)
+  const UpdateArticleStatus = async (
+    data: UpdateArticleStatusProps,
+    articleId: string
+  ): Promise<Article> => {
+    const { "user:token": token } = parseCookies();
+    const config = {
+      headers: { Authorization: `bearer ${token}` },
+    };
+
+    // Preparar dados para status
+    const statusData = {
+      newStatus: data.newStatus,
+      ...(data.reason_reject && { reason_reject: data.reason_reject }),
+      ...(data.change_request_description && {
+        change_request_description: data.change_request_description,
+      }),
+    };
+
+    try {
+      const response = await api.patch(
+        `/article-status-review/${articleId}`,
+        statusData,
+        config
+      );
+
+      // Extrair dados completos da resposta conforme formato do backend
+      let updatedArticle: Article;
+
+      if (
+        response.data &&
+        response.data.data &&
+        response.data.data.length > 0
+      ) {
+        updatedArticle = response.data.data[0];
+      } else {
+        updatedArticle = response.data;
+      }
+
+      // Atualizar a lista de artigos no contexto
+      if (listArticles) {
+        const updatedArticles = listArticles.data.map((article) =>
+          article.id === articleId ? updatedArticle : article
+        );
+        setListArticles({
+          ...listArticles,
+          data: updatedArticles,
+        });
+      }
+
+      // Se o artigo individual estiver carregado, atualizá-lo também
+      if (article && article.id === articleId) {
+        setArticle(updatedArticle);
+      }
+
+      return updatedArticle;
+    } catch (err: any) {
+      const errorMessages = {
+        PUBLISHED: "Erro ao publicar artigo",
+        REJECTED: "Erro ao rejeitar artigo",
+        CHANGES_REQUESTED: "Erro ao solicitar alterações",
+        DRAFT: "Erro ao retornar artigo para rascunho",
+      };
+
+      toast.error(err.response?.data?.message || errorMessages[data.newStatus]);
       throw err;
     }
   };
@@ -321,6 +460,8 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
         uploadThumbnail,
         GetPublishedArticles,
         publishedArticles,
+        UpdateArticleHighlight,
+        UpdateArticleStatus,
       }}
     >
       {children}

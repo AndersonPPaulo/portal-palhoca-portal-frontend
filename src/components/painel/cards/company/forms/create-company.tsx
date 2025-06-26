@@ -35,6 +35,7 @@ const companySchema = z.object({
   street: z.string().min(1, "Rua é obrigatória"),
   number: z.string().min(1, "Número é obrigatório"),
   complement: z.string().optional(),
+  email: z.string().email("Email inválido").optional(),
   district: z.string().min(1, "Bairro é obrigatório"),
   city: z.string().min(1, "Cidade é obrigatória"),
   state: z.string().min(1, "Estado é obrigatório"),
@@ -95,6 +96,7 @@ export default function FormCreateCompany() {
       linkLocationMaps: "",
       linkLocationWaze: "",
       cep: "",
+      email: "",
       street: "",
       number: "",
       complement: "",
@@ -264,6 +266,8 @@ export default function FormCreateCompany() {
         openingHours: data.openingHours,
         description: data.description || "",
         linkInstagram: data.linkInstagram || "",
+        responsibleName: data.name,
+        email: data.email || "",
         linkWhatsapp: data.linkWhatsapp || "",
         linkLocationMaps: data.linkLocationMaps || "",
         linkLocationWaze: data.linkLocationWaze || "",
@@ -687,6 +691,18 @@ export default function FormCreateCompany() {
                           </p>
                         )}
                     </div>
+                    <div>
+                      <CustomInput
+                        id="email"
+                        label="Endereço de Email"
+                        {...register("email")}
+                      />
+                      {errors.email && (
+                        <span className="text-red-500 text-sm">
+                          {errors.email.message}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -761,7 +777,7 @@ export default function FormCreateCompany() {
               <div className="mt-3 p-4 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg">
                 <div className="text-sm">
                   <div className="flex items-center gap-2 font-medium text-green-700 mb-2">
-                    🎯<span>Localização Exata Salva!</span>
+                    <span>Localização Exata Salva!</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
                     <div>

@@ -14,6 +14,7 @@ export interface Props {
   data: {
     id: string;
     name?: string;
+    email?: string;
     phone?: string;
     openingHours: string;
     description?: string;
@@ -22,7 +23,7 @@ export interface Props {
     linkLocationMaps: string;
     linkLocationWaze: string;
     address: string;
-    status: "active" | "inactive" | "blocked";
+    status: "active" | "inactive" | "blocked" | "new_lead";
     created_at: Date;
     update_at: Date;
   }[];
@@ -39,9 +40,13 @@ interface UpdateCompanyProps {
   linkLocationWaze?: string;
   address?: string;
   district?: string;
-  status: "active" | "inactive" | "blocked" | "new_lead";
+  status: "active" | "inactive" | "blocked" | "new_lead" | "in_process";
   portalIds?: string[];
   companyCategoryIds?: string[];
+  email: string;
+  responsibleName: string;
+  document_number: string;
+  document_type: "cnpj" | "cpf";
 }
 
 export interface UploadCompanyImageProps {
@@ -61,6 +66,7 @@ export interface ICompanyProps extends UpdateCompanyProps {
   update_at?: Date;
   company_image?: UploadCompanyImageProps;
   companyImage?: string;
+  companyMessage?: string;
   portals?: {
     id: string;
     name: string;
@@ -75,6 +81,12 @@ export interface ICompanyProps extends UpdateCompanyProps {
     created_at: string;
     updated_at: string;
   }[];
+  status: "active" | "inactive" | "blocked" | "new_lead" | "in_process";
+  email: string;
+  latitude?: number;
+  longitude?: number;
+  document_number: string;
+  document_type: "cnpj" | "cpf";
 }
 
 export type CompanyProps = {
@@ -127,12 +139,11 @@ export const CompanyContext = createContext<ICompanyData>({} as ICompanyData);
 export const CompanyProvider = ({ children }: IChildrenReact) => {
   const { push } = useRouter();
   const [listCompany, setListCompany] = useState<CompanyProps | null>(null);
-  console.log("listCompany", listCompany);
   const [apiCep, setApiCep] = useState<GetCEPProps | null>(null);
 
   const ListCompany = async (
-    limit = 1000,
     page = 1,
+    limit = 10,
     options = {}
   ): Promise<CompanyProps> => {
     const config = { params: { limit, page, ...options } };
@@ -151,7 +162,6 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
       };
 
       setListCompany(formattedResponse);
-      console.log("ListCompany", listCompany);
       return formattedResponse;
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Erro ao listar empresas");

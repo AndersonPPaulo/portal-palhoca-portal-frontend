@@ -65,12 +65,14 @@ export default function TableArticles({
       const search = filter.toLowerCase();
 
       const matchesSearch =
-        item.title.toLowerCase().includes(search) ||
-        item.tags.some((tag) => tag.name.toLowerCase().includes(search));
+        (item.title?.toLowerCase()?.includes(search) ?? false) ||
+        (item.tags?.some((tag) => tag.name?.toLowerCase()?.includes(search)) ??
+          false);
 
       const matchesCategory =
         activeFilters.categories.length === 0 ||
-        activeFilters.categories.includes(item.category.name);
+        (item.category?.name &&
+          activeFilters.categories.includes(item.category.name));
 
       const matchesHighlight =
         activeFilters.highlight === null ||
@@ -78,7 +80,8 @@ export default function TableArticles({
 
       const matchesCreator =
         (activeFilters.creators?.length ?? 0) === 0 ||
-        activeFilters.creators?.includes(item.creator.name);
+        (item.creator?.name &&
+          activeFilters.creators?.includes(item.creator.name));
 
       return (
         matchesSearch && matchesCategory && matchesHighlight && matchesCreator

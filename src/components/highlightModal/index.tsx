@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ArrowLeft, Star, Upload, X } from "lucide-react";
+import { toast } from "sonner";
 
 interface NewsHighlightModalProps {
   open: boolean;
@@ -40,14 +41,27 @@ export default function HighlightModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handlePublish = async () => {
+    // Validação antes de enviar
+    if (isHighlight && !highlightPosition) {
+      toast.error("Por favor, selecione uma posição para o destaque");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
+      console.log("Dados enviados pelo modal:", {
+        isHighlight,
+        highlightPosition,
+      });
       await onPublish(isHighlight, highlightPosition);
+
       // Reset do estado após publicar
       setIsHighlight(false);
       setHighlightPosition(undefined);
+      onOpenChange(false);
     } catch (error) {
       console.error("Erro ao publicar:", error);
+      toast.error("Erro ao processar a publicação");
     } finally {
       setIsSubmitting(false);
     }
@@ -60,8 +74,11 @@ export default function HighlightModal({
   };
 
   const toggleHighlight = () => {
-    setIsHighlight(!isHighlight);
-    if (!isHighlight) {
+    const newHighlightState = !isHighlight;
+    setIsHighlight(newHighlightState);
+
+    // Se estiver desabilitando o destaque, limpar a posição
+    if (!newHighlightState) {
       setHighlightPosition(undefined);
     }
   };
@@ -74,6 +91,9 @@ export default function HighlightModal({
     }
     onOpenChange(open);
   };
+
+  // Verificar se pode publicar
+  const canPublish = !isHighlight || (isHighlight && highlightPosition);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -133,8 +153,8 @@ export default function HighlightModal({
                     {/* Select de nível de destaque */}
                     {isHighlight && (
                       <div className="mt-6 space-y-3">
-                        <label className="block text-sm font-medium text-gray-700 bg-white">
-                          Nível de Destaque
+                        <label className="block text-sm font-medium text-gray-700">
+                          Posição do Destaque *
                         </label>
                         <Select
                           value={highlightPosition?.toString()}
@@ -143,7 +163,7 @@ export default function HighlightModal({
                           }
                         >
                           <SelectTrigger className="w-full bg-white">
-                            <SelectValue placeholder="Selecione o nível de destaque" />
+                            <SelectValue placeholder="Selecione a posição do destaque" />
                           </SelectTrigger>
                           <SelectContent className="bg-white">
                             <SelectItem value="1">
@@ -158,28 +178,49 @@ export default function HighlightModal({
                             <SelectItem value="4">
                               Quarto Destaque (Posição 4)
                             </SelectItem>
+                            <SelectItem value="5">
+                              Quinto Destaque (Posição 5)
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                         <p className="text-xs text-gray-500">
-                          Quanto menor o número, maior a prioridade de exibição
+                          * Campo obrigatório. Quanto menor o número, maior a
+                          prioridade de exibição.
                         </p>
+                        {isHighlight && !highlightPosition && (
+                          <p className="text-xs text-red-500">
+                            Por favor, selecione uma posição para o destaque
+                          </p>
+                        )}
                       </div>
                     )}
 
                     {/* Informações sobre destaque */}
-                    <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
-                      <h3 className="font-semibold mb-2 text-blue-800">
+                    <div
+                      className={`p-4 rounded-md border ${
+                        isHighlight
+                          ? "bg-yellow-50 border-yellow-200"
+                          : "bg-blue-50 border-blue-200"
+                      }`}
+                    >
+                      <h3
+                        className={`font-semibold mb-2 ${
+                          isHighlight ? "text-yellow-800" : "text-blue-800"
+                        }`}
+                      >
                         {isHighlight
                           ? "Notícia será publicada em destaque"
                           : "Notícia será publicada normalmente"}
                       </h3>
-                      <p className="text-sm text-blue-700">
+                      <p
+                        className={`text-sm ${
+                          isHighlight ? "text-yellow-700" : "text-blue-700"
+                        }`}
+                      >
                         {isHighlight
-                          ? `Esta notícia aparecerá na seção de destaques${
-                              highlightPosition
-                                ? ` na posição ${highlightPosition}`
-                                : ""
-                            }.`
+                          ? highlightPosition
+                            ? `Esta notícia aparecerá na seção de destaques na posição ${highlightPosition}.`
+                            : "Esta notícia aparecerá na seção de destaques. Selecione uma posição acima."
                           : "Esta notícia aparecerá na listagem normal de notícias."}
                       </p>
                     </div>
@@ -203,8 +244,8 @@ export default function HighlightModal({
 
             <Button
               onClick={handlePublish}
-              className="bg-green-500 text-white hover:bg-green-600 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm"
-              disabled={isSubmitting || (isHighlight && !highlightPosition)}
+              className="bg-green-500 text-white hover:bg-green-600 rounded-3xl min-h-[48px] text-[16px] px-6 whitespace-nowrap shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isSubmitting || !canPublish}
             >
               <Upload className="mr-2 h-4 w-4" />
               {isSubmitting ? "Publicando..." : "Publicar"}

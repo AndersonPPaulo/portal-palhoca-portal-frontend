@@ -1,6 +1,5 @@
 "use client";
 
-import axios from "axios";
 import { toast } from "sonner";
 import ThumbnailUploader from "@/components/thumbnail";
 import CustomSelect from "@/components/select/custom-select";
@@ -18,7 +17,6 @@ import { parseCookies } from "nookies";
 import { api } from "@/service/api";
 import { CompanyCategoryContext } from "@/providers/company-category/index.tsx";
 
-// Novos imports para o mapa
 import { useMapAddressSync } from "@/hooks/useMapAddressSync";
 import "leaflet/dist/leaflet.css";
 import MapComponent from "@/components/mapCompany";
@@ -28,6 +26,7 @@ const companySchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   phone: z.string().optional(),
   openingHours: z.string().min(1, "Horário de funcionamento é obrigatório"),
+  email: z.string().min(1, "Email é obrigatório"),
   description: z.string().optional(),
   linkInstagram: z.string().url("URL inválida").optional().or(z.literal("")),
   linkWhatsapp: z.string().url("URL inválida").optional().or(z.literal("")),
@@ -41,12 +40,11 @@ const companySchema = z.object({
   city: z.string().min(1, "Cidade é obrigatória"),
   state: z.string().min(1, "Estado é obrigatório"),
   address: z.string().min(1, "Endereço é obrigatório"),
-  status: z.enum(["active", "inactive", "blocked"]),
+  status: z.enum(["active", "inactive", "blocked", "new_lead", "in_process"]),
   portalIds: z.array(z.string()).min(1, "Selecione pelo menos um portal"),
   companyCategoryIds: z
     .array(z.string())
     .min(1, "Selecione pelo menos uma categoria"),
-  // Novos campos para coordenadas
   latitude: z.number().optional(),
   longitude: z.number().optional(),
 });
@@ -57,6 +55,8 @@ const statusLabels = {
   active: "Ativo",
   inactive: "Inativo",
   blocked: "Bloqueado",
+  new_lead: "Novo Lead",
+  in_process: "Em Processo",
 };
 
 export default function FormUpdateCompany({
@@ -66,7 +66,7 @@ export default function FormUpdateCompany({
 }) {
   const parameter = useParams();
   const router = useRouter();
-  const { UpdateCompany, SelfCompany, company } = useContext(CompanyContext);
+  const { UpdateCompany, SelfCompany } = useContext(CompanyContext);
   const { listPortals, ListPortals } = useContext(PortalContext);
   const { listCompanyCategory, ListCompanyCategory } = useContext(
     CompanyCategoryContext
@@ -162,6 +162,7 @@ export default function FormUpdateCompany({
   const state = watch("state");
 
   useEffect(() => {}, [companyData]);
+  console.log('companyData', companyData)
 
   useEffect(() => {
     setIsLoading(true);
@@ -189,6 +190,7 @@ export default function FormUpdateCompany({
       reset({
         name: data?.name || "",
         phone: data?.phone || "",
+        email: data.email || "",
         openingHours: data?.openingHours || "",
         description: data?.description || "",
         linkInstagram: data?.linkInstagram || "",
@@ -209,7 +211,9 @@ export default function FormUpdateCompany({
         latitude: data?.latitude || undefined,
         longitude: data?.longitude || undefined,
       });
+      
     };
+    
 
     loadData().finally(() => {
       setIsLoading(false);
@@ -289,7 +293,9 @@ export default function FormUpdateCompany({
       const companyUpdateData = {
         name: data.name,
         phone: data.phone || "",
+        email: data.email || "",
         openingHours: data.openingHours,
+        responsibleName: data.responsibleName || "",
         description: data.description || "",
         linkInstagram: data.linkInstagram || "",
         linkWhatsapp: data.linkWhatsapp || "",
@@ -302,8 +308,9 @@ export default function FormUpdateCompany({
         companyCategoryIds: data.companyCategoryIds,
         latitude: addressData.latitude || data.latitude,
         longitude: addressData.longitude || data.longitude,
+        cep: data.cep,
       };
-
+      
       const companyId = parameter.id as string;
       await UpdateCompany(companyUpdateData, companyId);
 
@@ -716,6 +723,19 @@ export default function FormUpdateCompany({
                         </span>
                       )}
                     </div>
+                    <div>
+                      <CustomInput
+                        id="email"
+                        label="Endereço de Email"
+                        {...register("email")}
+                        placeholder="Digite o email"
+                      />
+                      {errors.email && (
+                        <span className="text-red-500 text-sm">
+                          {errors.email.message}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -800,7 +820,7 @@ export default function FormUpdateCompany({
               <div className="mt-3 p-4 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg">
                 <div className="text-sm">
                   <div className="flex items-center gap-2 font-medium text-green-700 mb-2">
-                    🎯 <span>Localização Salva!</span>
+                    <span>Localização Salva!</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
                     <div>
@@ -889,7 +909,7 @@ export default function FormUpdateCompany({
                 <div className="flex items-center gap-2">
                   <span>Atualizar Empresa</span>
                   {(addressData.latitude || watch("latitude")) && (
-                    <span className="text-green-200">📍</span>
+                    <span className="text-green-200"></span>
                   )}
                 </div>
               )}
