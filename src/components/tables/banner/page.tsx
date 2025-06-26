@@ -4,12 +4,7 @@ import { DataTable } from "./data-table";
 import { useContext, useEffect, useState } from "react";
 import { columns } from "./columns";
 import { BannerContext } from "@/providers/banner";
-import {
-  Dialog,
-  DialogContent,
-  DialogOverlay,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 interface TableBannersProps {
   filter: string;
@@ -25,21 +20,29 @@ export default function TableBanners({
   const { ListBanners, banners } = useContext(BannerContext);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 9,
+  });
+
   useEffect(() => {
     const fetch = async () => {
-      await ListBanners(1, 10, false, true);
+      await ListBanners(
+        pagination.pageIndex + 1,
+        pagination.pageSize,
+        false,
+        true
+      );
     };
 
     fetch();
-  }, []);
+  }, [pagination.pageIndex, pagination.pageSize]);
 
-  // Se banners.data ainda não foi carregado, evite tentar usar .filter
   const filteredBanners = banners?.data?.length
     ? banners.data.filter((item) => {
         const search = filter.toLowerCase();
 
         const matchesSearch = item.name.toLowerCase().includes(search);
-
         const matchesStatus =
           activeFilters.status === null || activeFilters.status === item.status;
 
@@ -49,14 +52,24 @@ export default function TableBanners({
 
   return (
     <>
-      <DataTable columns={columns(setSelectedImage)} data={filteredBanners} />
+      <DataTable
+        columns={columns(setSelectedImage)}
+        data={filteredBanners}
+        totalPages={banners?.totalPages || 1}
+        pagination={pagination}
+        onPaginationChange={(updater) =>
+          setPagination((prev) =>
+            typeof updater === "function" ? updater(prev) : updater
+          )
+        }
+      />
 
       {selectedImage && (
         <Dialog
           open={!!selectedImage}
           onOpenChange={(open) => !open && setSelectedImage(null)}
         >
-          <DialogContent className=" max-w-2xl mx-auto p-4 rounded-xl bg-white shadow-xl z-50">
+          <DialogContent className="max-w-2xl mx-auto p-4 rounded-xl bg-white shadow-xl z-50">
             <DialogTitle>Preview Banner</DialogTitle>
             <img
               src={selectedImage}

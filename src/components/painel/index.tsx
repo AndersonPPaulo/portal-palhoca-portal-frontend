@@ -31,10 +31,10 @@ export default function InfoPainel() {
     ),
     highlight_articles: listArticles?.data.filter((item) => item.highlight)
       .length,
-    authors: listUser.length,
+    authors: listUser?.total,
     total_companies: listCompany?.total,
   };
-  
+
   return (
     <div className="h-full bg-white rounded-[32px] p-10">
       <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 ggxl:grid-cols-4 gap-4">
@@ -76,7 +76,7 @@ export default function InfoPainel() {
 
         <CardInfoPainel
           title="Usuários Cadastrados"
-          value={count.authors}
+          value={Number(count.authors) || 0}
           icon={<Users size={32} />}
           bgCard="bg-orange-light"
           textColor="text-primary-dark"
@@ -102,7 +102,6 @@ export default function InfoPainel() {
           path="/comercio?tab=new_leads"
           isAdmin={profile?.role.name.toLowerCase() === "administrador"}
         />
-        
       </div>
     </div>
   );

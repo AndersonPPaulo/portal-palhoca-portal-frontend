@@ -13,28 +13,33 @@ export default function TableCompany({ filter }: TableCompanyProps) {
   const { ListCompany, listCompany } = useContext(CompanyContext);
   const [loading, setLoading] = useState(true);
 
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 20,
+  });
+
   useEffect(() => {
     const fetchCompanies = async () => {
       setLoading(true);
       try {
-        await ListCompany(1, 20);
+        await ListCompany(pagination.pageIndex + 1, pagination.pageSize); // importante somar +1
       } catch (error) {
         console.error("Error fetching companies:", error);
       } finally {
         setLoading(false);
       }
     };
+
     fetchCompanies();
-  }, []);
+  }, [pagination.pageIndex, pagination.pageSize]);
 
   const filteredCompanies =
     listCompany?.data?.filter((item: ICompanyProps) => {
       let matchesName = true;
 
       if (filter.name) {
-        if (item.status === "new_lead") {
-          return false;
-        }
+        if (item.status === "new_lead") return false;
+
         if (Array.isArray(filter.name) && filter.name.length > 0) {
           matchesName = filter.name.some(
             (name) =>
@@ -50,8 +55,22 @@ export default function TableCompany({ filter }: TableCompanyProps) {
             .includes(filter.name.toLowerCase());
         }
       }
+
       return matchesName;
     }) || [];
 
-  return <DataTable columns={columns} data={filteredCompanies} />;
+  return (
+    <DataTable
+      columns={columns}
+      data={filteredCompanies}
+      totalPages={Number(listCompany?.totalPages) || 1}
+      pagination={pagination}
+      onPaginationChange={(updater) =>
+        setPagination((prev) =>
+          typeof updater === "function" ? updater(prev) : updater
+        )
+      }
+    />
+  );
 }
+

@@ -9,7 +9,7 @@ export default function Autores() {
   const { push } = useRouter();
 
   return (
-    <div className="h-screen bg-primary-light flex flex-col overflow-hidden">
+    <div className="min-h-screen h-full bg-primary-light flex flex-col overflow-hidden">
       <Header
         title="Usuários"
         text_button="Novo usuário"

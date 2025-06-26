@@ -40,6 +40,7 @@ export interface BannerItem {
 
 interface IBanner {
   total: number;
+  totalPages: number;
   page: number;
   limit: number;
   data: BannerItem[];
@@ -105,7 +106,7 @@ export const BannerProvider = ({ children }: ICihldrenReact) => {
     page?: number,
     limit?: number,
     onlyActive?: boolean,
-    portalAdmin?:boolean
+    portalAdmin?: boolean
   ): Promise<void> => {
     const { "user:token": token } = parseCookies();
 

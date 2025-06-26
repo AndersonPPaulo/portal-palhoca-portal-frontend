@@ -40,7 +40,23 @@ export interface ResponsePromise {
   created_at?: string;
   updated_at?: string;
   isActive?: boolean;
-  user_image: string;
+  user_image: {
+    id: string;
+    key: string;
+    url: string;
+    original_name?: string;
+    mime_type?: string;
+    size?: number;
+    uploaded_at?: Date;
+  };
+}
+
+interface IUserPagesResponse {
+  total: number;
+  totalPages: number;
+  page: number;
+  limit: number;
+  data: ResponsePromise[];
 }
 
 // Tipo para Role separado
@@ -52,8 +68,8 @@ export interface Role {
 
 interface IUserData {
   CreateUser(data: UserProps): Promise<ResponsePromise>;
-  listUser: ResponsePromise[];
-  ListUser(): Promise<ResponsePromise[]>;
+  listUser: IUserPagesResponse | null;
+  ListUser(page?: number, limit?: number): Promise<IUserPagesResponse>;
   GetUser(userId: string): Promise<ResponsePromise>;
   DeleteUser(userId: string): Promise<void>;
   Profile(): Promise<ResponsePromise>;
@@ -145,11 +161,15 @@ export const UserProvider = ({ children }: IChildrenReact) => {
     }
   };
 
-  const [listUser, setListUser] = useState<ResponsePromise[]>([]);
-  const ListUser = async (): Promise<ResponsePromise[]> => {
+  const [listUser, setListUser] = useState<IUserPagesResponse | null>(null);
+  const ListUser = async (
+    page?: number,
+    limit?: number
+  ): Promise<IUserPagesResponse> => {
     const { "user:token": token } = parseCookies();
     const config = {
       headers: { Authorization: `bearer ${token}` },
+      params: { page, limit },
     };
 
     try {

@@ -15,15 +15,17 @@ import { useRouter } from "next/navigation";
 import React from "react";
 
 const getBannerStyleClass = (style: string) => {
-  switch (style.toLowerCase()) {
-    case "slide":
+  switch (style?.toLowerCase()) {
+    case "noticia":
       return "bg-blue-500";
     case "destaque":
       return "bg-yellow-500 text-black";
-    case "promocional":
+    case "topo":
       return "bg-red-500";
+     case "sidebar":
+      return "bg-orange-500";
     default:
-      return "bg-gray-500";
+      return "bg-zinc-200";
   }
 };
 
@@ -110,7 +112,7 @@ export const columns = (
   },
   {
     accessorKey: "banner_style",
-    header: () => <div className="text-center">Tipo do Banner</div>,
+    header: () => <div className="text-center">Posição</div>,
     cell: ({ row }) => {
       const style = row.original.banner_style;
       const bgColor = getBannerStyleClass(style);
@@ -128,7 +130,7 @@ export const columns = (
   },
   {
     accessorKey: "date_active",
-    header: () => <div className="text-center">Ativo / Expira</div>,
+    header: () => <div className="text-center">Inicio / Fim</div>,
     cell: ({ row }) => (
       <div className="flex justify-center">
         <span className="text-sm text-gray-700 dark:text-gray-300 font-mono transition-opacity duration-200 hover:opacity-80">

@@ -12,40 +12,39 @@ interface TableUsersProps {
 
 export default function TableUsers({ filter, activeFilters }: TableUsersProps) {
   const { ListUser, listUser } = useContext(UserContext);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(9);
 
   useEffect(() => {
-    const fetch = async () => {
-      await ListUser();
-    };
+    ListUser(pageIndex + 1, pageSize);
+  }, [pageIndex, pageSize]);
 
-    fetch();
-  }, []);
+  const filteredUsers =
+    listUser?.data?.filter((item) => {
+      const search = filter.toLowerCase();
 
-  // Se listUser ainda não foi carregado, evite tentar usar .filter
-  const filteredUsers = listUser?.length
-    ? listUser.filter((item) => {
-        const search = filter.toLowerCase();
+      const matchesSearch =
+        item.name.toLowerCase().includes(search) ||
+        item.email.toLowerCase().includes(search) ||
+        item.phone.toLowerCase().includes(search) ||
+        item.role?.name.toLowerCase().includes(search) ||
+        item.topic?.toLowerCase().includes(search);
 
-        // Busca por nome, email, telefone ou função
-        const matchesSearch =
-          item.name.toLowerCase().includes(search) ||
-          item.email.toLowerCase().includes(search) ||
-          item.phone.toLowerCase().includes(search) ||
-          item.role?.name.toLowerCase().includes(search) ||
-          item.topic?.toLowerCase().includes(search);
+      const matchesStatus =
+        activeFilters.status === null || activeFilters.status === item.isActive;
 
-        // Filtro por status (isActive)
-        const matchesStatus =
-          activeFilters.status === null ||
-          activeFilters.status === item.isActive;
-
-        return matchesSearch && matchesStatus;
-      })
-    : [];
+      return matchesSearch && matchesStatus;
+    }) || [];
 
   return (
-    <>
-      <DataTable columns={columns} data={filteredUsers} />
-    </>
+    <DataTable
+      columns={columns}
+      data={filteredUsers}
+      totalPages={listUser?.totalPages || 1}
+      pageIndex={pageIndex}
+      setPageIndex={setPageIndex}
+      pageSize={pageSize}
+      setPageSize={setPageSize}
+    />
   );
 }
