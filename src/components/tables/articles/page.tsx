@@ -24,7 +24,12 @@ export default function TableArticles({
 }: TableArticlesProps) {
   const { ListAuthorArticles, listArticles } = useContext(ArticleContext);
   const { profile } = useContext(UserContext);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
+
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 9,
+  });
 
   useEffect(() => {
     const fetchArticles = async () => {
@@ -32,9 +37,9 @@ export default function TableArticles({
       try {
         if (profile?.id) {
           const params: ArticleListParams = {
-            limit: 20,
-            page: 1,
             status: activeFilters.status,
+            page: pagination.pageIndex + 1, // página começa do 1 no backend
+            limit: pagination.pageSize,
           };
 
           const roleName = profile.role.name.toLowerCase();
@@ -58,7 +63,7 @@ export default function TableArticles({
     if (profile?.id) {
       fetchArticles();
     }
-  }, [profile]);
+  }, [profile, pagination.pageIndex, pagination.pageSize, activeFilters]);
 
   const filteredArticles =
     listArticles?.data?.filter((item: Article) => {
@@ -88,5 +93,13 @@ export default function TableArticles({
       );
     }) || [];
 
-  return <DataTable columns={columns} data={filteredArticles} />;
+  return (
+    <DataTable
+      columns={columns}
+      data={filteredArticles}
+      totalPages={Number(listArticles?.meta?.totalPages || 1)}
+      pagination={pagination}
+      onPaginationChange={setPagination}
+    />
+  );
 }

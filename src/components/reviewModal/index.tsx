@@ -23,7 +23,7 @@ import { ArticleContext, Article } from "@/providers/article";
 import { toast } from "sonner";
 import { UserContext } from "@/providers/user";
 import { useRouter } from "next/navigation";
-import HighlightModal from "../../highlightModal";
+import HighlightModal from "../highlightModal";
 
 interface ArticleViewModalProps {
   open: boolean;
@@ -36,10 +36,9 @@ export function ArticleViewModal({
   onOpenChange,
   article,
 }: ArticleViewModalProps) {
-  const { ListAuthorArticles, UpdateArticle, UpdateArticleStatus } =
+  const {  UpdateArticle, UpdateArticleStatus } =
     useContext(ArticleContext);
 
-  const { profile } = useContext(UserContext);
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [showChangesForm, setShowChangesForm] = useState(false);
   const [rejectReason, setRejectReason] = useState("");

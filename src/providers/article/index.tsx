@@ -239,7 +239,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
     creatorId?: string,
     params: ArticleListParams = {}
   ): Promise<ArticleResponse> => {
-    const { page = 1, limit = 10, status, chiefEditorId } = params;
+    const { page, limit, status, chiefEditorId } = params;
     const { "user:token": token } = parseCookies();
     const config = {
       headers: { Authorization: `bearer ${token}` },
@@ -430,8 +430,8 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
   };
 
   const GetPublishedArticles = async (
-    page = 1,
-    limit = 10
+    page:number,
+    limit:number
   ): Promise<ArticleResponse> => {
     try {
       const response = await api.get("/article-published", {
