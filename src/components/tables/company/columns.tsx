@@ -186,6 +186,8 @@ export const columns: ColumnDef<ICompanyProps>[] = [
             ? "Ativo"
             : row.original.status === "blocked"
             ? "Bloqueado"
+            : row.original.status === "new_lead"
+            ? "Novo Lead"
             : "Inativo"}
         </span>
       </div>

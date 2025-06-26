@@ -39,7 +39,7 @@ interface UpdateCompanyProps {
   linkLocationWaze?: string;
   address?: string;
   district?: string;
-  status: "active" | "inactive" | "blocked";
+  status: "active" | "inactive" | "blocked" | "new_lead";
   portalIds?: string[];
   companyCategoryIds?: string[];
 }
@@ -127,6 +127,7 @@ export const CompanyContext = createContext<ICompanyData>({} as ICompanyData);
 export const CompanyProvider = ({ children }: IChildrenReact) => {
   const { push } = useRouter();
   const [listCompany, setListCompany] = useState<CompanyProps | null>(null);
+  console.log("listCompany", listCompany);
   const [apiCep, setApiCep] = useState<GetCEPProps | null>(null);
 
   const ListCompany = async (
@@ -150,6 +151,7 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
       };
 
       setListCompany(formattedResponse);
+      console.log("ListCompany", listCompany);
       return formattedResponse;
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Erro ao listar empresas");

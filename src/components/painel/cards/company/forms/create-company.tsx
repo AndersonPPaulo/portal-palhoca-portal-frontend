@@ -16,9 +16,10 @@ import { CompanyContext } from "@/providers/company";
 import { PortalContext } from "@/providers/portal";
 import { useMapAddressSync } from "@/hooks/useMapAddressSync";
 import { api } from "@/service/api";
-import "leaflet/dist/leaflet.css";
 import { CompanyCategoryContext } from "@/providers/company-category/index.tsx";
 import MapComponent from "@/components/mapCompany";
+import "leaflet/dist/leaflet.css";
+
 
 // Schema de validação
 const companySchema = z.object({
@@ -52,7 +53,7 @@ type CompanyFormData = z.infer<typeof companySchema>;
 const statusLabels: Record<CompanyFormData["status"], string> = {
   active: "Ativo",
   inactive: "Inativo",
-  blocked: "Bloqueado",
+  blocked: "Bloqueado"
 };
 
 export default function FormCreateCompany() {

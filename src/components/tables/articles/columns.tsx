@@ -213,7 +213,7 @@ export const columns: ColumnDef<Article>[] = [
     header: () => <div className="text-center w-[150px]">Criador</div>,
     cell: ({ row }) => (
       <div className="text-center w-[150px] truncate">
-        {row?.original?.creator.name}
+        {row?.original?.creator?.name ?? ""}
       </div>
     ),
   },
