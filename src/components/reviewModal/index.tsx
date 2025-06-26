@@ -23,7 +23,7 @@ import { ArticleContext, Article } from "@/providers/article";
 import { toast } from "sonner";
 import { UserContext } from "@/providers/user";
 import { useRouter } from "next/navigation";
-import HighlightModal from "../highlightModal";
+import HighlightModal from "../../highlightModal";
 
 interface ArticleViewModalProps {
   open: boolean;

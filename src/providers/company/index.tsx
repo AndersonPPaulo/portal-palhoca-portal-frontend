@@ -45,6 +45,8 @@ interface UpdateCompanyProps {
   companyCategoryIds?: string[];
   email: string;
   responsibleName: string;
+  document_number: string;
+  document_type: "cnpj" | "cpf";
 }
 
 export interface UploadCompanyImageProps {
@@ -83,6 +85,8 @@ export interface ICompanyProps extends UpdateCompanyProps {
   email: string;
   latitude?: number;
   longitude?: number;
+  document_number: string;
+  document_type: "cnpj" | "cpf";
 }
 
 export type CompanyProps = {
