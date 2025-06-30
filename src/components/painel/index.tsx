@@ -9,16 +9,19 @@ import { CompanyContext } from "@/providers/company";
 
 export default function InfoPainel() {
   const { ListAuthorArticles, listArticles } = useContext(ArticleContext);
-  const { ListUser, listUser, profile } = useContext(UserContext);
+  const { ListUser, listUser, profile, Profile } = useContext(UserContext);
   const { ListCompany, listCompany } = useContext(CompanyContext);
 
   useEffect(() => {
+    Profile();
     if (profile?.role.name.toLocaleLowerCase() === "administrador") {
       Promise.all([ListAuthorArticles(), ListUser(), ListCompany()]);
-    } else {
-      ListAuthorArticles();
+    } else if (profile?.id) {
+        ListAuthorArticles(profile?.id);
+      
+      console.log("profile?.id", profile?.id);
     }
-  }, []);
+  }, [profile?.id]);
 
   const count = {
     published_articles: listArticles?.meta.total,
