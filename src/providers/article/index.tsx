@@ -6,6 +6,22 @@ import { parseCookies } from "nookies";
 import { createContext, ReactNode, useState } from "react";
 import { toast } from "sonner";
 
+export interface ArticleListParams {
+  page?: number;
+  limit?: number;
+  status?: string;
+  slug?: string;
+  chiefEditorId?: string;
+  highlight?: boolean;
+  highlightPosition?: number;
+  highlightSlot?: number;
+  startDate?: string | Date;
+  endDate?: string | Date;
+  portalReferer?: string;
+  category_name?: string;
+  title?: string;
+}
+
 export interface ArticleProps {
   title: string;
   slug: string;
@@ -142,13 +158,6 @@ export interface Meta {
   totalPages: number;
 }
 
-export interface ArticleListParams {
-  page?: number;
-  limit?: number;
-  status?: string;
-  chiefEditorId?: string;
-}
-
 interface IArticleData {
   CreateArticle(data: ArticleProps): Promise<Article>;
   SelfArticle(articleId: string): Promise<Article>;
@@ -239,11 +248,23 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
     creatorId?: string,
     params: ArticleListParams = {}
   ): Promise<ArticleResponse> => {
-    const { page, limit, status, chiefEditorId } = params;
     const { "user:token": token } = parseCookies();
+    // Monta os parâmetros dinâmicos com todos os filtros definidos
     const config = {
-      headers: { Authorization: `bearer ${token}` },
-      params: { page, limit, status, chiefEditorId },
+      headers: { Authorization: `Bearer ${token}` },
+      params: {
+        ...params,
+        highlight:
+          params.highlight !== undefined ? String(params.highlight) : undefined,
+        startDate:
+          params.startDate instanceof Date
+            ? params.startDate.toISOString()
+            : params.startDate,
+        endDate:
+          params.endDate instanceof Date
+            ? params.endDate.toISOString()
+            : params.endDate,
+      },
     };
 
     let url = "/article-author";
@@ -430,8 +451,8 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
   };
 
   const GetPublishedArticles = async (
-    page:number,
-    limit:number
+    page: number,
+    limit: number
   ): Promise<ArticleResponse> => {
     try {
       const response = await api.get("/article-published", {

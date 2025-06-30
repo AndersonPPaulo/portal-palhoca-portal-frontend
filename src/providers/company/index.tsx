@@ -112,9 +112,13 @@ interface GetCEPProps {
 
 interface ICompanyData {
   ListCompany(
-    limit?: number,
-    page?: number,
-    options?: any
+    page: number,
+    limit: number,
+    options: {
+      name?: string;
+      category?: string;
+      isActive?: boolean | string;
+    }
   ): Promise<CompanyProps>;
   CreateCompany(data: UpdateCompanyProps): Promise<void>;
   apiCep: GetCEPProps | null;
@@ -144,9 +148,24 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
   const ListCompany = async (
     page = 1,
     limit = 10,
-    options = {}
+    options: {
+      name?: string;
+      category?: string;
+      isActive?: boolean | string;
+    } = {}
   ): Promise<CompanyProps> => {
-    const config = { params: { limit, page, ...options } };
+    const config = {
+      params: {
+        limit,
+        page,
+        ...options,
+        isActive:
+          typeof options.isActive === "boolean"
+            ? String(options.isActive)
+            : options.isActive,
+      },
+    };
+
     try {
       const res = await api.get("/company", config);
       const dataWithStatus = res.data.response.data.map(

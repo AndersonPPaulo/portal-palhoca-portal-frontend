@@ -27,16 +27,30 @@ export default function TableBanners({
 
   useEffect(() => {
     const fetch = async () => {
+      const filterParams: {
+        name?: string;
+        status?: "true" | "false";
+      } = {};
+
+      if (filter?.trim()) {
+        filterParams.name = filter.trim();
+      }
+
+      if (activeFilters.status !== null) {
+        filterParams.status = activeFilters.status ? "true" : "false";
+      }
+
       await ListBanners(
         pagination.pageIndex + 1,
         pagination.pageSize,
         false,
-        true
+        true,
+        filterParams
       );
     };
 
     fetch();
-  }, [pagination.pageIndex, pagination.pageSize]);
+  }, [pagination.pageIndex, pagination.pageSize, filter, activeFilters]);
 
   const filteredBanners = banners?.data?.length
     ? banners.data.filter((item) => {

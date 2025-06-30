@@ -59,6 +59,15 @@ interface IUserPagesResponse {
   data: ResponsePromise[];
 }
 
+export interface UserListParams {
+  page?: number;
+  limit?: number;
+  status?: "true" | "false";
+  name?: string;
+  email?: string;
+  role?: string;
+}
+
 // Tipo para Role separado
 export interface Role {
   id: string;
@@ -69,7 +78,7 @@ export interface Role {
 interface IUserData {
   CreateUser(data: UserProps): Promise<ResponsePromise>;
   listUser: IUserPagesResponse | null;
-  ListUser(page?: number, limit?: number): Promise<IUserPagesResponse>;
+  ListUser(params?: UserListParams): Promise<IUserPagesResponse>;
   GetUser(userId: string): Promise<ResponsePromise>;
   DeleteUser(userId: string): Promise<void>;
   Profile(): Promise<ResponsePromise>;
@@ -163,18 +172,25 @@ export const UserProvider = ({ children }: IChildrenReact) => {
 
   const [listUser, setListUser] = useState<IUserPagesResponse | null>(null);
   const ListUser = async (
-    page?: number,
-    limit?: number
+    params: UserListParams = {}
   ): Promise<IUserPagesResponse> => {
     const { "user:token": token } = parseCookies();
+
     const config = {
-      headers: { Authorization: `bearer ${token}` },
-      params: { page, limit },
+      headers: { Authorization: `Bearer ${token}` },
+      params: {
+        page: params.page || 1,
+        limit: params.limit || 10,
+        ...(params.status && { status: params.status }),
+        ...(params.name && { name: params.name }),
+        ...(params.email && { email: params.email }),
+        ...(params.role && { role: params.role }),
+      },
     };
 
     try {
       const response = await api.get("/user", config);
-      setListUser(response.data.response);
+      setListUser(response.data.response); // garante estado atualizado
       return response.data.response;
     } catch (err: any) {
       const errorMessage =

@@ -16,30 +16,34 @@ export default function TableUsers({ filter, activeFilters }: TableUsersProps) {
   const [pageSize, setPageSize] = useState(9);
 
   useEffect(() => {
-    ListUser(pageIndex + 1, pageSize);
-  }, [pageIndex, pageSize]);
+    const fetchUsers = async () => {
+      try {
+        const params: any = {
+          page: pageIndex + 1,
+          limit: pageSize,
+        };
 
-  const filteredUsers =
-    listUser?.data?.filter((item) => {
-      const search = filter.toLowerCase();
+        if (filter) {
+          params.name = filter; // Envie apenas um campo de busca (como 'name')
+        }
 
-      const matchesSearch =
-        item.name.toLowerCase().includes(search) ||
-        item.email.toLowerCase().includes(search) ||
-        item.phone.toLowerCase().includes(search) ||
-        item.role?.name.toLowerCase().includes(search) ||
-        item.topic?.toLowerCase().includes(search);
+        if (activeFilters.status !== null) {
+          params.status = activeFilters.status ? "true" : "false";
+        }
 
-      const matchesStatus =
-        activeFilters.status === null || activeFilters.status === item.isActive;
+        await ListUser(params);
+      } catch (error) {
+        console.error("Erro ao buscar usuários:", error);
+      }
+    };
 
-      return matchesSearch && matchesStatus;
-    }) || [];
+    fetchUsers();
+  }, [pageIndex, pageSize, filter, activeFilters]);
 
   return (
     <DataTable
       columns={columns}
-      data={filteredUsers}
+      data={listUser?.data || []}
       totalPages={listUser?.totalPages || 1}
       pageIndex={pageIndex}
       setPageIndex={setPageIndex}

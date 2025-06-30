@@ -59,17 +59,17 @@ export default function AnalyticsModal({
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Debug: Log para verificar se os dados estão chegando
-  useEffect(() => {
-    console.log("🔍 articleEvents:", articleEvents);
-    console.log("🔍 articleId:", articleId);
-    console.log("🔍 articleEvents[articleId]:", articleEvents[articleId]);
-  }, [articleEvents, articleId]);
+  // // Debug: Log para verificar se os dados estão chegando
+  // useEffect(() => {
+  //   console.log("🔍 articleEvents:", articleEvents);
+  //   console.log("🔍 articleId:", articleId);
+  //   console.log("🔍 articleEvents[articleId]:", articleEvents[articleId]);
+  // }, [articleEvents, articleId]);
 
   // Buscar dados quando o modal abrir
   useEffect(() => {
     if (isOpen && articleId && typeof GetEventsByArticle === "function") {
-      console.log("📊 Buscando eventos para o artigo:", articleId);
+      // console.log("📊 Buscando eventos para o artigo:", articleId);
       GetEventsByArticle(articleId);
     }
     if (typeof ClearError === "function") {
@@ -81,7 +81,7 @@ export default function AnalyticsModal({
   useEffect(() => {
     if (articleId && articleEvents && articleEvents[articleId]) {
       const events = articleEvents[articleId];
-      console.log("📈 Eventos encontrados:", events);
+      // console.log("📈 Eventos encontrados:", events);
 
       const newEditableEvents = { ...editableEvents };
 
@@ -93,12 +93,12 @@ export default function AnalyticsModal({
       // Depois, atualizar com os valores da API
       events.forEach((event: ArticleEvent) => {
         newEditableEvents[event.event_type] = event.virtual_count;
-        console.log(`📊 ${event.event_type}: ${event.virtual_count}`);
+        // console.log(`📊 ${event.event_type}: ${event.virtual_count}`);
       });
 
       setEditableEvents(newEditableEvents);
     } else {
-      console.log("⚠️ Nenhum evento encontrado para o artigo:", articleId);
+      // console.log("⚠️ Nenhum evento encontrado para o artigo:", articleId);
     }
   }, [articleId, articleEvents]);
 
@@ -116,13 +116,13 @@ export default function AnalyticsModal({
         });
       }
 
-      console.log("✅ Estatísticas atualizadas com sucesso!");
+      // console.log("✅ Estatísticas atualizadas com sucesso!");
       setIsEditing(false);
 
       // Recarregar dados
       await GetEventsByArticle(articleId);
     } catch (error) {
-      console.error("❌ Erro ao atualizar estatísticas:", error);
+      // console.error("❌ Erro ao atualizar estatísticas:", error);
     } finally {
       setIsSaving(false);
     }

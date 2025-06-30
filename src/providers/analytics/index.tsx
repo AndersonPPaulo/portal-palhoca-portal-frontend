@@ -132,10 +132,6 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
 
     // Debug do token
     const authToken = localStorage.getItem("authToken");
-    console.log(
-      "🔑 Auth token:",
-      authToken ? "Token encontrado" : "Token não encontrado"
-    );
 
     const config = {
       headers: {
@@ -149,14 +145,7 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
     const response = await api
       .get(`/event-article/${articleId}/article`, config)
       .then((res) => {
-        // 🔍 Logs de debug existentes
-        console.log("✅ Resposta completa:", res);
-        console.log("📊 Dados:", res.data);
-
         const responseData: IEventsByArticleResponse = res.data.response;
-
-        console.log("🔄 responseData processado:", responseData);
-        console.log("📈 Eventos:", responseData.events);
 
         setArticleEvents((prev) => ({
           ...prev,
@@ -167,9 +156,6 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
       })
       .catch((err) => {
         // 🔍 Logs de erro existentes
-        console.error("❌ Erro na requisição:", err);
-        console.error("📄 Dados do erro:", err.response?.data);
-        console.error("📋 Status do erro:", err.response?.status);
 
         setError(
           err.response?.data?.message || "Erro ao buscar eventos do artigo"

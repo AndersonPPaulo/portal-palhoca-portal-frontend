@@ -161,9 +161,6 @@ export default function FormUpdateCompany({
   const city = watch("city");
   const state = watch("state");
 
-  useEffect(() => {}, [companyData]);
-  console.log('companyData', companyData)
-
   useEffect(() => {
     setIsLoading(true);
     reset();
@@ -211,9 +208,7 @@ export default function FormUpdateCompany({
         latitude: data?.latitude || undefined,
         longitude: data?.longitude || undefined,
       });
-      
     };
-    
 
     loadData().finally(() => {
       setIsLoading(false);
@@ -310,7 +305,7 @@ export default function FormUpdateCompany({
         longitude: addressData.longitude || data.longitude,
         cep: data.cep,
       };
-      
+
       const companyId = parameter.id as string;
       await UpdateCompany(companyUpdateData, companyId);
 

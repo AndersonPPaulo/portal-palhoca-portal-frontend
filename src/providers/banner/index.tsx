@@ -52,7 +52,12 @@ interface IBannerData {
     page?: number,
     limit?: number,
     onlyActive?: boolean,
-    portalAdmin?: boolean
+    portalAdmin?: boolean,
+    filters?: {
+      name?: string;
+      status?: "true" | "false";
+      bannerStyle?: string;
+    }
   ): Promise<void>;
   banners: IBanner;
   UpdateBanner(data: BannerItem, id: string): Promise<void>;
@@ -106,7 +111,12 @@ export const BannerProvider = ({ children }: ICihldrenReact) => {
     page?: number,
     limit?: number,
     onlyActive?: boolean,
-    portalAdmin?: boolean
+    portalAdmin?: boolean,
+    filters: {
+      name?: string;
+      status?: "true" | "false";
+      bannerStyle?: string;
+    } = {}
   ): Promise<void> => {
     const { "user:token": token } = parseCookies();
 
@@ -119,19 +129,16 @@ export const BannerProvider = ({ children }: ICihldrenReact) => {
         limit,
         onlyActive,
         portalAdmin,
+        ...filters, // agora envia name, status, bannerStyle
       },
     };
 
-    const response = await api
-      .get("/banner", config)
-      .then((res) => {
-        setBanners(res.data.response);
-      })
-      .catch((err) => {
-        toast.error("Erro ao listar os banners");
-      });
-
-    return response;
+    try {
+      const response = await api.get("/banner", config);
+      setBanners(response.data.response);
+    } catch (err) {
+      toast.error("Erro ao listar os banners");
+    }
   };
 
   const UpdateBanner = async (data: BannerItem, id: string): Promise<void> => {

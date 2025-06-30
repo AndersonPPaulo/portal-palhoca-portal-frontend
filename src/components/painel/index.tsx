@@ -34,6 +34,8 @@ export default function InfoPainel() {
       .length,
     authors: listUser?.total,
     total_companies: listCompany?.total,
+    new_leads: listCompany?.data.filter((item) => item.status === "new_lead")
+      .length,
   };
 
   return (
@@ -49,6 +51,15 @@ export default function InfoPainel() {
         />
 
         <CardInfoPainel
+          title="Artigos em Destaque"
+          value={count.highlight_articles ? count.highlight_articles : 0}
+          icon={<Sparkles size={32} />}
+          bgCard="bg-orange-light"
+          textColor="text-orange-dark"
+          path="/postagens"
+        />
+
+        <CardInfoPainel
           title="Artigos Inativos"
           value={count.inactives_articles ? count.inactives_articles : 0}
           icon={<FileX size={32} />}
@@ -57,31 +68,22 @@ export default function InfoPainel() {
           path="/postagens"
         />
 
-        <CardInfoPainel
+        {/* <CardInfoPainel
           title="Visualizações"
           value={count.clicks_views ? count.clicks_views : 0}
           icon={<Eye size={32} />}
           bgCard="bg-green-light"
           textColor="text-green-dark"
           path="/postagens"
-        />
-
-        <CardInfoPainel
-          title="Artigos em Destaque"
-          value={count.highlight_articles ? count.highlight_articles : 0}
-          icon={<Sparkles size={32} />}
-          bgCard="bg-primary-light"
-          textColor="text-primary-dark"
-          path="/postagens"
-        />
+        /> */}
 
         <CardInfoPainel
           title="Usuários Cadastrados"
           value={Number(count.authors) || 0}
           icon={<Users size={32} />}
           bgCard="bg-orange-light"
-          textColor="text-primary-dark"
-          path="/postagens"
+          textColor="text-orange-dark"
+          path="/usuarios"
           isAdmin={profile?.role.name.toLowerCase() === "administrador"}
         />
 
@@ -96,10 +98,10 @@ export default function InfoPainel() {
         />
         <CardInfoPainel
           title="Novos Leads"
-          value={count.total_companies ? count.total_companies : 0}
+          value={count.new_leads ? count.new_leads : 0}
           icon={<Building2 size={32} />}
-          bgCard="bg-red"
-          textColor="text-black"
+          bgCard="bg-green-light"
+          textColor="text-green-dark"
           path="/comercio?tab=new_leads"
           isAdmin={profile?.role.name.toLowerCase() === "administrador"}
         />

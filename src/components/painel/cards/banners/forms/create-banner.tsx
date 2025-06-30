@@ -52,7 +52,6 @@ export function CreateBannerForm() {
   });
 
   const bannerStyle = watch("banner_style");
-  console.log("bannerStyle", bannerStyle);
   const image = watch("banner")?.[0];
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageDimensions, setImageDimensions] = useState<{
@@ -111,7 +110,6 @@ export function CreateBannerForm() {
   }, [image, bannerStyle]);
 
   const onSubmit = async (data: BannerFormData) => {
-
     try {
       setIsSubmitting(true);
       await CreateBanner({

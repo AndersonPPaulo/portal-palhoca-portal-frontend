@@ -1,11 +1,13 @@
 import { useContext, useEffect, useState } from "react";
 import { columns } from "./columns";
 import { DataTable } from "./data-table";
-import { CompanyContext, ICompanyProps } from "@/providers/company";
+import { CompanyContext } from "@/providers/company";
 
 interface TableCompanyProps {
   filter: {
-    name?: string[] | string;
+    name?: string;
+    category?: string;
+    isActive?: boolean | null;
   };
 }
 
@@ -22,7 +24,22 @@ export default function TableCompany({ filter }: TableCompanyProps) {
     const fetchCompanies = async () => {
       setLoading(true);
       try {
-        await ListCompany(pagination.pageIndex + 1, pagination.pageSize); // importante somar +1
+        const options: any = {};
+
+        if (filter.name) {
+          options.name = filter.name;
+        }
+
+        if (filter.category) {
+          options.category = filter.category;
+        }
+
+        //utilizar filtro de isActive como booleano usando select caso solicitado
+        // if (filter.isActive !== null && filter.isActive !== undefined) {
+        //   options.isActive = filter.isActive;
+        // }
+
+        await ListCompany(pagination.pageIndex + 1, pagination.pageSize, options);
       } catch (error) {
         console.error("Error fetching companies:", error);
       } finally {
@@ -31,38 +48,12 @@ export default function TableCompany({ filter }: TableCompanyProps) {
     };
 
     fetchCompanies();
-  }, [pagination.pageIndex, pagination.pageSize]);
-
-  const filteredCompanies =
-    listCompany?.data?.filter((item: ICompanyProps) => {
-      let matchesName = true;
-
-      if (filter.name) {
-        if (item.status === "new_lead") return false;
-
-        if (Array.isArray(filter.name) && filter.name.length > 0) {
-          matchesName = filter.name.some(
-            (name) =>
-              typeof name === "string" &&
-              item.name.toLowerCase().includes(name.toLowerCase())
-          );
-        } else if (
-          typeof filter.name === "string" &&
-          filter.name.trim() !== ""
-        ) {
-          matchesName = item.name
-            .toLowerCase()
-            .includes(filter.name.toLowerCase());
-        }
-      }
-
-      return matchesName;
-    }) || [];
+  }, [pagination.pageIndex, pagination.pageSize, filter]);
 
   return (
     <DataTable
       columns={columns}
-      data={filteredCompanies}
+      data={listCompany?.data || []}
       totalPages={Number(listCompany?.totalPages) || 1}
       pagination={pagination}
       onPaginationChange={(updater) =>
@@ -73,4 +64,3 @@ export default function TableCompany({ filter }: TableCompanyProps) {
     />
   );
 }
-

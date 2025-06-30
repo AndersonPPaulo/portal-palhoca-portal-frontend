@@ -85,8 +85,6 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
           const dimensions = await loadImageWithFallback(bannerData.url ?? "");
           setImageDimensions(dimensions);
           setImageLoadError(false);
-
-          console.log("Dimensões carregadas:", dimensions);
         } catch (error) {
           console.warn(
             "Não foi possível carregar as dimensões da imagem:",
@@ -372,14 +370,10 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
     try {
       return await tryLoad(url);
     } catch (error) {
-      console.log("Tentativa sem CORS falhou, tentando com CORS...");
-
       // Segunda tentativa: com CORS
       try {
         return await tryLoad(url, true);
       } catch (corsError) {
-        console.log("Tentativa com CORS falhou, tentando com timestamp...");
-
         // Terceira tentativa: adicionar timestamp para evitar cache
         const urlWithTimestamp = url.includes("?")
           ? `${url}&t=${Date.now()}`
