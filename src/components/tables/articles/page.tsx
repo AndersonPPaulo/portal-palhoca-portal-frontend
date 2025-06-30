@@ -66,32 +66,29 @@ export default function TableArticles({
   }, [profile, pagination.pageIndex, pagination.pageSize, activeFilters]);
 
   const filteredArticles =
-    listArticles?.data?.filter((item: Article) => {
-      const search = filter.toLowerCase();
+  listArticles?.data?.filter((item: Article) => {
+    const search = filter.toLowerCase();
 
-      const matchesSearch =
-        (item.title?.toLowerCase()?.includes(search) ?? false) ||
-        (item.tags?.some((tag) => tag.name?.toLowerCase()?.includes(search)) ??
-          false);
+    const matchesSearch =
+      (item.title?.toLowerCase()?.includes(search) ?? false) ||
+      (item.tags?.some((tag) => tag.name?.toLowerCase()?.includes(search)) ?? false);
 
-      const matchesCategory =
-        activeFilters.categories.length === 0 ||
-        (item.category?.name &&
-          activeFilters.categories.includes(item.category.name));
+    const matchesCategory =
+      activeFilters.categories.length === 0 ||
+      (item.category?.name && activeFilters.categories.includes(item.category.name));
 
-      const matchesHighlight =
-        activeFilters.highlight === null ||
-        item.highlight === activeFilters.highlight;
+    const matchesHighlight =
+      activeFilters.highlight === null ||
+      item.highlight === activeFilters.highlight;
 
-      const matchesCreator =
-        (activeFilters.creators?.length ?? 0) === 0 ||
-        (item.creator?.name &&
-          activeFilters.creators?.includes(item.creator.name));
+    const matchesCreator =
+      (activeFilters.creators?.length ?? 0) === 0 ||
+      (item.creator?.name && activeFilters.creators?.includes(item.creator.name));
 
-      return (
-        matchesSearch && matchesCategory && matchesHighlight && matchesCreator
-      );
-    }) || [];
+    return (
+      matchesSearch && matchesCategory && matchesHighlight && matchesCreator
+    );
+  }) || [];
 
   return (
     <DataTable

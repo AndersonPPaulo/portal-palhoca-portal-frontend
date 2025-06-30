@@ -10,6 +10,7 @@ import { CompanyCategoryProvider } from "./company-category/index.tsx";
 import { CompanyTransferProvider } from "./CompanyTransfer";
 import { BannerProvider } from "./banner";
 import { PortalProvider } from "./portal";
+import { ArticleAnalyticsProvider } from "./analytics";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -21,9 +22,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
               <CategorysProvider>
                 <CompanyCategoryProvider>
                   <CompanyTransferProvider>
-                    <BannerProvider>
-                      <TagProvider>{children}</TagProvider>
-                    </BannerProvider>
+                    <ArticleAnalyticsProvider>
+                      <BannerProvider>
+                        <TagProvider>{children}</TagProvider>
+                      </BannerProvider>
+                    </ArticleAnalyticsProvider>
                   </CompanyTransferProvider>
                 </CompanyCategoryProvider>
               </CategorysProvider>
