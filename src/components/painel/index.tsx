@@ -17,9 +17,7 @@ export default function InfoPainel() {
     if (profile?.role.name.toLocaleLowerCase() === "administrador") {
       Promise.all([ListAuthorArticles(), ListUser(), ListCompany()]);
     } else if (profile?.id) {
-        ListAuthorArticles(profile?.id);
-      
-      console.log("profile?.id", profile?.id);
+      ListAuthorArticles(profile?.id);
     }
   }, [profile?.id]);
 
