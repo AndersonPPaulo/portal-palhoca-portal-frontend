@@ -19,6 +19,7 @@ import { api } from "@/service/api";
 import "leaflet/dist/leaflet.css";
 import { CompanyCategoryContext } from "@/providers/company-category/index.tsx";
 import MapComponent from "@/components/mapCompany";
+import { cn } from "@/lib/utils";
 
 // Schema de validação
 const companySchema = z.object({
@@ -46,6 +47,8 @@ const companySchema = z.object({
     .min(1, "Selecione pelo menos uma categoria"),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
+  document_number: z.string().min(11, "CNPJ deve ter 14 dígitos"),
+  document_type: z.enum(["cnpj", "cpf"]).default("cnpj"),
 });
 
 type CompanyFormData = z.infer<typeof companySchema>;
@@ -108,6 +111,8 @@ export default function FormCreateCompany() {
       companyCategoryIds: [],
       latitude: undefined,
       longitude: undefined,
+      document_number: "",
+      document_type: "cnpj",
     },
   });
 
@@ -202,6 +207,22 @@ export default function FormCreateCompany() {
     setValue("phone", value.substring(0, 15));
   };
 
+  const formatCNPJ = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+
+    return numbers
+      .replace(/^(\d{2})(\d)/, "$1.$2")
+      .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/\.(\d{3})\.(\d{3})(\d)/, ".$1.$2/$3")
+      .replace(/(\d{4})(\d)/, "$1-$2")
+      .slice(0, 18);
+  };
+
+  const handleCnpjChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCNPJ(e.target.value);
+    setValue("document_number", formatted);
+  };
+
   const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "");
     if (value.length > 5) {
@@ -277,6 +298,8 @@ export default function FormCreateCompany() {
         companyCategoryIds: data.companyCategoryIds,
         latitude: addressData.latitude,
         longitude: addressData.longitude,
+        document_number: data.document_number || "",
+        document_type: data.document_type || "cnpj",
       };
 
       // Criar empresa
@@ -402,7 +425,20 @@ export default function FormCreateCompany() {
                     </span>
                   )}
                 </div>
-
+                <div>
+                  <CustomInput
+                    id="document_number"
+                    label="CNPJ"
+                    placeholder="00.000.000/0000-00"
+                    value={watch("document_number")}
+                    onChange={handleCnpjChange}
+                  />
+                  {errors.phone && (
+                    <span className="text-red-500 text-sm">
+                      {errors.phone.message}
+                    </span>
+                  )}
+                </div>
                 <div>
                   <CustomInput
                     id="openingHours"
@@ -694,6 +730,7 @@ export default function FormCreateCompany() {
                       <CustomInput
                         id="email"
                         label="Endereço de Email"
+                        placeholder="nome@gmail.com"
                         {...register("email")}
                       />
                       {errors.email && (

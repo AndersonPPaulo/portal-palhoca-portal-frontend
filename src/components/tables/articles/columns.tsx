@@ -10,11 +10,18 @@ import {
 import { TooltipArrow, TooltipPortal } from "@radix-ui/react-tooltip";
 import { Article } from "@/providers/article";
 import { ColumnDef } from "@tanstack/react-table";
-import { Edit, Eye, FolderSearch2 } from "lucide-react";
+import {
+  ChartLine,
+  Edit,
+  Eye,
+  FolderSearch2,
+  MousePointerClick,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
-import { ArticleViewModal } from "@/components/reviewModal";
-import { RejectedModal } from "@/components/rejectedModal";
+import { ArticleViewModal } from "@/components/Modals/reviewModal";
+import { RejectedModal } from "@/components/Modals/rejectedModal";
+import AnalyticsModal from "@/components/Modals/AnalyticsModal";
 
 interface Props {
   article: Article;
@@ -44,7 +51,7 @@ const CellActions = ({ article }: Props) => {
 
   const rejectedMessage = React.useEffect(() => {
     if (currentStatus === "REJECTED") {
-      setRejected(article.status_history[0].reason_reject);
+      setRejected(article.status_history[0].reason_reject ?? "");
     }
   });
 
@@ -55,7 +62,6 @@ const CellActions = ({ article }: Props) => {
         item_name={article.slug}
         item_id={article.id}
       />
-
       {["DRAFT", "CHANGES_REQUESTED"].includes(currentStatus) ? (
         <TooltipProvider delayDuration={600}>
           <Tooltip>
@@ -140,7 +146,6 @@ const CellActions = ({ article }: Props) => {
               </TooltipPortal>
             </Tooltip>
           </TooltipProvider>
-
           <RejectedModal
             open={open}
             onOpenChange={setOpen}
@@ -149,6 +154,51 @@ const CellActions = ({ article }: Props) => {
         </>
       ) : null}
     </div>
+  );
+};
+
+// Componente separado para a célula de analytics
+const AnalyticsCell = ({ article }: { article: Article }) => {
+  const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
+
+  return (
+    <>
+      <TooltipProvider delayDuration={600}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div 
+              className="text-center text-primary w-[150px] truncate flex items-center justify-center gap-2 cursor-pointer hover:bg-primary/10 rounded-lg p-2 transition-colors"
+              onClick={() => setIsAnalyticsModalOpen(true)}
+            >
+              <ChartLine size={20} />
+              <span className="text-sm font-medium">
+                {article.clicks_view || 0}
+              </span>
+            </div>
+          </TooltipTrigger>
+          <TooltipPortal>
+            <TooltipContent
+              className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
+              sideOffset={5}
+            >
+              <span>Ver estatísticas detalhadas</span>
+              <TooltipArrow
+                className="fill-primary-light"
+                width={11}
+                height={5}
+              />
+            </TooltipContent>
+          </TooltipPortal>
+        </Tooltip>
+      </TooltipProvider>
+
+      <AnalyticsModal
+        isOpen={isAnalyticsModalOpen}
+        onClose={() => setIsAnalyticsModalOpen(false)}
+        articleId={article.id}
+        articleTitle={article.title}
+      />
+    </>
   );
 };
 
@@ -197,12 +247,13 @@ export const columns: ColumnDef<Article>[] = [
       }
 
       // Sem imagem, mostra um placeholder com iniciais do título
-      const initials = article?.title
-        ?.split(" ")
-        .map((n) => n[0])
-        .join("")
-        .substring(0, 2)
-        .toUpperCase() || "AR";
+      const initials =
+        article?.title
+          ?.split(" ")
+          .map((n) => n[0])
+          .join("")
+          .substring(0, 2)
+          .toUpperCase() || "AR";
 
       return (
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-semibold mr-2">
@@ -250,11 +301,10 @@ export const columns: ColumnDef<Article>[] = [
     header: () => (
       <div className="text-center w-[150px]">Cliques / Visualisações</div>
     ),
-    cell: ({ row }) => (
-      <div className="text-center w-[150px] truncate flex items-center justify-center gap-2">
-        {row?.original?.clicks_view}
-      </div>
-    ),
+    cell: ({ row }) => {
+      const article = row?.original;
+      return <AnalyticsCell article={article} />;
+    },
   },
   {
     id: "actions",
