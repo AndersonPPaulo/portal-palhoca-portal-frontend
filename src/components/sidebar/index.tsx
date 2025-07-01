@@ -10,8 +10,7 @@ import ProfileImageViewer from "../profileImage";
 
 export function Sidebar() {
   const { Profile, profile } = useContext(UserContext);
-  
-  
+
   useEffect(() => {
     Profile();
   }, []);
@@ -20,12 +19,12 @@ export function Sidebar() {
     if (!context) return "Visitante";
 
     const roleMap: { [key: string]: string } = {
-      "administrador": "Administrador",
-      "chefe de redação": "Chefe de Redação", 
+      administrador: "Administrador",
+      "chefe de redação": "Chefe de Redação",
       "gerente comercial": "Gerente Comercial",
-      "colunista": "Colunista",
-      "vendedor": "Vendedor",
-      "jornalista": "Jornalista"
+      colunista: "Colunista",
+      vendedor: "Vendedor",
+      jornalista: "Jornalista",
     };
 
     const normalizedContext = context.toLowerCase();
@@ -33,14 +32,13 @@ export function Sidebar() {
   };
 
   // Iniciais para o placeholder
-  const initials = profile?.name
-    ?.split(" ")
-    .map((n) => n[0])
-    .join("")
-    .substring(0, 2)
-    .toUpperCase() || "??";
-
-  
+  const initials =
+    profile?.name
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .substring(0, 2)
+      .toUpperCase() || "??";
 
   return (
     <>
@@ -52,20 +50,24 @@ export function Sidebar() {
         <Image
           src={LogoSi3}
           alt="Logo Si3 Sistemas"
-          className="mx-auto max-w-[197px]"
+          className="mx-auto max-w-[197px] min-w-[197px]"
         />
 
-        <div className="flex items-center gap-4">
-          {/* Imagem de perfil com modal de visualização */}
-          <ProfileImageViewer
-            imageUrl={profile?.user_image?.url}
-            userName={profile?.name}
-            size="md"
-            fallbackInitials={initials}
-          />
-          
+        <div className="flex items-center gap-2">
+          <div className="w-20">
+            {/* Imagem de perfil com modal de visualização */}
+            <ProfileImageViewer
+              imageUrl={profile?.user_image?.url}
+              userName={profile?.name}
+              size="md"
+              fallbackInitials={initials}
+            />
+          </div>
+
           <div className="flex flex-col gap-1">
-            <span className="text-header-xs">{profile?.name || 'Carregando...'}</span>
+            <span className="text-header-xs">
+              {profile?.name || "Carregando..."}
+            </span>
             <span className="text-gray-30 capitalize">
               {contextProfile(profile?.role.name)}
             </span>

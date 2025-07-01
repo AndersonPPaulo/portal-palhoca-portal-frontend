@@ -15,17 +15,17 @@ export default function ProfileImageViewer({
   userName = "Usuário",
   size = "md",
   className = "",
-  fallbackInitials = "??"
+  fallbackInitials = "??",
 }: ProfileImageViewerProps) {
   const [showModal, setShowModal] = useState(false);
   const [imageError, setImageError] = useState(false);
 
   // Configurações de tamanho
   const sizeConfig = {
-    sm: { container: "h-8 w-8", text: "text-xs" },
-    md: { container: "h-14 w-14", text: "text-sm" },
-    lg: { container: "h-20 w-20", text: "text-base" },
-    xl: { container: "h-32 w-32", text: "text-xl" }
+    sm: { container: "min-h-8 min-w-8", text: "text-xs" },
+    md: { container: "min-h-14 min-w-14", text: "text-sm" },
+    lg: { container: "min-h-20 min-w-20", text: "text-base" },
+    xl: { container: "min-h-32 min-w-32", text: "text-xl" },
   };
 
   const currentSize = sizeConfig[size];
@@ -50,7 +50,7 @@ export default function ProfileImageViewer({
   return (
     <>
       {/* Imagem de perfil clicável */}
-      <div 
+      <div
         className={`${currentSize.container} ${className} cursor-pointer`}
         onClick={openModal}
       >
@@ -58,11 +58,13 @@ export default function ProfileImageViewer({
           <img
             src={imageUrl}
             alt={`Foto de perfil de ${userName}`}
-            className="rounded-full h-full w-full object-cover hover:opacity-90 transition-opacity"
+            className="rounded-full min-w-20 w-20 max-w-34 h-20 object-cover hover:opacity-90 transition-opacity"
             onError={handleImageError}
           />
         ) : (
-          <div className={`rounded-full h-full w-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold ${currentSize.text} shadow-lg hover:from-blue-500 hover:to-blue-700 transition-colors`}>
+          <div
+            className={`rounded-full w-20 h-20 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold ${currentSize.text} shadow-lg hover:from-blue-500 hover:to-blue-700 transition-colors`}
+          >
             {fallbackInitials}
           </div>
         )}
@@ -108,10 +110,7 @@ export default function ProfileImageViewer({
           </div>
 
           {/* Overlay clicável para fechar */}
-          <div 
-            className="absolute inset-0 -z-10"
-            onClick={closeModal}
-          />
+          <div className="absolute inset-0 -z-10" onClick={closeModal} />
         </div>
       )}
     </>
