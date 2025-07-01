@@ -1,6 +1,7 @@
 "use client";
 
 import { api } from "@/service/api";
+import { parseCookies } from "nookies";
 import { createContext, ReactNode, useState } from "react";
 
 // Enums
@@ -34,21 +35,9 @@ interface ITotalEventsResponse {
   events: TotalArticleEvent[];
 }
 
-interface IRegisterEventResponse {
-  message: string;
-  event: any;
-}
-
 interface IUpdateVirtualEventResponse {
   message: string;
   updated: any;
-}
-
-interface IRegisterEventProps {
-  articleId: string;
-  eventType: EventType;
-  extra_data?: Record<string, any>;
-  virtualIncrement?: number;
 }
 
 interface IUpdateVirtualEventProps {
@@ -87,76 +76,29 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Função para registrar evento (pública - sem auth)
-  const RegisterArticleEvent = async ({
-    articleId,
-    eventType,
-    extra_data = {},
-    virtualIncrement = 1,
-  }: IRegisterEventProps): Promise<void> => {
-    setLoading(true);
-    setError(null);
-
-    const config = {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    };
-
-    const requestData = {
-      articleId,
-      eventType,
-      extra_data,
-      virtualIncrement,
-    };
-
-    const response = await api
-      .post("/event-article", requestData, config)
-      .then((res) => {
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.response?.data?.message || "Erro ao registrar evento");
-        setLoading(false);
-        return err;
-      });
-
-    return response;
-  };
-
-  // Adicione estes logs na função GetEventsByArticle do seu provider
-
+  // Função para buscar eventos por artigo (privada - com auth)
   const GetEventsByArticle = async (articleId: string): Promise<void> => {
     setLoading(true);
     setError(null);
 
-    // Debug do token
-    const authToken = localStorage.getItem("authToken");
-
+    const { "user:token": token } = parseCookies();
     const config = {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${authToken}`,
-      },
+      headers: { Authorization: `bearer ${token}` },
     };
 
-    console.log("📡 Fazendo requisição para:", `event-article/${articleId}`);
-
     const response = await api
-      .get(`/event-article/${articleId}/article`, config)
+      .get(`/analytics/event-article/${articleId}/article`, config)
       .then((res) => {
         const responseData: IEventsByArticleResponse = res.data.response;
-
+        console.log("res.data.response", res.data.response);
         setArticleEvents((prev) => ({
           ...prev,
           [articleId]: responseData.events || [],
         }));
-
         setLoading(false);
+        console.log("responseData.events", responseData.events);
       })
       .catch((err) => {
-        // 🔍 Logs de erro existentes
-
         setError(
           err.response?.data?.message || "Erro ao buscar eventos do artigo"
         );
@@ -164,8 +106,10 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
         return err;
       });
 
+    console.log("response", response);
     return response;
   };
+
   // Função para buscar totais de eventos (privada - com auth)
   const GetTotalEvents = async (): Promise<void> => {
     setLoading(true);
@@ -179,7 +123,7 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
     };
 
     const response = await api
-      .get("/event-article", config)
+      .get("/analytics/event-article", config)
       .then((res) => {
         const responseData: ITotalEventsResponse = res.data.response;
         setTotalEvents(responseData.events || []);
@@ -218,7 +162,11 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
     };
 
     const response = await api
-      .patch(`/event-article/${article_id}/article`, requestData, config)
+      .patch(
+        `/analytics/event-article/${article_id}/article`,
+        requestData,
+        config
+      )
       .then((res) => {
         GetEventsByArticle(article_id);
         setLoading(false);
