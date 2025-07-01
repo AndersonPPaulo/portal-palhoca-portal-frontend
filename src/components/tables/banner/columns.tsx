@@ -22,7 +22,7 @@ const getBannerStyleClass = (style: string) => {
       return "bg-yellow-500 text-black";
     case "topo":
       return "bg-red-500";
-     case "sidebar":
+    case "sidebar":
       return "bg-orange-500";
     default:
       return "bg-zinc-200";
@@ -37,11 +37,11 @@ const CellActions = ({ banner }: Props) => {
   const { push } = useRouter();
   return (
     <div className="flex gap-6">
-      <DialogDelete
+      {/* <DialogDelete
         context="banners"
         item_name={banner.name}
         item_id={banner.id}
-      />
+      /> */}
 
       <TooltipProvider delayDuration={600}>
         <Tooltip>
