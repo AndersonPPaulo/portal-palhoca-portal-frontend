@@ -149,11 +149,9 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
     setLoading(true);
     setError(null);
 
+    const { "user:token": token } = parseCookies();
     const config = {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-      },
+      headers: { Authorization: `bearer ${token}` },
     };
 
     const requestData = {
