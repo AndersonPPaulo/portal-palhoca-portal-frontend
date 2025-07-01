@@ -28,6 +28,31 @@ interface UpdateUserProps {
   chiefEditorId?: string;
 }
 
+export interface CreateResponsePromise {
+  response: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    topic?: string;
+    role: { id: string; name: string; isDefault?: boolean };
+    password?: string;
+    chiefEditor?: { id: string; name: string };
+    created_at?: string;
+    updated_at?: string;
+    isActive?: boolean;
+    user_image: {
+      id: string;
+      key: string;
+      url: string;
+      original_name?: string;
+      mime_type?: string;
+      size?: number;
+      uploaded_at?: Date;
+    };
+  };
+}
+
 export interface ResponsePromise {
   id: string;
   name: string;
@@ -76,7 +101,7 @@ export interface Role {
 }
 
 interface IUserData {
-  CreateUser(data: UserProps): Promise<ResponsePromise>;
+  CreateUser(data: UserProps): Promise<CreateResponsePromise>;
   listUser: IUserPagesResponse | null;
   ListUser(params?: UserListParams): Promise<IUserPagesResponse>;
   GetUser(userId: string): Promise<ResponsePromise>;
@@ -98,7 +123,9 @@ export const UserContext = createContext<IUserData>({} as IUserData);
 export const UserProvider = ({ children }: IChildrenReact) => {
   const { back } = useRouter();
 
-  const CreateUser = async (data: UserProps): Promise<ResponsePromise> => {
+  const CreateUser = async (
+    data: UserProps
+  ): Promise<CreateResponsePromise> => {
     const { "user:token": token } = parseCookies();
     const config = {
       headers: {

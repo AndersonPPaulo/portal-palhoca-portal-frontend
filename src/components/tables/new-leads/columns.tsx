@@ -89,7 +89,7 @@ export const columns: ColumnDef<ILeadProps>[] = [
                 className="rounded-2xl shadow-sm bg-white text-[16px] text-gray-30 px-4 py-2 animate-fadeIn"
                 sideOffset={5}
               >
-                <span>{row.original.responsibleName || "Sem responsável"}</span>
+                <span>{row.original.responsibleName || "-"}</span>
                 <TooltipArrow
                   className="fill-primary-light"
                   width={11}

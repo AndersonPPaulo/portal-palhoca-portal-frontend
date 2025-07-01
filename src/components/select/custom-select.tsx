@@ -1,5 +1,5 @@
-"use client"
-import {  useCallback } from "react";
+"use client";
+import { useCallback, useEffect, useState } from "react";
 import ReactSelect from "react-select";
 import { MultiValue } from "react-select";
 
@@ -87,6 +87,11 @@ const CustomSelect = ({
   error,
   noOptionsMessage = "Nenhuma opção disponível",
 }: CustomSelectProps) => {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true); // somente no cliente
+  }, []);
   // Se for multi-select, retornar as opções selecionadas
   const getSelectedOptions = useCallback(() => {
     if (isMulti) {
@@ -120,18 +125,20 @@ const CustomSelect = ({
       <label className="px-6" htmlFor={id}>
         {label}
       </label>
-      <ReactSelect
-        id={id}
-        isMulti={isMulti}
-        className={`basic-${isMulti ? "multi-" : ""}select w-full`}
-        classNamePrefix="select"
-        placeholder={placeholder}
-        noOptionsMessage={() => noOptionsMessage}
-        value={getSelectedOptions()}
-        onChange={handleChange}
-        options={options}
-        styles={selectStyles}
-      />
+      {isClient && (
+        <ReactSelect
+          id={id}
+          isMulti={isMulti}
+          className={`basic-${isMulti ? "multi-" : ""}select w-full`}
+          classNamePrefix="select"
+          placeholder={placeholder}
+          noOptionsMessage={() => noOptionsMessage}
+          value={getSelectedOptions()}
+          onChange={handleChange}
+          options={options}
+          styles={selectStyles}
+        />
+      )}
       {error && <p className="text-sm text-red-500 px-6 mt-1">{error}</p>}
     </div>
   );

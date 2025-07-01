@@ -15,7 +15,11 @@ export default function InfoPainel() {
   useEffect(() => {
     Profile();
     if (profile?.role.name.toLocaleLowerCase() === "administrador") {
-      Promise.all([ListAuthorArticles(), ListUser(), ListCompany()]);
+      Promise.all([
+        ListAuthorArticles(),
+        ListUser(),
+        ListCompany(undefined, undefined, undefined),
+      ]);
     } else if (profile?.id) {
       ListAuthorArticles(profile?.id);
     }

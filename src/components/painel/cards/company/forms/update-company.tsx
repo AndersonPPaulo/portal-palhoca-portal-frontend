@@ -304,6 +304,8 @@ export default function FormUpdateCompany({
         latitude: addressData.latitude || data.latitude,
         longitude: addressData.longitude || data.longitude,
         cep: data.cep,
+        document_number: companyData?.document_number || "",
+        document_type: companyData?.document_type || "",
       };
 
       const companyId = parameter.id as string;

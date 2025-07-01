@@ -8,7 +8,7 @@ import CustomInput from "@/components/input/custom-input";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import ReturnPageButton from "@/components/button/returnPage";
-import { UserContext } from "@/providers/user";
+import { ResponsePromise, UserContext } from "@/providers/user";
 import ThumbnailUploader from "@/components/thumbnail";
 import { parseCookies } from "nookies";
 import { api } from "@/service/api";
@@ -33,8 +33,7 @@ const authorsSchema = z.object({
 type AuthorsFormData = z.infer<typeof authorsSchema>;
 
 export default function FormCreateAuthors() {
-  const { CreateUser, ListRoles, ListUser, listUser, roles } =
-    useContext(UserContext);
+  const { CreateUser, ListRoles, ListUser, roles } = useContext(UserContext);
   const { back } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rolesOptions, setRolesOptions] = useState<OptionType[]>([]);
@@ -64,11 +63,15 @@ export default function FormCreateAuthors() {
     },
   });
 
-  // Carregar dados iniciais
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        await Promise.all([ListRoles(), ListUser()]);
+        await Promise.all([
+          ListRoles(),
+          ListUser({
+            role: "chefe de redação|gerente comercial|administrador",
+          }),
+        ]);
       } catch (error) {
         console.error("Erro ao carregar dados iniciais:", error);
       }
@@ -88,14 +91,51 @@ export default function FormCreateAuthors() {
   }, [roles]);
 
   useEffect(() => {
-    if (listUser && Array.isArray(listUser)) {
-      const userOptions: OptionType[] = listUser.map((user) => ({
-        value: user.id,
-        label: user.name || user.email || `Usuário ${user.id}`,
-      }));
-      setUsersOptions(userOptions);
-    }
-  }, [listUser]);
+    const fetchChiefEditorsByRole = async () => {
+      const selectedRoleId = watch("roleId");
+      const selectedRole = roles?.find((role) => role.id === selectedRoleId);
+
+      if (!selectedRole?.name) {
+        setUsersOptions([]);
+        return;
+      }
+
+      const roleName = selectedRole.name.toLowerCase();
+
+      let roleFilter = "";
+
+      if (["jornalista", "colunista", "chefe de redação"].includes(roleName)) {
+        roleFilter = "chefe de redação";
+      } else if (["vendedor", "gerente comercial"].includes(roleName)) {
+        roleFilter = "gerente comercial";
+      } else if (roleName === "administrador") {
+        roleFilter = "chefe de redação|gerente comercial|administrador";
+      } else {
+        setUsersOptions([]);
+        return;
+      }
+
+      try {
+        const result = await ListUser({ role: roleFilter });
+        console.log("result", result);
+
+        if (result?.data?.length) {
+          const mappedOptions = result.data.map((user: ResponsePromise) => ({
+            value: user.id,
+            label: `${user.name} - ${user.role?.name}`,
+          }));
+          setUsersOptions(mappedOptions);
+        } else {
+          setUsersOptions([]);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar responsáveis:", error);
+        setUsersOptions([]);
+      }
+    };
+
+    fetchChiefEditorsByRole();
+  }, [watch("roleId"), roles]);
 
   const handleImageUpload = (file: File, previewUrl: string) => {
     setSelectedImage({ file, preview: previewUrl });
@@ -103,19 +143,12 @@ export default function FormCreateAuthors() {
 
   useEffect(() => {}, [selectedImage]);
 
-  const uploadUserImage = async (file: File, userEmail: string) => {
+  const uploadUserImage = async (file: File, user_id: string) => {
+    console.log("user_id", user_id);
     try {
       const { "user:token": token } = parseCookies();
 
-      const users = await ListUser();
-
-      const createdUser = users?.find(
-        (user) => user.email.toLowerCase() === userEmail.toLowerCase()
-      );
-
-      if (createdUser) {
-        const userId = createdUser.id;
-
+      if (user_id) {
         if (!file || file.size === 0) {
           throw new Error("Arquivo inválido ou vazio");
         }
@@ -150,7 +183,7 @@ export default function FormCreateAuthors() {
 
         // Fazer o upload da foto
         const uploadResponse = await api.post(
-          `/user/${userId}/upload-user-image`,
+          `/user/${user_id}/upload-user-image`,
           formData,
           {
             headers: {
@@ -197,18 +230,19 @@ export default function FormCreateAuthors() {
 
       const hasImage = selectedImage && selectedImage.file;
 
-      await CreateUser(data);
+      const response = await CreateUser(data);
+      console.log("response 3", response.response.id);
+
       formSubmittedSuccessfully.current = true;
 
       // Se há imagem selecionada, fazer upload após criação bem-sucedida
       if (hasImage) {
         const imageFile = selectedImage.file;
-        const userEmail = data.email;
 
         await new Promise((resolve) => setTimeout(resolve, 3000));
 
         try {
-          await uploadUserImage(imageFile, userEmail);
+          await uploadUserImage(imageFile, response.response.id);
 
           setTimeout(async () => {
             try {

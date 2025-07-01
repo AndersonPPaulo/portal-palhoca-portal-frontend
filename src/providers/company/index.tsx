@@ -112,9 +112,9 @@ interface GetCEPProps {
 
 interface ICompanyData {
   ListCompany(
-    page: number,
-    limit: number,
-    options: {
+    page?: number,
+    limit?: number,
+    options?: {
       name?: string;
       category?: string;
       isActive?: boolean | string;

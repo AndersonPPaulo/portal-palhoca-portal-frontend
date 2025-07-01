@@ -271,7 +271,7 @@ export const columns: ColumnDef<UsersProps>[] = [
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="truncate">
-                {row.original.chiefEditor?.name || "Sem responsável"}
+                {row.original.chiefEditor?.name || "-"}
               </div>
             </TooltipTrigger>
             <TooltipPortal>
@@ -280,7 +280,7 @@ export const columns: ColumnDef<UsersProps>[] = [
                 sideOffset={5}
               >
                 <span>
-                  {row.original.chiefEditor?.name || "Sem responsável"}
+                  {row.original.chiefEditor?.name || "-"}
                 </span>
                 <TooltipArrow
                   className="fill-primary-light"
