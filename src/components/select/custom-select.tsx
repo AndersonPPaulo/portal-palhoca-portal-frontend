@@ -16,6 +16,7 @@ interface CustomSelectProps {
   isMulti?: boolean;
   error?: string;
   noOptionsMessage?: string;
+  disable?:boolean
 }
 
 // Estilo comum para todos os ReactSelects
@@ -86,6 +87,7 @@ const CustomSelect = ({
   isMulti = false,
   error,
   noOptionsMessage = "Nenhuma opção disponível",
+  disable = false
 }: CustomSelectProps) => {
   const [isClient, setIsClient] = useState(false);
 
@@ -129,6 +131,7 @@ const CustomSelect = ({
         <ReactSelect
           id={id}
           isMulti={isMulti}
+          isDisabled={disable}
           className={`basic-${isMulti ? "multi-" : ""}select w-full`}
           classNamePrefix="select"
           placeholder={placeholder}
