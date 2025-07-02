@@ -206,9 +206,6 @@ const AnalyticsCell = ({ article }: { article: Article }) => {
               onClick={() => setIsAnalyticsModalOpen(true)}
             >
               <ChartLine size={20} />
-              <span className="text-sm font-medium">
-                {article.clicks_view || 0}
-              </span>
             </div>
           </TooltipTrigger>
           <TooltipPortal>
@@ -235,19 +232,6 @@ const AnalyticsCell = ({ article }: { article: Article }) => {
       />
     </>
   );
-};
-
-// Função para obter o status atual de um artigo
-const getCurrentStatus = (article: Article): string => {
-  if (!article.status_history || article.status_history.length === 0) {
-    return "";
-  }
-  const sortedHistory = [...article.status_history].sort(
-    (a, b) =>
-      new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
-  );
-
-  return sortedHistory[0].status;
 };
 
 export const columns: ColumnDef<Article>[] = [
@@ -349,13 +333,7 @@ export const columns: ColumnDef<Article>[] = [
     header: () => <div className="text-center w-[150px]">Analíticos</div>,
     cell: ({ row }) => {
       const article = row?.original;
-      const currentStatus = getCurrentStatus(article);
-
-      if (currentStatus === "PUBLISHED") {
-        return <AnalyticsCell article={article} />;
-      }
-
-      return <div className="text-center w-[150px]"></div>;
+      return <AnalyticsCell article={article} />;
     },
   },
   {

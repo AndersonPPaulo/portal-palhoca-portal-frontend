@@ -18,11 +18,11 @@ export const navigationMain = [
         icon: Dot,
         path: "/postagens/tags",
       },
-      {
-        name: "Categorias",
-        icon: Dot,
-        path: "/postagens/categorias",
-      },
+      // {
+      //   name: "Categorias",
+      //   icon: Dot,
+      //   path: "/postagens/categorias",
+      // },
     ],
   },
   {
