@@ -67,7 +67,7 @@ export default function TableBanners({
   return (
     <>
       <DataTable
-        columns={columns(setSelectedImage)}
+        columns={columns}
         data={filteredBanners}
         totalPages={banners?.totalPages || 1}
         pagination={pagination}

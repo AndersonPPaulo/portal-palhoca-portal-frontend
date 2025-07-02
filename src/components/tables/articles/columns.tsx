@@ -15,13 +15,11 @@ import {
   Edit,
   Eye,
   FolderSearch2,
-  MousePointerClick,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { ArticleViewModal } from "@/components/Modals/reviewModal";
 import { RejectedModal } from "@/components/Modals/rejectedModal";
-import AnalyticsModal from "@/components/Modals/AnalyticsModal";
 import ArticleAnalyticsModal from "@/components/Modals/AnalyticsModal/articleAnalyticsModal";
 
 interface Props {
@@ -156,56 +154,36 @@ const CellActions = ({ article }: Props) => {
 const AnalyticsCell = ({ article }: { article: Article }) => {
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
 
-  // Obter o status mais recente ordenando pelo changed_at
-  const currentStatus = React.useMemo(() => {
-    if (!article.status_history || article.status_history.length === 0) {
-      return "";
-    }
-
-    // Ordenar o histórico de status pela data (do mais recente para o mais antigo)
-    const sortedHistory = [...article.status_history].sort(
-      (a, b) =>
-        new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
-    );
-
-    // Retornar o status do primeiro item (o mais recente)
-    return sortedHistory[0].status;
-  }, [article.status_history]);
-
   return (
     <>
-      {currentStatus === "PUBLISHED" ? (
-        <TooltipProvider delayDuration={600}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div
-                className="text-center text-primary w-[150px] truncate flex items-center justify-center gap-2 cursor-pointer hover:bg-primary/10 rounded-lg p-2 transition-colors"
-                onClick={() => setIsAnalyticsModalOpen(true)}
-              >
-                <ChartLine size={20} />
-                <span className="text-sm font-medium">
-                  {article.clicks_view || 0}
-                </span>
-              </div>
-            </TooltipTrigger>
-            <TooltipPortal>
-              <TooltipContent
-                className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
-                sideOffset={5}
-              >
-                <span>Ver estatísticas detalhadas</span>
-                <TooltipArrow
-                  className="fill-primary-light"
-                  width={11}
-                  height={5}
-                />
-              </TooltipContent>
-            </TooltipPortal>
-          </Tooltip>
-        </TooltipProvider>
-      ) : (
-        ""
-      )}
+      <TooltipProvider delayDuration={600}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              className="text-center text-primary w-[150px] truncate flex items-center justify-center gap-2 cursor-pointer hover:bg-primary/10 rounded-lg p-2 transition-colors"
+              onClick={() => setIsAnalyticsModalOpen(true)}
+            >
+              <ChartLine size={20} />
+              <span className="text-sm font-medium">
+                {article.clicks_view || 0}
+              </span>
+            </div>
+          </TooltipTrigger>
+          <TooltipPortal>
+            <TooltipContent
+              className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
+              sideOffset={5}
+            >
+              <span>Ver estatísticas detalhadas</span>
+              <TooltipArrow
+                className="fill-primary-light"
+                width={11}
+                height={5}
+              />
+            </TooltipContent>
+          </TooltipPortal>
+        </Tooltip>
+      </TooltipProvider>
 
       <ArticleAnalyticsModal
         isOpen={isAnalyticsModalOpen}
@@ -216,6 +194,22 @@ const AnalyticsCell = ({ article }: { article: Article }) => {
     </>
   );
 };
+
+// Função para obter o status atual de um artigo
+const getCurrentStatus = (article: Article): string => {
+  if (!article.status_history || article.status_history.length === 0) {
+    return "";
+  }
+  const sortedHistory = [...article.status_history].sort(
+    (a, b) =>
+      new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
+  );
+
+  return sortedHistory[0].status;
+};
+
+
+
 
 export const columns: ColumnDef<Article>[] = [
   {
@@ -314,11 +308,18 @@ export const columns: ColumnDef<Article>[] = [
   {
     accessorKey: "clicks_view",
     header: () => (
-      <div className="text-center w-[150px]">Cliques / Visualisações</div>
+      
+      <div className="text-center w-[150px]">Analíticos</div>
     ),
     cell: ({ row }) => {
       const article = row?.original;
-      return <AnalyticsCell article={article} />;
+      const currentStatus = getCurrentStatus(article);
+
+      if (currentStatus === "PUBLISHED") {
+        return <AnalyticsCell article={article} />;
+      }
+
+      return <div className="text-center w-[150px]"></div>;
     },
   },
   {

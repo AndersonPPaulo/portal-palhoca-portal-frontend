@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { UserContext } from "@/providers/user";
 import {
   ArrowLeft,
   Eye,
@@ -18,7 +19,7 @@ import {
   BarChart3,
   AlertCircle,
 } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useContext } from "react";
 import type { LucideIcon } from "lucide-react";
 
 export interface GenericEvent {
@@ -145,7 +146,7 @@ export default function ReusableAnalyticsModal({
       analyticsActions.loadEvents(entityId);
       analyticsActions.clearError();
     }
-  }, []);
+  }, [isOpen]);
 
   // Processar dados quando chegarem
   useEffect(() => {
@@ -225,6 +226,20 @@ export default function ReusableAnalyticsModal({
     };
   };
 
+  const { profile } = useContext(UserContext);
+
+  const userPermissions = useMemo(() => {
+      return {
+        isChiefEditor:
+          profile?.role?.name?.toLowerCase() === "chefe de redação" ||
+          profile?.chiefEditor !== null,
+        isAdmin: profile?.role?.name?.toLowerCase() === "administrador",
+        userId: profile?.id,
+        userRole: profile?.role?.name,
+        profile,
+      };
+    }, [profile]);
+
   const defaultMetrics = calculateDefaultMetrics();
 
   const hasData = Object.values(editableEvents).some((value) => value > 0);
@@ -302,45 +317,46 @@ export default function ReusableAnalyticsModal({
                 </Button>
               )}
 
-              {enableEditing && (
-                <>
-                  {isEditing ? (
-                    <>
+                
+                {enableEditing && profile?.role?.name?.toLowerCase() === "administrador" && (
+                  <>
+                    {isEditing ? (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleCancel}
+                          disabled={isSaving}
+                          className="text-gray-700 hover:bg-gray-100"
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={handleSave}
+                          disabled={isSaving || !analyticsActions.updateEvent}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          {isSaving ? (
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Save className="h-4 w-4 mr-2" />
+                          )}
+                          Salvar
+                        </Button>
+                      </>
+                    ) : (
                       <Button
-                        variant="ghost"
                         size="sm"
-                        onClick={handleCancel}
-                        disabled={isSaving}
-                        className="text-gray-700 hover:bg-gray-100"
+                        onClick={() => setIsEditing(true)}
+                        disabled={analyticsData.loading || !hasData}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
                       >
-                        Cancelar
+                        Editar
                       </Button>
-                      <Button
-                        size="sm"
-                        onClick={handleSave}
-                        disabled={isSaving || !analyticsActions.updateEvent}
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        {isSaving ? (
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <Save className="h-4 w-4 mr-2" />
-                        )}
-                        Salvar
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      size="sm"
-                      onClick={() => setIsEditing(true)}
-                      disabled={analyticsData.loading || !hasData}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      Editar
-                    </Button>
-                  )}
-                </>
-              )}
+                    )}
+                  </>
+                )}
             </div>
           </div>
         </div>

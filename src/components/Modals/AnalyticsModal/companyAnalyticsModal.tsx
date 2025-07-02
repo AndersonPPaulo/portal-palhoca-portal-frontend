@@ -1,48 +1,47 @@
 "use client";
 
 import React, { useContext } from "react";
-import AnalyticsModal from "../AnalyticsModal/index";
-import { ArticleAnalyticsContext } from "@/providers/analytics/ArticleAnalyticsProvider";
-import {articleEventConfigs, articleMetricConfigs} from "../configs/index";
+import ReusableAnalyticsModal from "./index";
+import { CompanyAnalyticsContext } from "@/providers/analytics/CompanyAnalyticsProvider";
+import { companyEventConfigs, companyMetricConfigs } from "../configs";
 
-
-interface ArticleAnalyticsModalProps {
+interface CompanyAnalyticsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  articleId: string;
-  articleTitle: string;
+  companyId: string;
+  companyTitle: string;
 }
 
-export default function ArticleAnalyticsModal({
+export default function CompanyAnalyticsModal({
   isOpen,
   onClose,
-  articleId,
-  articleTitle,
-}: ArticleAnalyticsModalProps) {
-  // Usando seu provider atual
+  companyId,
+  companyTitle,
+}: CompanyAnalyticsModalProps) {
+  // Usando seu provider de comércio
   const {
-    articleEvents,
+    companyEvents,
     loading,
     error,
-    GetEventsByArticle,
+    GetEventsByCompany,
     UpdateVirtualEvent,
     ClearError,
-  } = useContext(ArticleAnalyticsContext);
+  } = useContext(CompanyAnalyticsContext);
 
   // Adaptando para a interface do modal reutilizável
   const analyticsData = {
-    events: articleEvents[articleId] || [],
+    events: companyEvents[companyId] || [],
     loading,
     error,
   };
 
   const analyticsActions = {
     loadEvents: async (id: string) => {
-      await GetEventsByArticle(id);
+      await GetEventsByCompany(id);
     },
     updateEvent: async (id: string, eventType: string, newValue: number) => {
       await UpdateVirtualEvent({
-        article_id: id,
+        company_id: id,
         eventType: eventType as any, // Seu EventType enum
         newVirtualCount: newValue,
       });
@@ -51,29 +50,30 @@ export default function ArticleAnalyticsModal({
   };
 
   return (
-    <AnalyticsModal
+    <ReusableAnalyticsModal
       isOpen={isOpen}
       onClose={onClose}
-      entityId={articleId}
-      entityTitle={articleTitle}
-      entityType="article"
+      entityId={companyId}
+      entityTitle={companyTitle}
+      entityType="company"
       analyticsData={analyticsData}
       analyticsActions={analyticsActions}
-      eventTypeConfigs={articleEventConfigs}
-      metricConfigs={articleMetricConfigs}
+      eventTypeConfigs={companyEventConfigs}
+      metricConfigs={companyMetricConfigs}
       enableEditing={true}
       enableDebug={process.env.NODE_ENV === "development"}
-      customTitle="Analytics do Artigo"
-      customDescription="Este artigo ainda não possui eventos registrados."
+      customTitle="Analytics do Comércio"
+      customDescription="Este comércio ainda não possui eventos registrados."
       onDataLoaded={(data) => {
-        console.log(`📊 Dados do artigo ${articleTitle} carregados:`, data);
+        console.log(`📊 Dados do comércio ${companyTitle} carregados:`, data);
       }}
       onEventUpdated={(eventType, newValue) => {
-        console.log(` Evento ${eventType} atualizado para ${newValue}`);
+        console.log(`🏪 Evento ${eventType} atualizado para ${newValue}`);
         // Aqui você pode adicionar lógica adicional, como:
         // - Enviar para analytics externos (Google Analytics, etc)
         // - Notificar outros componentes
         // - Atualizar cache global
+        // - Atualizar rankings de comércios
       }}
     />
   );
