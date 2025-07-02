@@ -13,6 +13,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import {
   ChartLine,
   Edit,
+  ExternalLink,
   Eye,
   FolderSearch2,
 } from "lucide-react";
@@ -25,6 +26,16 @@ import ArticleAnalyticsModal from "@/components/Modals/AnalyticsModal/articleAna
 interface Props {
   article: Article;
 }
+
+const generateSlug = (text: string) =>
+  text
+    .normalize("NFD") // separa acentos dos caracteres
+    .replace(/[\u0300-\u036f]/g, "") // remove os acentos
+    .replace(/ç/g, "c") // substitui ç por c
+    .replace(/[^a-zA-Z0-9\s-]/g, "") // remove caracteres especiais (exceto espaço e hífen)
+    .trim() // remove espaços do início/fim
+    .toLowerCase()
+    .replace(/\s+/g, "-"); // substitui espaços por hífen
 
 const CellActions = ({ article }: Props) => {
   const { push } = useRouter();
@@ -145,6 +156,37 @@ const CellActions = ({ article }: Props) => {
             articleId={article.id}
           />
         </>
+      ) : currentStatus === "PUBLISHED" ? (
+        <TooltipProvider delayDuration={600}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <ExternalLink
+                onClick={() =>
+                  window.open(
+                    `/noticia/${generateSlug(article.category.name)}/${
+                      article.slug
+                    }`
+                  )
+                }
+                size={20}
+                className="text-primary cursor-pointer"
+              />
+            </TooltipTrigger>
+            <TooltipPortal>
+              <TooltipContent
+                className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
+                sideOffset={5}
+              >
+                <span>Ver artigo publicado</span>
+                <TooltipArrow
+                  className="fill-primary-light"
+                  width={11}
+                  height={5}
+                />
+              </TooltipContent>
+            </TooltipPortal>
+          </Tooltip>
+        </TooltipProvider>
       ) : null}
     </div>
   );
@@ -207,9 +249,6 @@ const getCurrentStatus = (article: Article): string => {
 
   return sortedHistory[0].status;
 };
-
-
-
 
 export const columns: ColumnDef<Article>[] = [
   {
@@ -307,10 +346,7 @@ export const columns: ColumnDef<Article>[] = [
   },
   {
     accessorKey: "clicks_view",
-    header: () => (
-      
-      <div className="text-center w-[150px]">Analíticos</div>
-    ),
+    header: () => <div className="text-center w-[150px]">Analíticos</div>,
     cell: ({ row }) => {
       const article = row?.original;
       const currentStatus = getCurrentStatus(article);
