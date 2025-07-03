@@ -113,33 +113,33 @@ export const columns: ColumnDef<ICompanyProps>[] = [
     header: () => <div>Comércio</div>,
   },
   {
-      accessorKey: "email",
-      header: () => <div className="text-start">Email</div>,
-      cell: ({ row }) => (
-        <div className="w-[250px] text-start">
-          <TooltipProvider delayDuration={600}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="truncate">{row.original.email || "-"}</div>
-              </TooltipTrigger>
-              <TooltipPortal>
-                <TooltipContent
-                  className="rounded-2xl shadow-sm bg-white text-[16px] text-gray-30 px-4 py-2 animate-fadeIn"
-                  sideOffset={5}
-                >
-                  <span>{row.original.email || "Sem email"}</span>
-                  <TooltipArrow
-                    className="fill-primary-light"
-                    width={11}
-                    height={5}
-                  />
-                </TooltipContent>
-              </TooltipPortal>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      ),
-    },
+    accessorKey: "email",
+    header: () => <div className="text-start">Email</div>,
+    cell: ({ row }) => (
+      <div className="w-[250px] text-start">
+        <TooltipProvider delayDuration={600}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="truncate">{row.original.email || "-"}</div>
+            </TooltipTrigger>
+            <TooltipPortal>
+              <TooltipContent
+                className="rounded-2xl shadow-sm bg-white text-[16px] text-gray-30 px-4 py-2 animate-fadeIn"
+                sideOffset={5}
+              >
+                <span>{row.original.email || "Sem email"}</span>
+                <TooltipArrow
+                  className="fill-primary-light"
+                  width={11}
+                  height={5}
+                />
+              </TooltipContent>
+            </TooltipPortal>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    ),
+  },
   {
     accessorKey: "phone",
     header: () => <div className="text-start">Telefone</div>,
@@ -204,10 +204,14 @@ export const columns: ColumnDef<ICompanyProps>[] = [
         <span
           className={`${
             row.original.status === "active"
-              ? "bg-green"
+              ? "bg-green font-bold"
               : row.original.status === "blocked"
-              ? "bg-red"
-              : "bg-orange"
+              ? "bg-red font-bold"
+              : row.original.status === "new_lead"
+              ? "bg-primary font-bold"
+              : row.original.status === "inactive"
+              ? "bg-yellow-600 font-bold"
+              : "bg-orange font-bold"
           } px-3 min-w-[130px] py-1 rounded-full text-sm capitalize`}
         >
           {row.original.status === "active"
@@ -216,7 +220,9 @@ export const columns: ColumnDef<ICompanyProps>[] = [
             ? "Bloqueado"
             : row.original.status === "new_lead"
             ? "Novo Lead"
-            : "Inativo"}
+            : row.original.status === "inactive"
+            ? "Inativo"
+            : "Em processo"}
         </span>
       </div>
     ),

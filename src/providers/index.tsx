@@ -7,7 +7,6 @@ import { TagProvider } from "./tags";
 import { UserProvider } from "./user";
 import { CompanyProvider } from "./company";
 import { CompanyCategoryProvider } from "./company-category/index.tsx";
-import { CompanyTransferProvider } from "./CompanyTransfer";
 import { BannerProvider } from "./banner";
 import { PortalProvider } from "./portal";
 import { ArticleAnalyticsProvider } from "./analytics";
@@ -21,13 +20,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <ArticleProvider>
               <CategorysProvider>
                 <CompanyCategoryProvider>
-                  <CompanyTransferProvider>
-                    <ArticleAnalyticsProvider>
-                      <BannerProvider>
-                        <TagProvider>{children}</TagProvider>
-                      </BannerProvider>
-                    </ArticleAnalyticsProvider>
-                  </CompanyTransferProvider>
+                  <ArticleAnalyticsProvider>
+                    <BannerProvider>
+                      <TagProvider>{children}</TagProvider>
+                    </BannerProvider>
+                  </ArticleAnalyticsProvider>
                 </CompanyCategoryProvider>
               </CategorysProvider>
             </ArticleProvider>

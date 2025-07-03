@@ -13,12 +13,10 @@ interface TableCompanyProps {
 
 export default function TableCompany({ filter }: TableCompanyProps) {
   const { ListCompany, listCompany } = useContext(CompanyContext);
+  console.log('listCompany', listCompany)
   const [loading, setLoading] = useState(true);
-
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: 20,
-  });
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(9);
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -34,12 +32,7 @@ export default function TableCompany({ filter }: TableCompanyProps) {
           options.category = filter.category;
         }
 
-        //utilizar filtro de isActive como booleano usando select caso solicitado
-        // if (filter.isActive !== null && filter.isActive !== undefined) {
-        //   options.isActive = filter.isActive;
-        // }
-
-        await ListCompany(pagination.pageIndex + 1, pagination.pageSize, options);
+        await ListCompany(pageIndex + 1, pageSize, options);
       } catch (error) {
         console.error("Error fetching companies:", error);
       } finally {
@@ -48,19 +41,21 @@ export default function TableCompany({ filter }: TableCompanyProps) {
     };
 
     fetchCompanies();
-  }, [pagination.pageIndex, pagination.pageSize, filter]);
+  }, [pageIndex, pageSize, filter]);
+
+  const filteredData = listCompany?.data?.filter(company => 
+    company.status !== "new_lead" && company.status !== "in_process"
+  ) || [];
 
   return (
     <DataTable
       columns={columns}
-      data={listCompany?.data || []}
+      data={filteredData}
       totalPages={Number(listCompany?.totalPages) || 1}
-      pagination={pagination}
-      onPaginationChange={(updater) =>
-        setPagination((prev) =>
-          typeof updater === "function" ? updater(prev) : updater
-        )
-      }
+      pageIndex={pageIndex}
+      setPageIndex={setPageIndex}
+      pageSize={pageSize}
+      setPageSize={setPageSize}
     />
   );
 }
