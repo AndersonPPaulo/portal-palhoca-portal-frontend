@@ -4,19 +4,8 @@ import React, { useContext, useEffect, useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserContext } from "@/providers/user";
-import { filterTabsByRole } from "./tabPostConfiguration";
+import { filterTabsByRole, TabConfig } from "./tabPostConfiguration";
 import Header from "@/components/header";
-
-interface TabConfig {
-  value: string;
-  label: string;
-  description: string;
-  component: React.ReactNode;
-  path: string;
-  title: string;
-  name: string;
-  allowedRoles?: string[];
-}
 
 interface PostTabsProps {
   tabs: TabConfig[];

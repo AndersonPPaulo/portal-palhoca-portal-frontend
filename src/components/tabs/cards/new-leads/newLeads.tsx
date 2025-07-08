@@ -9,12 +9,12 @@ import { useState } from "react";
 export default function Leads() {
   const [filter, setFilter] = useState("");
   const [activeFilters, setActiveFilters] = useState<{
-    name: string[];
+    name: string;
     status?: string[];
     email?: string[];
     responsibleName?: string[];
   }>({
-    name: [],
+    name: "",
     status: [],
     email: [],
     responsibleName: [],

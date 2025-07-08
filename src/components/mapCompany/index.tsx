@@ -278,6 +278,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
             address = await mapService.reverseGeocode(latitude, longitude);
           } catch (error) {
             address = `GPS: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+            return error
           }
 
           onLocationSelect(latitude, longitude, address);
