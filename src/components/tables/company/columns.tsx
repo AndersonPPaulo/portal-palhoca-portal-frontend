@@ -1,4 +1,5 @@
 "use client";
+import CompanyAnalyticsModal from "@/components/Modals/AnalyticsModal/companyAnalyticsModal";
 import {
   TooltipContent,
   TooltipProvider,
@@ -7,9 +8,9 @@ import {
 import { ICompanyProps } from "@/providers/company";
 import { Tooltip, TooltipArrow, TooltipPortal } from "@radix-ui/react-tooltip";
 import { ColumnDef } from "@tanstack/react-table";
-import { Edit } from "lucide-react";
+import { ChartLine, Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React from "react";
+import React, { useState } from "react";
 
 const CellActions = (companyId: string) => {
   const { push } = useRouter();
@@ -41,6 +42,48 @@ const CellActions = (companyId: string) => {
         </Tooltip>
       </TooltipProvider>
     </div>
+  );
+};
+
+// Componente separado para a célula de analytics
+const AnalyticsCell = ({ company }: { company: ICompanyProps }) => {
+  const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
+
+  return (
+    <>
+      <TooltipProvider delayDuration={600}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              className="text-center text-primary w-[150px] truncate flex items-center justify-center gap-2 cursor-pointer hover:bg-primary/10 rounded-lg p-2 transition-colors"
+              onClick={() => setIsAnalyticsModalOpen(true)}
+            >
+              <ChartLine size={20} />
+            </div>
+          </TooltipTrigger>
+          <TooltipPortal>
+            <TooltipContent
+              className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
+              sideOffset={5}
+            >
+              <span>Ver estatísticas detalhadas</span>
+              <TooltipArrow
+                className="fill-primary-light"
+                width={11}
+                height={5}
+              />
+            </TooltipContent>
+          </TooltipPortal>
+        </Tooltip>
+      </TooltipProvider>
+
+      <CompanyAnalyticsModal
+        isOpen={isAnalyticsModalOpen}
+        onClose={() => setIsAnalyticsModalOpen(false)}
+        companyId={company.id}
+        companyTitle={company.name}
+      />
+    </>
   );
 };
 
@@ -226,6 +269,14 @@ export const columns: ColumnDef<ICompanyProps>[] = [
         </span>
       </div>
     ),
+  },
+  {
+    accessorKey: "Analíticos",
+    header: () => <div className="text-center w-[150px]">Analíticos</div>,
+    cell: ({ row }) => {
+      const company = row?.original;
+      return <AnalyticsCell company={company} />;
+    },
   },
   {
     id: "actions",

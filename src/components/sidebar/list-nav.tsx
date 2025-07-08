@@ -1,4 +1,4 @@
-import { Home,  User, LogOut, Users, Dot, Store, NotebookPen } from "lucide-react";
+import { Home,  User, LogOut, Users, Dot, Store, NotebookPen, Globe } from "lucide-react";
 import { RiMegaphoneLine } from "react-icons/ri";
 
 
@@ -7,6 +7,11 @@ export const navigationMain = [
     name: "Home",
     icon: Home,
     path: "/dashboard",
+  },
+  {
+    name: "Portais",
+    icon: Globe ,
+    path: "/portais",
   },
   {
     name: "Noticias",
@@ -18,11 +23,11 @@ export const navigationMain = [
         icon: Dot,
         path: "/postagens/tags",
       },
-      {
-        name: "Categorias",
-        icon: Dot,
-        path: "/postagens/categorias",
-      },
+      // {
+      //   name: "Categorias",
+      //   icon: Dot,
+      //   path: "/postagens/categorias",
+      // },
     ],
   },
   {

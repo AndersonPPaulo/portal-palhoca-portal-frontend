@@ -32,7 +32,7 @@ const authorsSchema = z.object({
 
 type AuthorsFormData = z.infer<typeof authorsSchema>;
 
-export default function FormCreateAuthors() {
+export default function FormCreatePortals() {
   const { CreateUser, ListRoles, ListUser, roles } = useContext(UserContext);
   const { back } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -117,6 +117,7 @@ export default function FormCreateAuthors() {
 
       try {
         const result = await ListUser({ role: roleFilter });
+        console.log("result", result);
 
         if (result?.data?.length) {
           const mappedOptions = result.data.map((user: ResponsePromise) => ({
@@ -143,6 +144,7 @@ export default function FormCreateAuthors() {
   useEffect(() => {}, [selectedImage]);
 
   const uploadUserImage = async (file: File, user_id: string) => {
+    console.log("user_id", user_id);
     try {
       const { "user:token": token } = parseCookies();
 
@@ -229,6 +231,7 @@ export default function FormCreateAuthors() {
       const hasImage = selectedImage && selectedImage.file;
 
       const response = await CreateUser(data);
+      console.log("response 3", response.response.id);
 
       formSubmittedSuccessfully.current = true;
 
@@ -273,34 +276,10 @@ export default function FormCreateAuthors() {
         <div className="w-full flex justify-between items-center">
           <ReturnPageButton />
         </div>
-
-        {/* Layout com foto à esquerda e inputs em duas linhas à direita */}
         <div className="flex gap-6 items-start">
-          {/* Thumbnail Uploader - mantém posição e tamanho */}
-          <div className="flex-shrink-0 w-32">
-            <ThumbnailUploader
-              showDescription={false}
-              width="w-full"
-              height="h-28"
-              borderRadius="rounded-xl"
-              label="Foto"
-              modalWidth="max-w-sm"
-              previewHeight="h-32"
-              onImageUpload={handleImageUpload}
-              modalTitle="Adicionar Foto de Perfil"
-              confirmButtonText="Selecionar Foto"
-              uploadAreaText="Clique para adicionar foto"
-              uploadAreaSubtext="JPG, PNG ou GIF (max. 5MB)"
-            />
-            {selectedImage && (
-              <p className="text-green-600 text-xs mt-1">Foto selecionada</p>
-            )}
-          </div>
-
-          {/* Container dos inputs organizados em duas linhas */}
           <div className="flex-1 space-y-4">
             {/* Primeira linha de inputs */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               {/* Nome */}
               <div className="space-y-1">
                 <CustomInput
@@ -331,25 +310,10 @@ export default function FormCreateAuthors() {
                   </span>
                 )}
               </div>
-
-              {/* Telefone */}
-              <div className="space-y-1">
-                <CustomInput
-                  id="phone"
-                  label="Telefone"
-                  {...register("phone")}
-                  placeholder="(11) 99999-9999"
-                />
-                {errors.phone && (
-                  <span className="text-xs text-red-500 block">
-                    {errors.phone.message}
-                  </span>
-                )}
-              </div>
             </div>
 
             {/* Segunda linha de inputs */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               {/* Senha */}
               <div className="space-y-1">
                 <CustomInput
@@ -365,50 +329,7 @@ export default function FormCreateAuthors() {
                   </span>
                 )}
               </div>
-
-              {/* Cargo - Usando CustomSelect */}
-              <div className="space-y-1">
-                <CustomSelect
-                  id="roleId"
-                  label="Cargo"
-                  options={rolesOptions}
-                  value={watch("roleId")}
-                  onChange={(value) =>
-                    setValue(
-                      "roleId",
-                      Array.isArray(value) ? value[0] ?? "" : value
-                    )
-                  }
-                  placeholder="Selecione a função"
-                />
-                {errors.roleId && (
-                  <span className="text-xs text-red-500 block">
-                    {errors.roleId.message}
-                  </span>
-                )}
-              </div>
-
               {/* Responsável Técnico - Usando CustomSelect */}
-              <div className="space-y-1">
-                <CustomSelect
-                  id="chiefEditorId"
-                  label="Responsável Técnico"
-                  options={usersOptions}
-                  value={watch("chiefEditorId")}
-                  onChange={(value) =>
-                    setValue(
-                      "chiefEditorId",
-                      Array.isArray(value) ? value[0] ?? "" : value
-                    )
-                  }
-                  placeholder="Selecione o responsável"
-                />
-                {errors.chiefEditorId && (
-                  <span className="text-xs text-red-500 block">
-                    {errors.chiefEditorId.message}
-                  </span>
-                )}
-              </div>
               <div className="space-y-1">
                 <CustomInput
                   id="topic"

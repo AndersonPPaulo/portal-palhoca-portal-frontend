@@ -93,7 +93,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     );
 
     setChangeStatus(sortedHistory[0].status);
-    setChangeMessage(sortedHistory[0].change_request_description);
+    setChangeMessage(sortedHistory[0].change_request_description || "");
   }, []);
 
   // Carregar dados necessários e garantir que todos carregaram antes de definir valores

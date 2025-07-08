@@ -5,7 +5,6 @@ import { useContext } from "react";
 import Header from "@/components/header";
 import { CompanyContext } from "@/providers/company";
 import FormUpdateCompany from "@/components/painel/cards/company/forms/update-company";
-import { LoaderIcon } from "lucide-react";
 
 interface Props {
   params: Promise<{ id: string }>;

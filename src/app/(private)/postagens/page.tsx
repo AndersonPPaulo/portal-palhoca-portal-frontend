@@ -1,13 +1,11 @@
-import { PostTabs } from "@/components/tabs/configuration/tabsPostConfiguration";
-import { tabPostConfigurations } from "@/components/tabs/configuration/tabsPostConfiguration/tabPostConfiguration";
+// src/app/(private)/postagens/page.tsx
+
+import ClientPostTabsWrapper from "./client-post-tabs-wrapper";
 
 export default function Postagens() {
   return (
     <div className="bg-primary-light h-full">
-      <PostTabs tabs={tabPostConfigurations} />
+      <ClientPostTabsWrapper />
     </div>
   );
 }
-
-
-
