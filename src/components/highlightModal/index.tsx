@@ -49,10 +49,6 @@ export default function HighlightModal({
 
     setIsSubmitting(true);
     try {
-      console.log("Dados enviados pelo modal:", {
-        isHighlight,
-        highlightPosition,
-      });
       await onPublish(isHighlight, highlightPosition);
 
       // Reset do estado após publicar

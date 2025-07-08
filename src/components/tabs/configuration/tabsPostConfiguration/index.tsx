@@ -143,12 +143,15 @@ export function PostTabs({ tabs }: PostTabsProps) {
           value={tab.value}
           className="flex-1 gap-4 py-2 px-6"
         >
-          {React.createElement(tab.component, {
-            userId: userPermissions.userId,
-            userRole: userPermissions.userRole,
-            isChiefEditor: userPermissions.isChiefEditor,
-            isAdmin: userPermissions.isAdmin,
-          })}
+          {React.isValidElement(tab.component) && typeof tab.component.type !== "string"
+            ? React.cloneElement(tab.component as React.ReactElement<any>, {
+                ...(tab.component.props || {}),
+                userId: userPermissions.userId,
+                userRole: userPermissions.userRole,
+                isChiefEditor: userPermissions.isChiefEditor,
+                isAdmin: userPermissions.isAdmin,
+              })
+            : tab.component}
         </TabsContent>
       ))}
     </Tabs>
