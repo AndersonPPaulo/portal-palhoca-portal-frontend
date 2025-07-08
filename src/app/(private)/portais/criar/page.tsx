@@ -1,5 +1,5 @@
 import Header from "@/components/header";
-import FormCreateAuthors from "@/components/painel/cards/authors/forms/create-authors";
+import FormCreatePortals from "@/components/painel/cards/portals/forms/create-portals";
 
 export default function CriarAutor() {
   return (
@@ -10,7 +10,7 @@ export default function CriarAutor() {
         description="Criar usuários para poderem publicar artigos/postagens para o site"
       />
       <div className="flex-1 p-6">
-        <FormCreateAuthors/>
+        <FormCreatePortals/>
       </div>
     </div>
   );
