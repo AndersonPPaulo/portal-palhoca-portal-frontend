@@ -36,13 +36,13 @@ interface IPortalData {
   portal: ResponsePromise | null;
 }
 
-interface ICihldrenReact {
+interface IChildrenReact {
   children: ReactNode;
 }
 
 export const PortalContext = createContext<IPortalData>({} as IPortalData);
 
-export const PortalProvider = ({ children }: ICihldrenReact) => {
+export const PortalProvider = ({ children }: IChildrenReact) => {
   const { back } = useRouter();
 
   const CreatePortal = async (data: PortalProps): Promise<ResponsePromise> => {
@@ -70,19 +70,22 @@ export const PortalProvider = ({ children }: ICihldrenReact) => {
   };
 
   const [listPortals, setListPortals] = useState<ResponsePromise[]>([]);
+  
   const ListPortals = async (): Promise<ResponsePromise[]> => {
     const { "user:token": token } = parseCookies();
-    const response = await api
-      .get("/portal", { headers: { Authorization: `bearer ${token}` } })
-      .then((res) => {
-        setListPortals(res.data.response);
-      })
-      .catch((err) => {
-        toast.error(err.response.data.message);
-        return err;
+    
+    try {
+      const response = await api.get("/portal", { 
+        headers: { Authorization: `bearer ${token}` } 
       });
-
-    return response;
+      
+      setListPortals(response.data.response);
+      return response.data.response;
+    } catch (err: any) {
+      console.error("Erro ao listar portais:", err);
+      toast.error(err.response?.data?.message || "Erro ao carregar portais");
+      return [];
+    }
   };
 
   const DeletePortal = async (portalId: string): Promise<void> => {
@@ -111,14 +114,12 @@ export const PortalProvider = ({ children }: ICihldrenReact) => {
     const { "user:token": token } = parseCookies();
 
     try {
-      // Ajustando para usar URL com parâmetro em vez de query params
       await api.patch(`/portal/${portalId}`, data, {
         headers: { Authorization: `bearer ${token}` },
       });
 
       toast.success("Portal atualizado com sucesso!");
 
-      // Recarregar depois de atualizar
       await ListPortals();
     } catch (err: any) {
       console.error("Erro detalhado ao atualizar portal:", err);
