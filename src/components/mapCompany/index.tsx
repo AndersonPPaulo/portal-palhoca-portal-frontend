@@ -277,7 +277,6 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
           try {
             address = await mapService.reverseGeocode(latitude, longitude);
           } catch (error) {
-            console.log("Geocoding falhou, mas GPS funcionou");
             address = `GPS: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
           }
 
@@ -304,7 +303,6 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       try {
         address = await mapService.reverseGeocode(lat, lng);
       } catch (error) {
-        console.log("Geocoding falhou, mas coordenadas foram salvas");
         address = `Coordenadas: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
       }
 

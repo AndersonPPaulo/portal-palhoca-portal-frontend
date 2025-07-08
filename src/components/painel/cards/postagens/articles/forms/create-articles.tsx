@@ -150,7 +150,6 @@ export default function FormCreateArticle() {
       thumbnailDescription: "",
     },
   });
-  console.log("profile", profile);
 
   const title = watch("title");
   const categoryId = watch("categoryId");

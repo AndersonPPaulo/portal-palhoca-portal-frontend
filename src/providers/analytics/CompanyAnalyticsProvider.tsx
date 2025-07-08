@@ -1,6 +1,7 @@
 "use client";
 
 import { api } from "@/service/api";
+import { parseCookies } from "nookies";
 import { createContext, ReactNode, useState } from "react";
 
 // Enums
@@ -14,29 +15,24 @@ export enum EventType {
 }
 
 // Interfaces dos dados
-export interface ArticleEvent {
+export interface CompanyEvent {
   event_type: EventType;
   virtual_count: number;
 }
 
-export interface TotalArticleEvent {
+export interface TotalCompanyEvent {
   event_type: EventType;
   total: number;
 }
 
-interface IEventsByArticleResponse {
+interface IEventsByCompanyResponse {
   message: string;
-  events: ArticleEvent[];
+  events: CompanyEvent[];
 }
 
 interface ITotalEventsResponse {
   message: string;
-  events: TotalArticleEvent[];
-}
-
-interface IRegisterEventResponse {
-  message: string;
-  event: any;
+  events: TotalCompanyEvent[];
 }
 
 interface IUpdateVirtualEventResponse {
@@ -44,27 +40,20 @@ interface IUpdateVirtualEventResponse {
   updated: any;
 }
 
-interface IRegisterEventProps {
-  articleId: string;
-  eventType: EventType;
-  extra_data?: Record<string, any>;
-  virtualIncrement?: number;
-}
-
 interface IUpdateVirtualEventProps {
-  article_id: string;
+  company_id: string;
   eventType: EventType;
   newVirtualCount?: number;
 }
 
 // Interface principal do contexto
-interface IArticleAnalyticsData {
-  GetEventsByArticle(articleId: string): Promise<void>;
+interface ICompanyAnalyticsData {
+  GetEventsByCompany(companyId: string): Promise<void>;
   GetTotalEvents(): Promise<void>;
   UpdateVirtualEvent(data: IUpdateVirtualEventProps): Promise<void>;
 
-  articleEvents: Record<string, ArticleEvent[]>;
-  totalEvents: TotalArticleEvent[];
+  companyEvents: Record<string, CompanyEvent[]>;
+  totalEvents: TotalCompanyEvent[];
   loading: boolean;
   error: string | null;
 
@@ -75,97 +64,52 @@ interface IChildrenReact {
   children: ReactNode;
 }
 
-export const ArticleAnalyticsContext = createContext<IArticleAnalyticsData>(
-  {} as IArticleAnalyticsData
+export const CompanyAnalyticsContext = createContext<ICompanyAnalyticsData>(
+  {} as ICompanyAnalyticsData
 );
 
-export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
-  const [articleEvents, setArticleEvents] = useState<
-    Record<string, ArticleEvent[]>
+export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
+  const [companyEvents, setCompanyEvents] = useState<
+    Record<string, CompanyEvent[]>
   >({});
-  const [totalEvents, setTotalEvents] = useState<TotalArticleEvent[]>([]);
+  const [totalEvents, setTotalEvents] = useState<TotalCompanyEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Função para registrar evento (pública - sem auth)
-  const RegisterArticleEvent = async ({
-    articleId,
-    eventType,
-    extra_data = {},
-    virtualIncrement = 1,
-  }: IRegisterEventProps): Promise<void> => {
+  // Função para buscar eventos por comércio (privada - com auth)
+  const GetEventsByCompany = async (companyId: string): Promise<void> => {
     setLoading(true);
     setError(null);
 
+    const { "user:token": token } = parseCookies();
     const config = {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    };
-
-    const requestData = {
-      articleId,
-      eventType,
-      extra_data,
-      virtualIncrement,
+      headers: { Authorization: `bearer ${token}` },
     };
 
     const response = await api
-      .post("/event-article", requestData, config)
+      .get(`/analytics/event-company/${companyId}/company`, config)
       .then((res) => {
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.response?.data?.message || "Erro ao registrar evento");
-        setLoading(false);
-        return err;
-      });
-
-    return response;
-  };
-
-  // Adicione estes logs na função GetEventsByArticle do seu provider
-
-  const GetEventsByArticle = async (articleId: string): Promise<void> => {
-    setLoading(true);
-    setError(null);
-
-    // Debug do token
-    const authToken = localStorage.getItem("authToken");
-
-    const config = {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${authToken}`,
-      },
-    };
-
-    console.log("📡 Fazendo requisição para:", `event-article/${articleId}`);
-
-    const response = await api
-      .get(`/event-article/${articleId}/article`, config)
-      .then((res) => {
-        const responseData: IEventsByArticleResponse = res.data.response;
-
-        setArticleEvents((prev) => ({
+        const responseData: IEventsByCompanyResponse = res.data.response;
+        console.log("res.data.response", res.data.response);
+        setCompanyEvents((prev) => ({
           ...prev,
-          [articleId]: responseData.events || [],
+          [companyId]: responseData.events || [],
         }));
-
         setLoading(false);
+        console.log("responseData.events", responseData.events);
       })
       .catch((err) => {
-        // 🔍 Logs de erro existentes
-
         setError(
-          err.response?.data?.message || "Erro ao buscar eventos do artigo"
+          err.response?.data?.message || "Erro ao buscar eventos do comércio"
         );
         setLoading(false);
         return err;
       });
 
+    console.log("response", response);
     return response;
   };
+
   // Função para buscar totais de eventos (privada - com auth)
   const GetTotalEvents = async (): Promise<void> => {
     setLoading(true);
@@ -179,7 +123,7 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
     };
 
     const response = await api
-      .get("/event-article", config)
+      .get("/analytics/event-company", config)
       .then((res) => {
         const responseData: ITotalEventsResponse = res.data.response;
         setTotalEvents(responseData.events || []);
@@ -198,18 +142,16 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
 
   // Função para atualizar evento virtual (privada - com auth)
   const UpdateVirtualEvent = async ({
-    article_id,
+    company_id,
     eventType,
     newVirtualCount,
   }: IUpdateVirtualEventProps): Promise<void> => {
     setLoading(true);
     setError(null);
 
+    const { "user:token": token } = parseCookies();
     const config = {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-      },
+      headers: { Authorization: `bearer ${token}` },
     };
 
     const requestData = {
@@ -218,9 +160,13 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
     };
 
     const response = await api
-      .patch(`/event-article/${article_id}/article`, requestData, config)
+      .patch(
+        `/analytics/event-company/${company_id}/company`,
+        requestData,
+        config
+      )
       .then((res) => {
-        GetEventsByArticle(article_id);
+        GetEventsByCompany(company_id);
         setLoading(false);
       })
       .catch((err) => {
@@ -240,12 +186,12 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
   };
 
   return (
-    <ArticleAnalyticsContext.Provider
+    <CompanyAnalyticsContext.Provider
       value={{
-        GetEventsByArticle,
+        GetEventsByCompany,
         GetTotalEvents,
         UpdateVirtualEvent,
-        articleEvents,
+        companyEvents,
         totalEvents,
         loading,
         error,
@@ -253,6 +199,6 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
       }}
     >
       {children}
-    </ArticleAnalyticsContext.Provider>
+    </CompanyAnalyticsContext.Provider>
   );
 };

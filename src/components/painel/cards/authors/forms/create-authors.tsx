@@ -117,7 +117,6 @@ export default function FormCreateAuthors() {
 
       try {
         const result = await ListUser({ role: roleFilter });
-        console.log("result", result);
 
         if (result?.data?.length) {
           const mappedOptions = result.data.map((user: ResponsePromise) => ({
@@ -144,7 +143,6 @@ export default function FormCreateAuthors() {
   useEffect(() => {}, [selectedImage]);
 
   const uploadUserImage = async (file: File, user_id: string) => {
-    console.log("user_id", user_id);
     try {
       const { "user:token": token } = parseCookies();
 
@@ -231,7 +229,6 @@ export default function FormCreateAuthors() {
       const hasImage = selectedImage && selectedImage.file;
 
       const response = await CreateUser(data);
-      console.log("response 3", response.response.id);
 
       formSubmittedSuccessfully.current = true;
 
