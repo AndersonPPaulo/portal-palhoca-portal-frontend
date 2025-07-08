@@ -21,7 +21,6 @@ import MapComponent from "@/components/mapCompany";
 import { cn } from "@/lib/utils";
 import "leaflet/dist/leaflet.css";
 
-
 // Schema de validação
 const companySchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -57,7 +56,7 @@ type CompanyFormData = z.infer<typeof companySchema>;
 const statusLabels: Record<CompanyFormData["status"], string> = {
   active: "Ativo",
   inactive: "Inativo",
-  blocked: "Bloqueado"
+  blocked: "Bloqueado",
 };
 
 export default function FormCreateCompany() {
@@ -247,8 +246,6 @@ export default function FormCreateCompany() {
       const { "user:token": token } = parseCookies();
       const response = await ListCompany(1, 1, {
         name: companyName,
-        order: "DESC",
-        orderBy: "created_at",
       });
 
       if (response?.data?.length > 0) {

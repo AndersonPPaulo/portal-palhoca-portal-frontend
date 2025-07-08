@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { AlertCircle } from "lucide-react";
-import { TooltipProvider } from "@radix-ui/react-tooltip";
 
 interface CustomInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -20,22 +19,6 @@ const CustomInput: React.FC<CustomInputProps> = ({
   ...props
 }) => {
   const hasIcon = Boolean(icon);
-  const [isFocused, setIsFocused] = useState(false);
-
-  // Funções para gerenciar o estado de foco
-  const handleFocus = (e: React.FocusEvent) => {
-    setIsFocused(true);
-    if (props.onFocus) {
-      props.onFocus(e as any);
-    }
-  };
-
-  const handleBlur = (e: React.FocusEvent) => {
-    setIsFocused(false);
-    if (props.onBlur) {
-      props.onBlur(e as any);
-    }
-  };
 
   // Estilos comuns para input e textarea
   const commonInputStyles = `
@@ -86,10 +69,7 @@ const CustomInput: React.FC<CustomInputProps> = ({
             className={`${commonInputStyles} min-h-[128px] resize-none`}
           />
         ) : (
-          <input
-            {...props}
-            className={commonInputStyles}
-          />
+          <input {...props} className={commonInputStyles} />
         )}
 
         {icon && (

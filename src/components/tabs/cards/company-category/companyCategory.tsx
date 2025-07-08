@@ -6,10 +6,8 @@ import { useState } from "react";
 
 export default function CategoriaComercio() {
     const [filter, setFilter] = useState("");
-    const [activeFilters, setActiveFilters] = useState<{
-      name: string[];
-    }>({
-      name: [],
+    const [activeFilters, setActiveFilters] = useState<{ name: string }>({
+      name: "",
     });
     
     return (

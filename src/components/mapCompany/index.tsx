@@ -279,6 +279,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
           } catch (error) {
             console.log("Geocoding falhou, mas GPS funcionou");
             address = `GPS: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+            return error
           }
 
           onLocationSelect(latitude, longitude, address);

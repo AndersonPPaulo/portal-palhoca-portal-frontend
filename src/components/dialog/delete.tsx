@@ -48,7 +48,6 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
   const { DeleteCompanyCategory, ListCompanyCategory } = useContext(
     CompanyCategoryContext
   );
-  const { UpdateBanner, ListBanners } = useContext(BannerContext);
 
   const { push } = useRouter();
   const [open, setOpen] = useState(false);

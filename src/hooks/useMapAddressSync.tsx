@@ -245,7 +245,7 @@ class AddressService {
 
     const filteredParts = parts.filter(
       (part) =>
-        !cepMatch?.test(part) &&
+        !/\d{5}-?\d{3}/.test(part) &&
         !/^[A-Z]{2}$/.test(part) &&
         !part.toLowerCase().includes("brasil")
     );
