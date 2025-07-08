@@ -27,6 +27,7 @@ import { UserContext } from "@/providers/user";
 import { CompanyCategoryContext } from "@/providers/company-category/index.tsx";
 import { BannerContext } from "@/providers/banner";
 import { useRouter } from "next/navigation";
+import { PortalContext } from "@/providers/portal";
 
 interface Props {
   item_id: string;
@@ -37,7 +38,8 @@ interface Props {
     | "articles"
     | "users"
     | "companyCategory"
-    | "banners";
+    | "banners"
+    | "portals";
 }
 
 export function DialogDelete({ item_id, item_name, context }: Props) {
@@ -49,6 +51,7 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
     CompanyCategoryContext
   );
   const { UpdateBanner, ListBanners } = useContext(BannerContext);
+  const { DeletePortal, ListPortals } = useContext(PortalContext);
 
   const { push } = useRouter();
   const [open, setOpen] = useState(false);
@@ -80,6 +83,9 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
       } else if (context === "companyCategory") {
         await DeleteCompanyCategory(item_id);
         ListCompanyCategory();
+      } else if (context === "portals") {
+        await DeletePortal(item_id);
+        ListPortals();
       }
       // else if (context === "banners") {
       //   await UpdateBanner({ status: false }, item_id);
@@ -115,6 +121,8 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
         return `Você tem certeza que deseja deletar este artigo? Caso realmente for deletar informe o nome do artigo e confirme `;
       case "companyCategory":
         return `Você tem certeza que deseja deletar esta categoria? Caso realmente for deletar informe o nome da categoria e confirme `;
+      case "portals":
+        return `Você tem certeza que deseja deletar este portal? Caso realmente for deletar informe o nome do portal e confirme `;
       default:
         return "";
     }
@@ -148,6 +156,8 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
                   ? "categoria de comércio"
                   : context === "banners"
                   ? "banner"
+                  : context === "portals"
+                  ? "portal"
                   : "artigo"}
               </span>
 
@@ -171,6 +181,8 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
               ? "categoria de comércio"
               : context === "banners"
               ? "banner"
+              : context === "portals"
+              ? "portal"
               : "artigo"}
           </DialogTitle>
           <DialogDescription className="flex flex-col gap-4 pt-2">

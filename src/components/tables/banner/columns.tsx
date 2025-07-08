@@ -17,15 +17,15 @@ import React from "react";
 const getBannerStyleClass = (style: string) => {
   switch (style?.toLowerCase()) {
     case "noticia":
-      return "bg-blue-500";
+      return "bg-primary";
     case "destaque":
-      return "bg-yellow-500 text-black";
+      return "bg-yellow-600";
     case "topo":
-      return "bg-red-500";
+      return "bg-red";
     case "sidebar":
-      return "bg-orange-500";
+      return "bg-orange";
     default:
-      return "bg-zinc-200";
+      return "bg-zinc";
   }
 };
 
@@ -112,15 +112,15 @@ export const columns = (
   },
   {
     accessorKey: "banner_style",
-    header: () => <div className="text-center">Posição</div>,
+    header: () => <div className="text-center w-[150px]">Posição</div>,
     cell: ({ row }) => {
       const style = row.original.banner_style;
       const bgColor = getBannerStyleClass(style);
 
       return (
-        <div className="flex justify-center">
+        <div className="flex justify-center text-center w-[150px] truncate text-white select-none">
           <span
-            className={`text-white px-3 py-1 rounded-full text-xs font-semibold capitalize transition-transform duration-200 hover:scale-105 ${bgColor}`}
+            className={`text-white font-bold  min-w-[130px] py-1 rounded-full text-sm capitalize ${bgColor}`}
           >
             {style}
           </span>
@@ -133,7 +133,7 @@ export const columns = (
     header: () => <div className="text-center">Inicio / Fim</div>,
     cell: ({ row }) => (
       <div className="flex justify-center">
-        <span className="text-sm text-gray-700 dark:text-gray-300 font-mono transition-opacity duration-200 hover:opacity-80">
+        <span className="text-sm font-bold text-gray-700 dark:text-gray-300 font-mono transition-opacity duration-200 hover:opacity-80">
           {formatDate(row.original.date_active, "dd/MM/yyyy")}{" "}
           <span className="text-gray-400"> - </span>{" "}
           {formatDate(row.original.date_expiration, "dd/MM/yyyy")}
@@ -143,14 +143,14 @@ export const columns = (
   },
   {
     accessorKey: "status",
-    header: () => <div className="text-center">Status</div>,
+    header: () => <div className="text-center w-[150px]">Status</div>,
     cell: ({ row }) => (
-      <div className="flex justify-center">
+      <div className="flex justify-center text-center w-[150px]  text-white select-none">
         <span
-          className={`px-3 py-1 rounded-full text-xs font-semibold transition-all duration-200 hover:scale-105 ${
+          className={`px-3 min-w-[130px] py-1 rounded-full text-sm capitalize ${
             row.original.status
-              ? "bg-green-500 text-white"
-              : "bg-red-500 text-white"
+              ? "bg-green text-white font-bold"
+              : "bg-red text-white font-bold"
           }`}
         >
           {row.original.status ? "Ativo" : "Inativo"}
@@ -163,7 +163,7 @@ export const columns = (
     header: () => <div className="text-center">Ações</div>,
     size: 150,
     cell: ({ row }) => (
-      <div className="flex justify-center">
+      <div className="flex justify-center text-center text-white select-none">
         <CellActions banner={row.original} />
       </div>
     ),
