@@ -22,17 +22,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <ArticleProvider>
               <CategorysProvider>
                 <CompanyCategoryProvider>
-                  <CompanyTransferProvider>
-                    <ArticleAnalyticsProvider>
-                      <BannerAnalyticsProvider>
-                        <CompanyAnalyticsProvider>
-                          <BannerProvider>
-                            <TagProvider>{children}</TagProvider>
-                          </BannerProvider>
-                        </CompanyAnalyticsProvider>
-                      </BannerAnalyticsProvider>
-                    </ArticleAnalyticsProvider>
-                  </CompanyTransferProvider>
+                  <ArticleAnalyticsProvider>
+                    <BannerAnalyticsProvider>
+                      <CompanyAnalyticsProvider>
+                        <BannerProvider>
+                          <TagProvider>{children}</TagProvider>
+                        </BannerProvider>
+                      </CompanyAnalyticsProvider>
+                    </BannerAnalyticsProvider>
+                  </ArticleAnalyticsProvider>
                 </CompanyCategoryProvider>
               </CategorysProvider>
             </ArticleProvider>
