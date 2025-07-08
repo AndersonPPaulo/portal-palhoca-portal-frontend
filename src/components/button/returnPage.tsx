@@ -7,12 +7,10 @@ import { useState } from "react";
 
 export default function ReturnPageButton() {
   const { back } = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   return (
     <Button
       type="button"
-      disabled={isSubmitting}
       onClick={back}
       className="flex items-center bg-primary-light text-primary  rounded-full"
     >

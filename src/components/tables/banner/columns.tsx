@@ -1,6 +1,7 @@
 "use client";
 
 import { DialogDelete } from "@/components/dialog/delete";
+import BannerAnalyticsModal from "@/components/Modals/AnalyticsModal/bannerAnalitycsModal";
 import {
   TooltipContent,
   TooltipProvider,
@@ -10,9 +11,9 @@ import { BannerItem } from "@/providers/banner";
 import { Tooltip, TooltipArrow, TooltipPortal } from "@radix-ui/react-tooltip";
 import { ColumnDef } from "@tanstack/react-table";
 import { formatDate } from "date-fns";
-import { Edit } from "lucide-react";
+import { ChartLine, Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React from "react";
+import React, { useState } from "react";
 
 const getBannerStyleClass = (style: string) => {
   switch (style?.toLowerCase()) {
@@ -68,6 +69,48 @@ const CellActions = ({ banner }: Props) => {
         </Tooltip>
       </TooltipProvider>
     </div>
+  );
+};
+
+// Componente separado para a célula de analytics
+const AnalyticsCell = ({ banner }: { banner: BannerItem }) => {
+  const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
+
+  return (
+    <>
+      <TooltipProvider delayDuration={600}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              className="text-center text-primary w-[150px] truncate flex items-center justify-center gap-2 cursor-pointer hover:bg-primary/10 rounded-lg p-2 transition-colors"
+              onClick={() => setIsAnalyticsModalOpen(true)}
+            >
+              <ChartLine size={20} />
+            </div>
+          </TooltipTrigger>
+          <TooltipPortal>
+            <TooltipContent
+              className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
+              sideOffset={5}
+            >
+              <span>Ver estatísticas detalhadas</span>
+              <TooltipArrow
+                className="fill-primary-light"
+                width={11}
+                height={5}
+              />
+            </TooltipContent>
+          </TooltipPortal>
+        </Tooltip>
+      </TooltipProvider>
+
+      <BannerAnalyticsModal
+        isOpen={isAnalyticsModalOpen}
+        onClose={() => setIsAnalyticsModalOpen(false)}
+        bannerId={banner.id}
+        bannerTitle={banner.name}
+      />
+    </>
   );
 };
 
@@ -157,6 +200,14 @@ export const columns = (
         </span>
       </div>
     ),
+  },
+   {
+    accessorKey: "Analíticos",
+    header: () => <div className="text-center w-[150px]">Analíticos</div>,
+    cell: ({ row }) => {
+      const banner = row?.original;
+      return <AnalyticsCell banner={banner} />;
+    },
   },
   {
     id: "actions",

@@ -23,10 +23,6 @@ export default function TableArticles({
   activeFilters,
 }: TableArticlesProps) {
   const { ListAuthorArticles, listArticles } = useContext(ArticleContext);
-  console.log(
-    "listArticles",
-    listArticles?.data.filter((item) => item.highlight === true)
-  );
   const { profile } = useContext(UserContext);
   const [_loading, setLoading] = useState(true);
 

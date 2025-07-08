@@ -1,6 +1,5 @@
 import Header from "@/components/header";
 import FormCreateCompanyCategory from "@/components/painel/cards/company-category/forms/create-company-category";
-import TransferList from "@/components/transferList";
 
 export default function CreateCompanyCategory() {
   return (

@@ -1,7 +1,18 @@
 import React from "react";
 import Articles from "../../cards/articles/articles";
 
-export const tabPostConfigurations = [
+export interface TabConfig {
+  value: string;
+  name: string;
+  label: string;
+  title: string;
+  description: string;
+  component: React.ReactNode;
+  path: string;
+  allowedRoles: string[];
+}
+
+export const tabPostConfigurations:TabConfig[] = [
   {
     value: "PUBLISHED",
     name: "Noticias",

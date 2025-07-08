@@ -52,8 +52,6 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
   );
   const { UpdateBanner, ListBanners } = useContext(BannerContext);
   const { DeletePortal, ListPortals } = useContext(PortalContext);
-
-  const { push } = useRouter();
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState("");
