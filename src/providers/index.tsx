@@ -13,6 +13,7 @@ import { PortalProvider } from "./portal";
 import { ArticleAnalyticsProvider } from "./analytics/ArticleAnalyticsProvider";
 import { BannerAnalyticsProvider } from "./analytics/BannerAnalyticsProvider";
 import { CompanyAnalyticsProvider } from "./analytics/CompanyAnalyticsProvider";
+import { WhatsappGroupProvider } from "./whatsapp-group";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -21,21 +22,23 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <UserProvider>
           <CompanyProvider>
             <ArticleProvider>
-              <CategorysProvider>
-                <CompanyCategoryProvider>
-                  <CompanyTransferProvider>
-                    <ArticleAnalyticsProvider>
-                      <BannerAnalyticsProvider>
-                        <CompanyAnalyticsProvider>
-                          <BannerProvider>
-                            <TagProvider>{children}</TagProvider>
-                          </BannerProvider>
-                        </CompanyAnalyticsProvider>
-                      </BannerAnalyticsProvider>
-                    </ArticleAnalyticsProvider>
-                  </CompanyTransferProvider>
-                </CompanyCategoryProvider>
-              </CategorysProvider>
+              <WhatsappGroupProvider>
+                <CategorysProvider>
+                  <CompanyCategoryProvider>
+                    <CompanyTransferProvider>
+                      <ArticleAnalyticsProvider>
+                        <BannerAnalyticsProvider>
+                          <CompanyAnalyticsProvider>
+                            <BannerProvider>
+                              <TagProvider>{children}</TagProvider>
+                            </BannerProvider>
+                          </CompanyAnalyticsProvider>
+                        </BannerAnalyticsProvider>
+                      </ArticleAnalyticsProvider>
+                    </CompanyTransferProvider>
+                  </CompanyCategoryProvider>
+                </CategorysProvider>
+              </WhatsappGroupProvider>
             </ArticleProvider>
           </CompanyProvider>
         </UserProvider>

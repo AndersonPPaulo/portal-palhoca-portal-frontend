@@ -62,5 +62,5 @@ export default function TablePortals({
     );
   }
 
-  return <DataTable columns={columns} data={filteredPortals} />;
+  return <DataTable columns={columns} data={filteredPortals}/>;
 }
