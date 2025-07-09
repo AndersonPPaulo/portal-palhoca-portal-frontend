@@ -1,4 +1,4 @@
-import { Home,  User, LogOut, Users, Dot, Store, NotebookPen, Globe } from "lucide-react";
+import { Home,  User, LogOut, Users, Dot, Store, NotebookPen, Globe, FileChartColumnIncreasing } from "lucide-react";
 import { RiMegaphoneLine } from "react-icons/ri";
 
 
@@ -34,6 +34,11 @@ export const navigationMain = [
     name: "Comércios",
     icon: Store,
     path: "/comercio",
+  },
+  {
+    name: "Relatórios",
+    icon: FileChartColumnIncreasing,
+    path: "/relatorios",
   },
   {
     name: "Banners",
