@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }: ICihldrenReact) => {
     const response = await api
       .post("/login", data)
       .then((res) => {
-        setCookie({ res }, "user:token", res.data.token, {
+        setCookie(null, "user:token", res.data.token, {
           maxAge: 60 * 60 * 24 * 2,
           path: "/",
         });

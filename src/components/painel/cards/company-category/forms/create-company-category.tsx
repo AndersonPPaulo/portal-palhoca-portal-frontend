@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import ReturnPageButton from "@/components/button/returnPage";
 import { CompanyCategoryContext } from "@/providers/company-category/index.tsx";
-import TransferList from "@/components/transferList";
 
 const categorySchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -21,7 +20,6 @@ export default function FormCreateCompanyCategory() {
   const { CreateCompanyCategory } = useContext(CompanyCategoryContext);
   const { back } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showTransferList, setShowTransferList] = useState(false);
 
   const {
     register,
@@ -49,10 +47,6 @@ export default function FormCreateCompanyCategory() {
     }
   };
 
-  const toggleTransferList = () => {
-    setShowTransferList(!showTransferList);
-  };
-
   return (
     <div className=" bg-white p-6 rounded-3xl h-auto">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -76,29 +70,6 @@ export default function FormCreateCompanyCategory() {
           </div>
         </div>
 
-        <div className="mt-4">
-          <Button
-            type="button"
-            onClick={toggleTransferList}
-            className=" hover:bg-blue-700 text-white rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
-          >
-            {showTransferList
-              ? "Ocultar associação de comércios"
-              : "Associar comércios a esta categoria"}
-          </Button>
-          {showTransferList && (
-            <div className="h-full mt-4">
-              <h3 className="text-lg font-medium mb-2">
-                Associar comércios a esta categoria
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Selecione os comércios que deseja associar a esta categoria.
-              </p>
-
-              <TransferList />
-            </div>
-          )}
-        </div>
         <div className="flex w-full justify-end items-center">
           <div className="space-x-4">
             <Button

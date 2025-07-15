@@ -43,6 +43,8 @@ interface Props {
 }
 
 export function DialogDelete({ item_id, item_name, context }: Props) {
+  const { push } = useRouter();
+
   const { DeleteTag, ListTags } = useContext(TagContext);
   const { DeleteCategory, ListCategorys } = useContext(CategorysContext);
   const { DeleteArticle, ListAuthorArticles } = useContext(ArticleContext);
@@ -50,7 +52,6 @@ export function DialogDelete({ item_id, item_name, context }: Props) {
   const { DeleteCompanyCategory, ListCompanyCategory } = useContext(
     CompanyCategoryContext
   );
-  const { UpdateBanner, ListBanners } = useContext(BannerContext);
   const { DeletePortal, ListPortals } = useContext(PortalContext);
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
