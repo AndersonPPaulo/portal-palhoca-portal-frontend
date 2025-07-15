@@ -3,270 +3,71 @@
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useContext, useEffect, useState, useRef } from "react";
+import { useContext, useState } from "react";
 import CustomInput from "@/components/input/custom-input";
+import CustomSelect from "@/components/select/custom-select";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import ReturnPageButton from "@/components/button/returnPage";
-import { ResponsePromise, UserContext } from "@/providers/user";
-import ThumbnailUploader from "@/components/thumbnail";
-import { parseCookies } from "nookies";
-import { api } from "@/service/api";
-import { toast } from "sonner";
-import CustomSelect from "@/components/select/custom-select";
+import { PortalContext } from "@/providers/portal";
 
-interface OptionType {
-  value: string;
-  label: string;
-}
-
-const authorsSchema = z.object({
+const portalSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
-  email: z.string().email().min(1, "Email obrigatório"),
-  phone: z.string().min(1, "Telefone/celular obrigatório"),
-  roleId: z.string().min(1, "Função obrigatório"),
-  password: z.string().min(1, "Senha obrigatório"),
-  chiefEditorId: z.string().min(1, "Responsável necessita ser indicado"),
-  topic: z.string(),
+  link_referer: z.string().min(1, "Link de redirecionamento é obrigatório"),
+  status: z.boolean(),
 });
 
-type AuthorsFormData = z.infer<typeof authorsSchema>;
+type PortalFormData = z.infer<typeof portalSchema>;
 
 export default function FormCreatePortals() {
-  const { CreateUser, ListRoles, ListUser, roles } = useContext(UserContext);
+  const { CreatePortal } = useContext(PortalContext);
   const { back } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [rolesOptions, setRolesOptions] = useState<OptionType[]>([]);
-  const [usersOptions, setUsersOptions] = useState<OptionType[]>([]);
-  const formSubmittedSuccessfully = useRef(false);
-  const [selectedImage, setSelectedImage] = useState<{
-    file: File;
-    preview: string;
-  } | null>(null);
+  const [statusValue, setStatusValue] = useState("true");
+
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
     setValue,
-    watch,
-  } = useForm<AuthorsFormData>({
-    resolver: zodResolver(authorsSchema),
+  } = useForm<PortalFormData>({
+    resolver: zodResolver(portalSchema),
     defaultValues: {
       name: "",
-      email: "",
-      phone: "",
-      roleId: "",
-      password: "",
-      chiefEditorId: "",
-      topic: "",
+      link_referer: "",
+      status: true, // Ativo por padrão
     },
   });
 
-  useEffect(() => {
-    const loadInitialData = async () => {
-      try {
-        await Promise.all([
-          ListRoles(),
-          ListUser({
-            role: "chefe de redação|gerente comercial|administrador",
-          }),
-        ]);
-      } catch (error) {
-        console.error("Erro ao carregar dados iniciais:", error);
-      }
-    };
+  const statusOptions = [
+    { value: "true", label: "Ativo" },
+    { value: "false", label: "Inativo" },
+  ];
 
-    loadInitialData();
-  }, []);
-
-  useEffect(() => {
-    if (roles && Array.isArray(roles)) {
-      const roleOptions: OptionType[] = roles.map((role) => ({
-        value: role.id,
-        label: role.name || `Role ${role.id}`,
-      }));
-      setRolesOptions(roleOptions);
-    }
-  }, [roles]);
-
-  useEffect(() => {
-    const fetchChiefEditorsByRole = async () => {
-      const selectedRoleId = watch("roleId");
-      const selectedRole = roles?.find((role) => role.id === selectedRoleId);
-
-      if (!selectedRole?.name) {
-        setUsersOptions([]);
-        return;
-      }
-
-      const roleName = selectedRole.name.toLowerCase();
-
-      let roleFilter = "";
-
-      if (["jornalista", "colunista", "chefe de redação"].includes(roleName)) {
-        roleFilter = "chefe de redação";
-      } else if (["vendedor", "gerente comercial"].includes(roleName)) {
-        roleFilter = "gerente comercial";
-      } else if (roleName === "administrador") {
-        roleFilter = "chefe de redação|gerente comercial|administrador";
-      } else {
-        setUsersOptions([]);
-        return;
-      }
-
-      try {
-        const result = await ListUser({ role: roleFilter });
-        console.log("result", result);
-
-        if (result?.data?.length) {
-          const mappedOptions = result.data.map((user: ResponsePromise) => ({
-            value: user.id,
-            label: `${user.name} - ${user.role?.name}`,
-          }));
-          setUsersOptions(mappedOptions);
-        } else {
-          setUsersOptions([]);
-        }
-      } catch (error) {
-        console.error("Erro ao buscar responsáveis:", error);
-        setUsersOptions([]);
-      }
-    };
-
-    fetchChiefEditorsByRole();
-  }, [watch("roleId"), roles]);
-
-  const handleImageUpload = (file: File, previewUrl: string) => {
-    setSelectedImage({ file, preview: previewUrl });
+  const handleStatusChange = (value: string | string[]) => {
+    const stringValue = Array.isArray(value) ? value[0] : value;
+    setStatusValue(stringValue);
+    setValue("status", stringValue === "true");
   };
 
-  useEffect(() => {}, [selectedImage]);
-
-  const uploadUserImage = async (file: File, user_id: string) => {
-    console.log("user_id", user_id);
-    try {
-      const { "user:token": token } = parseCookies();
-
-      if (user_id) {
-        if (!file || file.size === 0) {
-          throw new Error("Arquivo inválido ou vazio");
-        }
-
-        const allowedTypes = [
-          "image/jpeg",
-          "image/jpg",
-          "image/png",
-          "image/gif",
-          "image/webp",
-        ];
-        if (!allowedTypes.includes(file.type)) {
-          throw new Error(
-            `Tipo de arquivo não suportado: ${file.type}. Use JPEG, PNG, GIF ou WebP.`
-          );
-        }
-
-        // Verificar tamanho (max 5MB)
-        const maxSize = 5 * 1024 * 1024; // 5MB
-        if (file.size > maxSize) {
-          throw new Error(
-            `Arquivo muito grande: ${(file.size / 1024 / 1024).toFixed(
-              2
-            )}MB. Máximo permitido: 5MB.`
-          );
-        }
-
-        // Criar FormData para enviar o arquivo
-        const formData = new FormData();
-
-        formData.append("user_image", file, file.name);
-
-        // Fazer o upload da foto
-        const uploadResponse = await api.post(
-          `/user/${user_id}/upload-user-image`,
-          formData,
-          {
-            headers: {
-              Authorization: `bearer ${token}`,
-            },
-            timeout: 60000, // 60 segundos timeout
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity,
-          }
-        );
-
-        // Verificar se a resposta contém user_image
-        if (uploadResponse.data?.user_image) {
-          toast.success("Foto de perfil enviada com sucesso!");
-        } else {
-          toast.success(
-            "Upload realizado, mas verifique se a foto foi salva corretamente"
-          );
-        }
-      } else {
-        throw new Error(
-          "Usuário criado, mas não foi possível encontrá-lo para adicionar a foto"
-        );
-      }
-    } catch (error: any) {
-      if (error.response) {
-      } else if (error.request) {
-        console.error("Request feito mas sem resposta:", error.request);
-      }
-
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        "Erro ao fazer upload da foto";
-      toast.error(errorMessage);
-      throw error;
-    }
-  };
-
-  const onSubmit = async (data: AuthorsFormData) => {
+  const onSubmit = async (data: PortalFormData) => {
     try {
       setIsSubmitting(true);
-      formSubmittedSuccessfully.current = false;
 
-      const hasImage = selectedImage && selectedImage.file;
+      await CreatePortal({
+        name: data.name,
+        link_referer: data.link_referer,
+        status: data.status,
+      });
 
-      const response = await CreateUser(data);
-      console.log("response 3", response.response.id);
-
-      formSubmittedSuccessfully.current = true;
-
-      // Se há imagem selecionada, fazer upload após criação bem-sucedida
-      if (hasImage) {
-        const imageFile = selectedImage.file;
-
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-
-        try {
-          await uploadUserImage(imageFile, response.response.id);
-
-          setTimeout(async () => {
-            try {
-              await ListUser();
-            } catch (reloadError) {
-              console.error("Erro ao recarregar lista:", reloadError);
-            }
-          }, 1000);
-        } catch (uploadError) {
-          console.error("Erro ao fazer upload da foto:", uploadError);
-          toast.error("Usuário criado, mas houve erro no upload da foto");
-        }
-      }
-      // Limpar formulário e imagem
+      // Limpar formulário
       reset();
-      setSelectedImage(null);
-
-      setTimeout(() => {
-        setIsSubmitting(false);
-      }, 1000);
+      setStatusValue("true");
     } catch (error) {
+      console.error("Erro ao criar portal:", error);
+    } finally {
       setIsSubmitting(false);
-      console.error("Erro ao criar usuário:", error);
-      toast.error("Erro ao criar usuário: " + (error as Error).message);
     }
   };
 
@@ -276,74 +77,49 @@ export default function FormCreatePortals() {
         <div className="w-full flex justify-between items-center">
           <ReturnPageButton />
         </div>
-        <div className="flex gap-6 items-start">
-          <div className="flex-1 space-y-4">
-            {/* Primeira linha de inputs */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Nome */}
-              <div className="space-y-1">
-                <CustomInput
-                  id="name"
-                  label="Nome"
-                  {...register("name")}
-                  placeholder="Nome completo"
-                />
-                {errors.name && (
-                  <span className="text-xs text-red-500 block">
-                    {errors.name.message}
-                  </span>
-                )}
-              </div>
 
-              {/* Email */}
-              <div className="space-y-1">
-                <CustomInput
-                  id="email"
-                  label="Email"
-                  type="email"
-                  {...register("email")}
-                  placeholder="email@exemplo.com"
-                />
-                {errors.email && (
-                  <span className="text-xs text-red-500 block">
-                    {errors.email.message}
-                  </span>
-                )}
-              </div>
-            </div>
+        <div className="space-y-4">
+          {/* Nome do Portal */}
+          <div className="space-y-1">
+            <CustomInput
+              id="name"
+              label="Nome"
+              {...register("name")}
+              placeholder="Nome do portal"
+            />
+            {errors.name && (
+              <span className="text-xs text-red-500 block px-6">
+                {errors.name.message}
+              </span>
+            )}
+          </div>
 
-            {/* Segunda linha de inputs */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Senha */}
-              <div className="space-y-1">
-                <CustomInput
-                  id="password"
-                  label="Senha"
-                  type="password"
-                  {...register("password")}
-                  placeholder="••••••••"
-                />
-                {errors.password && (
-                  <span className="text-xs text-red-500 block">
-                    {errors.password.message}
-                  </span>
-                )}
-              </div>
-              {/* Responsável Técnico - Usando CustomSelect */}
-              <div className="space-y-1">
-                <CustomInput
-                  id="topic"
-                  label="Titulo da coluna"
-                  {...register("topic")}
-                  placeholder="Insira o titulo da coluna do colunista"
-                />
-                {errors.password && (
-                  <span className="text-xs text-red-500 block">
-                    {errors.topic?.message}
-                  </span>
-                )}
-              </div>
-            </div>
+          {/* Link de Redirecionamento */}
+          <div className="space-y-1">
+            <CustomInput
+              id="link_referer"
+              label="Link de redirecionamento"
+              {...register("link_referer")}
+              placeholder="https://exemplo.com"
+            />
+            {errors.link_referer && (
+              <span className="text-xs text-red-500 block px-6">
+                {errors.link_referer.message}
+              </span>
+            )}
+          </div>
+
+          {/* Status */}
+          <div className="space-y-1">
+            <CustomSelect
+              id="status"
+              label="Status"
+              options={statusOptions}
+              value={statusValue}
+              onChange={handleStatusChange}
+              placeholder="Selecione o status"
+              error={errors.status?.message}
+            />
           </div>
         </div>
 
@@ -366,12 +142,10 @@ export default function FormCreatePortals() {
               {isSubmitting ? (
                 <div className="flex items-center">
                   <div className="animate-spin h-5 w-5 border-2 border-white rounded-full border-t-transparent mr-2"></div>
-                  {selectedImage
-                    ? "Criando usuário e enviando foto..."
-                    : "Criando..."}
+                  Criando...
                 </div>
               ) : (
-                <div className="flex items-center">Criar Usuário</div>
+                "Criar Portal"
               )}
             </Button>
           </div>

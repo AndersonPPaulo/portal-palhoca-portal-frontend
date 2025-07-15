@@ -1,5 +1,5 @@
 import Header from "@/components/header";
-import FormCreatePortals from "@/components/painel/cards/portals/forms/create-portals";
+import FormCreateWhatsappGroup from "@/components/painel/cards/whatsapp-group/forms/create-whatsapp-group";
 
 export default function CriarAutor() {
   return (
@@ -10,7 +10,7 @@ export default function CriarAutor() {
         description="Criar novos portais de notícias, eventos e informações."
       />
       <div className="flex-1 p-6">
-        <FormCreatePortals/>
+        <FormCreateWhatsappGroup/>
       </div>
     </div>
   );
