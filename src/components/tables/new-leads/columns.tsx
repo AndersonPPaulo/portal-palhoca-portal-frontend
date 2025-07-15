@@ -11,8 +11,6 @@ import { ILeadProps } from "./page";
 import { Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-
-
 const CellActions = (companyId: string) => {
   const { push } = useRouter();
 
@@ -45,7 +43,6 @@ const CellActions = (companyId: string) => {
     </div>
   );
 };
-
 
 export const columns: ColumnDef<ILeadProps>[] = [
   {
@@ -166,12 +163,12 @@ export const columns: ColumnDef<ILeadProps>[] = [
         <span
           className={`${
             row.original.status === "active"
-              ? "bg-green"
+              ? "bg-green font-bold"
               : row.original.status === "blocked"
-              ? "bg-red"
+              ? "bg-red font-bold"
               : row.original.status === "new_lead"
-              ? "bg-blue-500"
-              : "bg-orange"
+              ? "bg-primary font-bold"
+              : "bg-orange font-bold"
           } px-3 py-1 rounded-full min-w-[130px] text-sm capitalize`}
         >
           {row.original.status === "active"

@@ -146,8 +146,8 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
   const [apiCep, setApiCep] = useState<GetCEPProps | null>(null);
 
   const ListCompany = async (
-    page = 1,
-    limit = 10,
+    page: number = 1,
+    limit: number = 9,
     options: {
       name?: string;
       category?: string;
@@ -166,26 +166,18 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
       },
     };
 
-    try {
-      const res = await api.get("/company", config);
-      const dataWithStatus = res.data.response.data.map(
-        (company: ICompanyProps) => ({
-          ...company,
-          status: company.status || "active",
-        })
-      );
+    const response = await api
+      .get("/company", config)
+      .then((res) => {
+        setListCompany(res.data);
+      })
+      .catch((err) => {
+        console.error("Erro ao listar empresas:", err);
+        toast.error(err.response?.data?.message || "Erro ao listar empresas");
+        return err;
+      });
 
-      const formattedResponse = {
-        ...res.data.response,
-        data: dataWithStatus,
-      };
-
-      setListCompany(formattedResponse);
-      return formattedResponse;
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Erro ao listar empresas");
-      throw err;
-    }
+    return response;
   };
 
   const CreateCompany = async (data: UpdateCompanyProps): Promise<void> => {

@@ -30,42 +30,56 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   totalPages: number;
-  pagination: PaginationState;
-  onPaginationChange: OnChangeFn<PaginationState>;
+  pageIndex: number;
+  setPageIndex: (index: number) => void;
+  pageSize: number;
+  setPageSize: (size: number) => void;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   totalPages,
-  pagination,
-  onPaginationChange,
+  pageIndex,
+  setPageIndex,
+  pageSize,
+  setPageSize,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  );
 
-    const table = useReactTable({
-      data,
-      columns,
-      manualPagination: true,
-      pageCount: totalPages,
-      onPaginationChange: (updater) => {
-        const newPagination =
-          typeof updater === "function" ? updater(pagination) : updater;
-        onPaginationChange(newPagination);
+  const table = useReactTable({
+    data,
+    columns,
+    manualPagination: true,
+    pageCount: totalPages,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onPaginationChange: (updater) => {
+      if (typeof updater === "function") {
+        const newState = updater({ pageIndex, pageSize });
+        setPageIndex(newState.pageIndex);
+        setPageSize(newState.pageSize);
+      } else {
+        setPageIndex(updater.pageIndex);
+        setPageSize(updater.pageSize);
+      }
+    },
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
+    onColumnFiltersChange: setColumnFilters,
+    getFilteredRowModel: getFilteredRowModel(),
+    state: {
+      sorting,
+      columnFilters,
+      pagination: {
+        pageIndex,
+        pageSize,
       },
-      getCoreRowModel: getCoreRowModel(),
-      getPaginationRowModel: getPaginationRowModel(),
-      onSortingChange: setSorting,
-      getSortedRowModel: getSortedRowModel(),
-      onColumnFiltersChange: setColumnFilters,
-      getFilteredRowModel: getFilteredRowModel(),
-      state: {
-        pagination,
-        sorting,
-        columnFilters,
-      },
-    });
+    },
+  });
 
   return (
     <div>
