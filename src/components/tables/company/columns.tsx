@@ -247,10 +247,14 @@ export const columns: ColumnDef<ICompanyProps>[] = [
         <span
           className={`${
             row.original.status === "active"
-              ? "bg-green"
+              ? "bg-green font-bold"
               : row.original.status === "blocked"
-              ? "bg-red"
-              : "bg-orange"
+              ? "bg-red font-bold"
+              : row.original.status === "new_lead"
+              ? "bg-primary font-bold"
+              : row.original.status === "inactive"
+              ? "bg-yellow-600 font-bold"
+              : "bg-orange font-bold"
           } px-3 min-w-[130px] py-1 rounded-full text-sm capitalize`}
         >
           {row.original.status === "active"
@@ -259,7 +263,9 @@ export const columns: ColumnDef<ICompanyProps>[] = [
             ? "Bloqueado"
             : row.original.status === "new_lead"
             ? "Novo Lead"
-            : "Inativo"}
+            : row.original.status === "inactive"
+            ? "Inativo"
+            : "Em processo"}
         </span>
       </div>
     ),

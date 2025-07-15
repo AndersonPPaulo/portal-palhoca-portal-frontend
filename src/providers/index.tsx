@@ -7,7 +7,6 @@ import { TagProvider } from "./tags";
 import { UserProvider } from "./user";
 import { CompanyProvider } from "./company";
 import { CompanyCategoryProvider } from "./company-category/index.tsx";
-import { CompanyTransferProvider } from "./CompanyTransfer";
 import { BannerProvider } from "./banner";
 import { PortalProvider } from "./portal";
 import { ArticleAnalyticsProvider } from "./analytics/ArticleAnalyticsProvider";
