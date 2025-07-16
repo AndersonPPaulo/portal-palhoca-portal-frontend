@@ -273,6 +273,7 @@ export default function FormCreateCompany() {
 
   // Submit otimizado do formulário
   const onSubmit = async (data: CompanyFormData) => {
+    console.log('data', data);
     try {
       setIsSubmitting(true);
       formSubmittedSuccessfully.current = false;

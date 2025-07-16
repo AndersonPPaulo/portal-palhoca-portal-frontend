@@ -43,12 +43,12 @@ const TiptapEditor = ({
   const editor = useEditor({
     extensions: [
       StarterKit,
-      CustomImage,
+      // CustomImage,
       BulletList,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Underline,
       Link,
-      CodeBlock,
+      // CodeBlock,
     ],
 
     content: value,
@@ -57,47 +57,47 @@ const TiptapEditor = ({
     },
   });
 
-  const handleImageUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  // const handleImageUpload = async (
+  //   event: React.ChangeEvent<HTMLInputElement>
+  // ) => {
+  //   const file = event.target.files?.[0];
+  //   if (!file) return;
 
-    const formData = new FormData();
-    formData.append("thumbnail", file);
+  //   const formData = new FormData();
+  //   formData.append("thumbnail", file);
 
-    try {
-      const response = await fetch("http://localhost:5555/upload", {
-        method: "POST",
-        body: formData,
-      });
+  //   try {
+  //     const response = await fetch("http://localhost:5555/upload", {
+  //       method: "POST",
+  //       body: formData,
+  //     });
 
-      if (!response.ok) {
-        throw new Error("Falha ao fazer upload da imagem");
-      }
+  //     if (!response.ok) {
+  //       throw new Error("Falha ao fazer upload da imagem");
+  //     }
 
-      const data = await response.json();
-      const imageUrl = `http://localhost:5555/${data.url}`;
+  //     const data = await response.json();
+  //     const imageUrl = `http://localhost:5555/${data.url}`;
 
-      editor?.chain().focus().setImage({ src: imageUrl }).run();
+  //     editor?.chain().focus().setImage({ src: imageUrl }).run();
 
-      setTimeout(() => {
-        const lastImage = editor?.view.dom.querySelector("img:last-of-type");
-        if (lastImage) {
-          editor
-            ?.chain()
-            .focus()
-            .updateAttributes("image", {
-              width: imageSize.width.toString(),
-              height: imageSize.height.toString(),
-            })
-            .run();
-        }
-      }, 10);
-    } catch (error) {
-      alert(error);
-    }
-  };
+  //     setTimeout(() => {
+  //       const lastImage = editor?.view.dom.querySelector("img:last-of-type");
+  //       if (lastImage) {
+  //         editor
+  //           ?.chain()
+  //           .focus()
+  //           .updateAttributes("image", {
+  //             width: imageSize.width.toString(),
+  //             height: imageSize.height.toString(),
+  //           })
+  //           .run();
+  //       }
+  //     }, 10);
+  //   } catch (error) {
+  //     alert(error);
+  //   }
+  // };
 
   useEffect(() => {
     if (!editor) return;
@@ -222,7 +222,7 @@ const TiptapEditor = ({
           <AlignJustify />
         </span>
 
-        <label className="px-2 py-1 border rounded cursor-pointer bg-gray-100">
+        {/* <label className="px-2 py-1 border rounded cursor-pointer bg-gray-100">
           Upload de Imagem
           <input
             type="file"
@@ -250,16 +250,16 @@ const TiptapEditor = ({
             }
             className="w-16 border rounded px-2 py-1"
           />
-        </div>
+        </div> */}
 
-        <span
+        {/* <span
           onClick={() => editor.chain().focus().toggleCodeBlock().run()}
           className={`px-2 py-1 border rounded ${
             editor.isActive("codeBlock") ? "bg-gray-200" : ""
           }`}
         >
           <CodeSquare />
-        </span>
+        </span> */}
 
         <span
           onClick={() => {
@@ -286,8 +286,6 @@ const TiptapEditor = ({
         className="p-4 border rounded-b-[24px] overflow-y-auto overflow-x-hidden max-h-[400px] min-h-[300px] w-full"
         editor={editor}
       />
-
-      
     </div>
   );
 };
