@@ -16,6 +16,7 @@ import {
   ExternalLink,
   Eye,
   FolderSearch2,
+  Star,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
@@ -311,11 +312,56 @@ export const columns: ColumnDef<Article>[] = [
     ),
   },
   {
+    accessorKey: "highlight",
+    header: () => <div className="text-center w-[150px]">Destaque</div>,
+    cell: ({ row }) => {
+      const isHighlight = row?.original?.highlight;
+      const highlightPosition = row?.original?.highlight_position;
+
+      return (
+        <div className="flex items-center justify-center w-[150px]">
+          <span
+            className={`flex items-center gap-1 px-3 py-1 rounded-full font-semibold text-sm ${
+              isHighlight
+                ? "bg-green-100 text-green-600"
+                : "bg-red-100 text-red-500"
+            }`}
+          >
+            {isHighlight ? (
+              <>
+                <Star className="w-4 h-4 text-green-600" fill="currentColor" />{" "}
+                Sim
+                {highlightPosition && (
+                  <span className="ml-1 text-xs text-green-700">
+                    (Posição: {highlightPosition})
+                  </span>
+                )}
+              </>
+            ) : (
+              <>
+                <Star className="w-4 h-4 text-red-500 opacity-50" /> Não
+              </>
+            )}
+          </span>
+        </div>
+      );
+    },
+  },
+  {
     accessorKey: "category",
     header: () => <div className="text-center w-[150px]">Categorias</div>,
     cell: ({ row }) => (
       <div className="text-center w-[150px]">
         {row?.original?.category.name}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "portal",
+    header: () => <div className="text-center w-[150px]">Portal</div>,
+    cell: ({ row }) => (
+      <div className="text-center w-[150px]">
+        {row?.original.portals.map((portal) => portal.name).join(" - ")}
       </div>
     ),
   },
