@@ -23,6 +23,9 @@ import React, { useState } from "react";
 import { ArticleViewModal } from "@/components/Modals/reviewModal";
 import { RejectedModal } from "@/components/Modals/rejectedModal";
 import ArticleAnalyticsModal from "@/components/Modals/AnalyticsModal/articleAnalyticsModal";
+import { Button } from "@/components/ui/button";
+import ArticleHighlightModal from "@/components/Modals/ArticleHighlight";
+import { HighlightCell } from "@/components/Modals/ArticleHighlight/highlight-cell";
 
 interface Props {
   article: Article;
@@ -235,6 +238,8 @@ const AnalyticsCell = ({ article }: { article: Article }) => {
   );
 };
 
+// const [isOpen, setIsOpen] = useState(false);
+
 export const columns: ColumnDef<Article>[] = [
   {
     accessorKey: "thumb",
@@ -311,40 +316,13 @@ export const columns: ColumnDef<Article>[] = [
       </div>
     ),
   },
+  // Atualizar a coluna highlight no array columns
   {
     accessorKey: "highlight",
     header: () => <div className="text-center w-[150px]">Destaque</div>,
     cell: ({ row }) => {
-      const isHighlight = row?.original?.highlight;
-      const highlightPosition = row?.original?.highlight_position;
-
-      return (
-        <div className="flex items-center justify-center w-[150px]">
-          <span
-            className={`flex items-center gap-1 px-3 py-1 rounded-full font-semibold text-sm ${
-              isHighlight
-                ? "bg-green-100 text-green-600"
-                : "bg-red-100 text-red-500"
-            }`}
-          >
-            {isHighlight ? (
-              <>
-                <Star className="w-4 h-4 text-green-600" fill="currentColor" />{" "}
-                Sim
-                {highlightPosition && (
-                  <span className="ml-1 text-xs text-green-700">
-                    (Posição: {highlightPosition})
-                  </span>
-                )}
-              </>
-            ) : (
-              <>
-                <Star className="w-4 h-4 text-red-500 opacity-50" /> Não
-              </>
-            )}
-          </span>
-        </div>
-      );
+      const article = row?.original;
+      return <HighlightCell article={article} />;
     },
   },
   {

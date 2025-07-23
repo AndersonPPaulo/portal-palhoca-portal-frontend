@@ -31,6 +31,7 @@ export interface ArticleProps {
   content: string;
   initialStatus: string;
   highlight: boolean;
+  highlight_position?: number;
   categoryId: string;
   tagIds: string[];
   chiefEditorId: string;
@@ -342,6 +343,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
 
     try {
       const response = await api.patch("/article", highlightData, config);
+      console.log('response', response);
       toast.success("Destaque atualizado com sucesso!");
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Erro ao atualizar destaque");
