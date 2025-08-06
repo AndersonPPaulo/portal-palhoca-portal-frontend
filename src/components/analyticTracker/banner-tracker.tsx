@@ -5,7 +5,6 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Eye,
   MousePointer,
@@ -15,6 +14,7 @@ import {
   User,
   Target,
 } from "lucide-react";
+import { ScrollArea } from "../ui/scroll-area";
 
 export interface BannerEvent {
   id: string;
