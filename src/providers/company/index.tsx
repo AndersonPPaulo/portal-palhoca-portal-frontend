@@ -83,6 +83,7 @@ export interface ICompanyProps extends UpdateCompanyProps {
   }[];
   status: "active" | "inactive" | "blocked" | "new_lead" | "in_process";
   email: string;
+  city?: string;
   latitude?: number;
   longitude?: number;
   document_number: string;
@@ -187,7 +188,7 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
     };
     try {
       const response = await api.post("/company", data, config);
-      console.log('response', response);
+      console.log("response", response);
       toast.success("Empresa criada com sucesso!");
       push("/comercio");
     } catch (err: any) {
