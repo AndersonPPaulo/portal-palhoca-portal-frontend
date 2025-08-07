@@ -138,7 +138,11 @@ export default function FormUpdateAuthors({
     setIsSubmitting(true);
 
     try {
-      await UpdateUser(data, profileData.id);
+      const formattedData = {
+        ...data,
+        phone: data.phone?.trim() || undefined, // transforma string vazia ou undefined em undefined
+      };
+      await UpdateUser(formattedData, profileData.id);
 
       if (selectedImage?.file) {
         await uploadUserImage(selectedImage.file, profileData.id);

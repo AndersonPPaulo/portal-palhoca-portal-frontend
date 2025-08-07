@@ -10,7 +10,7 @@ import { toast } from "sonner";
 export interface UserProps {
   name: string;
   email: string;
-  phone: string;
+  phone?: string;
   password: string;
   topic?: string;
   roleId: string;
@@ -39,7 +39,7 @@ export interface CreateResponsePromise {
     id: string;
     name: string;
     email: string;
-    phone: string;
+    phone?: string;
     topic?: string;
     role: { id: string; name: string; isDefault?: boolean };
     password?: string;
@@ -63,7 +63,7 @@ export interface ResponsePromise {
   id: string;
   name: string;
   email: string;
-  phone: string;
+  phone?: string;
   topic?: string;
   role: { id: string; name: string; isDefault?: boolean };
   password?: string;
