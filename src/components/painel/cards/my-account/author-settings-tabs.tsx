@@ -42,7 +42,11 @@ export default function AuthorSettingsTabs() {
       {/* Conteúdo de cada aba */}
       {activeTab === "info" && (
         <FormUpdateAuthors
-          profileData={{ ...profile, roleId: profile.role.id }}
+          profileData={{
+            ...profile,
+            roleId: profile.role.id,
+            phone: profile.phone ?? "",
+          }}
         />
       )}
       {activeTab === "password" && <FormUpdatePassword />}

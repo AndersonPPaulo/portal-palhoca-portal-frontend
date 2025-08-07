@@ -43,7 +43,10 @@ export default function TableUsers({ filter, activeFilters }: TableUsersProps) {
   return (
     <DataTable
       columns={columns}
-      data={listUser?.data || []}
+      data={(listUser?.data || []).map((user: any) => ({
+        ...user,
+        phone: user.phone ?? "",
+      }))}
       totalPages={listUser?.totalPages || 1}
       pageIndex={pageIndex}
       setPageIndex={setPageIndex}
