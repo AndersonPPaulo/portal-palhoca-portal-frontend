@@ -19,6 +19,8 @@ import { CategorysContext } from "@/providers/categorys";
 import { TagContext } from "@/providers/tags";
 import { UserContext } from "@/providers/user";
 import { PortalContext } from "@/providers/portal";
+import { Plus } from "lucide-react";
+import CreateTagModal from "@/components/Modals/CreateTagPost";
 
 const ARTICLE_STATUS = { DRAFT: "DRAFT", PENDING_REVIEW: "PENDING_REVIEW" };
 
@@ -95,6 +97,7 @@ export default function FormCreateArticle() {
     description: string;
   } | null>(null);
   const [thumbnailDescription, setThumbnailDescription] = useState("");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const { CreateArticle, ListAuthorArticles } = useContext(ArticleContext);
   const { ListCategorys, listCategorys } = useContext(CategorysContext);
@@ -257,6 +260,50 @@ export default function FormCreateArticle() {
 
   const contentLength = stripHtml(editorContent).length;
 
+  const handleOpenModal = () => {
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsCreateModalOpen(false);
+  };
+  // Substitua a função handleTagCreated no seu FormCreateArticle por esta:
+
+  const handleTagCreated = async (newTag: {
+    name: string;
+    description: string;
+    status: boolean;
+  }) => {
+    try {
+      console.log("Tag criada com sucesso:", newTag);
+
+      // 1. Atualizar a lista de tags no contexto (SEM redirecionamento)
+      await ListTags();
+
+      // 2. Encontrar a nova tag pelo nome (assumindo que o backend retorna a lista atualizada)
+      const updatedTags = Array.isArray(listTags) ? listTags : [];
+      const createdTag = updatedTags.find((tag) => tag.name === newTag.name);
+
+      // 3. Adicionar a nova tag às tags já selecionadas automaticamente, se encontrada
+      if (createdTag) {
+        const currentTagIds = watch("tagIds") || [];
+        const updatedTagIds = [...currentTagIds, createdTag.id];
+
+        setValue("tagIds", updatedTagIds, {
+          shouldValidate: true,
+        });
+
+        toast.success(`Tag "${newTag.name}" criada e selecionada com sucesso!`);
+      } else {
+        toast.error("Não foi possível encontrar a nova tag criada.");
+      }
+    } catch (error) {
+      console.error("Erro ao processar nova tag:", error);
+      toast.error(
+        "Erro ao atualizar a lista de tags. Tente recarregar a página."
+      );
+    }
+  };
   return (
     <div className="w-full h-full flex flex-col bg-white rounded-[24px]">
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
@@ -312,22 +359,41 @@ export default function FormCreateArticle() {
             </div>
             <div className="basis-1/2">
               <div className="mt-5">
-                <CustomSelect
-                  id="tagIds"
-                  label="Tag(s):"
-                  placeholder="Selecione uma ou mais tags"
-                  options={tagOptions}
-                  value={tagIds}
-                  onChange={(value) =>
-                    setValue("tagIds", value as string[], {
-                      shouldValidate: true,
-                    })
-                  }
-                  isMulti={true}
-                  error={errors.tagIds?.message}
-                  noOptionsMessage="Nenhuma tag disponível"
-                />
+                <div className="flex flex-col gap-1 w-full">
+                  <label className="px-6" htmlFor="tagIds">
+                    Tag(s):
+                  </label>
+                  <div className="flex gap-3 items-start">
+                    <div className="flex-1">
+                      <CustomSelect
+                        id="tagIds"
+                        label=""
+                        placeholder="Selecione uma ou mais tags"
+                        options={tagOptions}
+                        value={tagIds}
+                        onChange={(value) =>
+                          setValue("tagIds", value as string[], {
+                            shouldValidate: true,
+                          })
+                        }
+                        isMulti={true}
+                        error={errors.tagIds?.message}
+                        noOptionsMessage="Nenhuma tag disponível"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={handleOpenModal}
+                      className="rounded-3xl min-h-[56px] px-4 flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white border-2 border-[#DFEAF6] hover:border-[#DFEAF695] mt-[6px] whitespace-nowrap"
+                      title="Adicionar nova tag"
+                    >
+                      <Plus size={20} />
+                      Nova Tag
+                    </Button>
+                  </div>
+                </div>
               </div>
+
               <div className="mt-10">
                 <CustomInput
                   id="reading_time"
@@ -467,6 +533,12 @@ export default function FormCreateArticle() {
             </Button>
           </div>
         </form>
+        {/* Modal de criação de tag */}
+        <CreateTagModal
+          isOpen={isCreateModalOpen}
+          onClose={handleCloseModal}
+          onSuccess={handleTagCreated}
+        />
       </div>
     </div>
   );

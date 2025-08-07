@@ -28,7 +28,7 @@ export type ResponsePromise = {
 };
 
 interface ITagData {
-  CreateTag(data: TagProps): Promise<ResponsePromise>;
+  CreateTag(data: TagProps, back_route?: boolean): Promise<ResponsePromise>;
   ListTags(): Promise<ResponsePromise[]>;
   listTags: ResponsePromise[];
   DeleteTag(tagId: string): Promise<void>;
@@ -46,7 +46,10 @@ export const TagContext = createContext<ITagData>({} as ITagData);
 export const TagProvider = ({ children }: ICihldrenReact) => {
   const { back } = useRouter();
 
-  const CreateTag = async (data: TagProps): Promise<ResponsePromise> => {
+  const CreateTag = async (
+    data: TagProps,
+    back_route: boolean = true
+  ): Promise<ResponsePromise> => {
     const { "user:token": token } = parseCookies();
     const config = {
       headers: { Authorization: `bearer ${token}` },
@@ -56,7 +59,7 @@ export const TagProvider = ({ children }: ICihldrenReact) => {
       .then(() => {
         toast.success(`Tag adicionada com sucesso!`);
         setTimeout(() => {
-          back();
+          if (back_route) back();
         }, 1800);
       })
       .catch((err) => {
