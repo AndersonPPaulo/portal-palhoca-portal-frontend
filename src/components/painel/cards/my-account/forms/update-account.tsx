@@ -23,10 +23,10 @@ interface OptionType {
 const authorsSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   email: z.string().email("Email inválido").min(1, "Email é obrigatório"),
-  phone: z.string().min(1, "Telefone é obrigatório"),
+  phone: z.string().optional(),
   roleId: z.string().min(1, "Função obrigatória"),
   password: z.string().optional(), // Senha opcional na edição
-  chiefEditorId: z.string().min(1, "Responsável obrigatório"),
+  chiefEditorId: z.string().optional(),
   topic: z.string().optional(),
 });
 
@@ -247,7 +247,7 @@ export default function FormUpdateAuthors({
                   id="chiefEditorId"
                   label="Responsável Técnico"
                   options={usersOptions}
-                  value={watch("chiefEditorId")}
+                  value={watch("chiefEditorId") ?? ""}
                   onChange={(value) =>
                     setValue(
                       "chiefEditorId",
