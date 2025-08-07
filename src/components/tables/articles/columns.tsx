@@ -10,12 +10,13 @@ import {
 import { TooltipArrow, TooltipPortal } from "@radix-ui/react-tooltip";
 import { Article } from "@/providers/article";
 import { ColumnDef } from "@tanstack/react-table";
-import { ChartLine, Edit, ExternalLink } from "lucide-react";
+import { ChartLine, Edit, ExternalLink, Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useContext, useState } from "react";
 import ArticleAnalyticsModal from "@/components/Modals/AnalyticsModal/articleAnalyticsModal";
 import { HighlightCell } from "@/components/Modals/ArticleHighlight/highlight-cell";
 import { UserContext } from "@/providers/user";
+import { formatDate } from "date-fns";
 
 interface Props {
   article: Article;
@@ -159,82 +160,97 @@ const AnalyticsCell = ({ article }: { article: Article }) => {
 
 export const columns: ColumnDef<Article>[] = [
   {
-    accessorKey: "title",
-    header: () => <div>Título</div>,
-    cell: ({ row }) => (
-      <div className="w-[200px] truncate">{row?.original?.title}</div>
-    ),
-  },
-  {
-    accessorKey: "creator",
-    header: () => <div className="text-center w-[150px]">Criador</div>,
-    cell: ({ row }) => (
-      <div className="text-center w-[150px] truncate">
-        {row?.original?.creator?.name ?? ""}
-      </div>
-    ),
-  },
-  // Atualizar a coluna highlight no array columns
-  {
-    accessorKey: "highlight",
-    header: () => <div className="text-center w-[150px]">Destaque</div>,
+    id: "article",
+    header: () => <div className="text-left">Artigo</div>,
     cell: ({ row }) => {
-      const article = row?.original;
-      return <HighlightCell article={article} />;
-    },
-  },
-  {
-    accessorKey: "category",
-    header: () => <div className="text-center w-[150px]">Categorias</div>,
-    cell: ({ row }) => (
-      <div className="text-center w-[150px]">
-        {row?.original?.category.name}
-      </div>
-    ),
-  },
-  {
-    accessorKey: "portal",
-    header: () => <div className="text-center w-[150px]">Portal</div>,
-    cell: ({ row }) => {
-      const article = row.original;
+      const { title, creator } = row.original;
 
       return (
-        <div className="text-center w-[150px] space-y-1">
-          {article.portals.map((portal) => (
-            <div
-              key={portal.id}
-              className="flex items-center justify-center gap-1"
-            >
-              <span>{portal.name}</span>
-              <LinkRedirect
-                article={article}
-                portalReferer={portal.link_referer}
-              />
-            </div>
-          ))}
+        <div className="flex flex-col w-[250px]">
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="font-semibold text-base truncate cursor-help text-primary">
+                  {title}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-sm bg-white">
+                <span>{title}</span>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <span className="text-sm text-muted-foreground mt-1">
+            Autor:{" "}
+            <span className="font-medium">
+              {creator?.name ?? "Desconhecido"}
+            </span>
+          </span>
         </div>
       );
     },
   },
+  {
+    id: "publication",
+    header: () => <div className="text-center">Publicação</div>,
+    cell: ({ row }) => {
+      const { portals, updated_at } = row.original;
 
+      return (
+        <div className="flex flex-col items-center justify-center gap-1 text-sm">
+          <div className="space-y-1">
+            {portals.map((portal) => (
+              <div
+                key={portal.id}
+                className="flex items-center justify-center gap-1"
+              >
+                <span className="truncate max-w-[100px] font-medium">
+                  {portal.name}
+                </span>
+                <LinkRedirect
+                  article={row.original}
+                  portalReferer={portal.link_referer}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-1 text-muted-foreground mt-1 text-xs">
+            <Info size={12} />
+            <span>
+              Atualizado em{" "}
+              <span className="font-medium">
+                {updated_at ? formatDate(updated_at, "dd/MM/yyyy") : "Sem data"}
+              </span>
+            </span>
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: "highlight",
+    header: () => <div className="text-center">Destaque</div>,
+    cell: ({ row }) => (
+      <div className="flex justify-center">
+        <HighlightCell article={row.original} />
+      </div>
+    ),
+  },
   {
     accessorKey: "clicks_view",
-    header: () => <div className="text-center w-[150px]">Analíticos</div>,
-    cell: ({ row }) => {
-      const article = row?.original;
-      return <AnalyticsCell article={article} />;
-    },
+    header: () => <div className="text-center">Analíticos</div>,
+    cell: ({ row }) => (
+      <div className="flex justify-center">
+        <AnalyticsCell article={row.original} />
+      </div>
+    ),
   },
   {
     id: "actions",
     header: () => <div className="text-center">Ações</div>,
-    cell: (article) => {
-      const articleRow = article.row?.original;
-      return (
-        <div className="flex justify-center">
-          <CellActions article={articleRow} />
-        </div>
-      );
-    },
+    cell: ({ row }) => (
+      <div className="flex justify-center">
+        <CellActions article={row.original} />
+      </div>
+    ),
   },
 ];
