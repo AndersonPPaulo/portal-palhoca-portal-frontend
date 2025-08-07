@@ -32,9 +32,7 @@ const articleSchema = z.object({
   resume_content: z
     .string()
     .min(100, "Resumo é obrigatório minimo de 100 caracteres"),
-  content: z
-    .string()
-    .min(300, "Conteudo é obrigatório minimo de 300 caracteres"),
+  content: z.string(),
   initialStatus: z.string().optional(),
   highlight: z.boolean().default(false),
   categoryId: z.string().min(1, "Adicione uma categoria"),
@@ -145,7 +143,7 @@ export default function FormCreateArticle() {
       highlight: false,
       categoryId: "",
       tagIds: [],
-      chiefEditorId: profile?.chiefEditor?.id ,
+      chiefEditorId: profile?.chiefEditor?.id,
       portalIds: [],
       thumbnailDescription: "",
     },
@@ -247,6 +245,17 @@ export default function FormCreateArticle() {
       </div>
     );
   }
+
+  const resumeContent = watch("resume_content");
+  const resumeLength = resumeContent?.length || 0;
+
+  const stripHtml = (html: string) => {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  };
+
+  const contentLength = stripHtml(editorContent).length;
 
   return (
     <div className="w-full h-full flex flex-col bg-white rounded-[24px]">
@@ -391,6 +400,20 @@ export default function FormCreateArticle() {
               {...register("resume_content")}
               placeholder="Digite o resumo"
             />
+            <div className="text-sm mt-1 px-6">
+              <span
+                className={`${
+                  resumeLength < 100 ? "text-gray-500" : "text-green-600"
+                }`}
+              >
+                Contador de caracteres: {resumeLength}
+              </span>
+              {resumeLength < 100 && (
+                <span className="text-red-500 ml-2">
+                  Mínimo de 100 caracteres necessário
+                </span>
+              )}
+            </div>
             {errors.resume_content && (
               <span className="text-sm text-red-500">
                 {errors.resume_content.message}
@@ -406,6 +429,9 @@ export default function FormCreateArticle() {
                 value={editorContent}
                 onChange={handleEditorChange}
               />
+              <div className="text-sm mt-1 ml-6 text-gray-500">
+                Contador de caracteres: {contentLength}
+              </div>
               {errors.content && (
                 <span className="text-sm text-red-500 ml-6">
                   {errors.content.message}

@@ -28,9 +28,7 @@ const articleSchema = z.object({
     (val) => (val === "" ? undefined : Number(val)),
     z.number().min(1, "Tempo de leitura é obrigatório")
   ),
-  resume_content: z
-    .string()
-    .min(100, "Resumo é obrigatório mínimo de 100 caracteres"),
+  resume_content: z.string(),
   content: z
     .string()
     .min(300, "Conteúdo é obrigatório mínimo de 300 caracteres"),
@@ -399,6 +397,17 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     setValue("content", content, { shouldValidate: true });
   };
 
+  const resumeContent = watch("resume_content");
+  const resumeLength = resumeContent?.length || 0;
+
+  const stripHtml = (html: string) => {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  };
+
+  const contentLength = stripHtml(editorContent).length;
+
   return (
     <div className="w-full h-full flex flex-col bg-white rounded-[24px]">
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
@@ -547,6 +556,20 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
               {...register("resume_content")}
               placeholder="Digite o resumo"
             />
+            <div className="text-sm mt-1 px-6">
+              <span
+                className={`${
+                  resumeLength < 100 ? "text-gray-500" : "text-green-600"
+                }`}
+              >
+                Contador de caracteres: {resumeLength}
+              </span>
+              {resumeLength < 100 && (
+                <span className="text-red-500 ml-2">
+                  Mínimo de 100 caracteres necessário
+                </span>
+              )}
+            </div>
             {errors.resume_content && (
               <span className="text-sm text-red-500">
                 {errors.resume_content.message}
@@ -563,6 +586,9 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
                 value={editorContent}
                 onChange={handleEditorChange}
               />
+              <div className="text-sm mt-1 ml-6 text-gray-500">
+                Contador de caracteres: {contentLength}
+              </div>
               {errors.content && (
                 <span className="text-sm text-red-500 ml-6">
                   {errors.content.message}
