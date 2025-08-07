@@ -45,7 +45,6 @@ const articleSchema = z.object({
 
 type ArticleFormData = z.infer<typeof articleSchema>;
 
-
 interface FormEditArticleProps {
   article: Article;
 }
@@ -603,10 +602,18 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
             <Button
               type="button"
               onClick={handleSendForReview}
-              className="bg-blue-500 text-white hover:bg-blue-600 rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
+              className={`${
+                findArticle?.status_history[0].status === "PUBLISHED"
+                  ? "bg-green-500 text-white hover:bg-green-600"
+                  : "bg-blue-500 text-white hover:bg-blue-600"
+              } rounded-3xl min-h-[48px] text-[16px] pt-3 px-6`}
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Salvando..." : "Enviar para Revisão"}
+              {isSubmitting
+                ? "Salvando..."
+                : findArticle?.status_history[0].status === "PUBLISHED"
+                ? "Atualizar"
+                : "Enviar para Revisão"}
             </Button>
           </div>
         </form>

@@ -10,23 +10,40 @@ import {
 import { TooltipArrow, TooltipPortal } from "@radix-ui/react-tooltip";
 import { Article } from "@/providers/article";
 import { ColumnDef } from "@tanstack/react-table";
-import {
-  ChartLine,
-  Edit,
-  ExternalLink,
-  Eye,
-  FolderSearch2,
-} from "lucide-react";
+import { ChartLine, Edit, ExternalLink } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
-import { ArticleViewModal } from "@/components/Modals/reviewModal";
-import { RejectedModal } from "@/components/Modals/rejectedModal";
+import React, { useContext, useState } from "react";
 import ArticleAnalyticsModal from "@/components/Modals/AnalyticsModal/articleAnalyticsModal";
 import { HighlightCell } from "@/components/Modals/ArticleHighlight/highlight-cell";
+import { UserContext } from "@/providers/user";
 
 interface Props {
   article: Article;
 }
+
+interface LinkRedirectProps {
+  article: Article;
+  portalReferer: string;
+}
+
+const LinkRedirect = ({ article, portalReferer }: LinkRedirectProps) => {
+  const url = `${portalReferer}/noticia/${generateSlug(
+    article.category.name
+  )}/${article.slug}`;
+
+  return (
+    <a
+      href={url.startsWith("http") ? url : `https://${url}`}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <ExternalLink
+        size={20}
+        className="text-primary cursor-pointer hover:text-primary-dark transition-colors inline-block ml-1"
+      />
+    </a>
+  );
+};
 
 const generateSlug = (text: string) =>
   text
@@ -39,9 +56,8 @@ const generateSlug = (text: string) =>
     .replace(/\s+/g, "-"); // substitui espaços por hífen
 
 const CellActions = ({ article }: Props) => {
+  const { profile } = useContext(UserContext);
   const { push } = useRouter();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [open, setOpen] = useState(false);
 
   // Obter o status mais recente ordenando pelo changed_at
   const currentStatus = React.useMemo(() => {
@@ -66,7 +82,10 @@ const CellActions = ({ article }: Props) => {
         item_name={article.slug}
         item_id={article.id}
       />
-      {["DRAFT", "CHANGES_REQUESTED"].includes(currentStatus) ? (
+      {["DRAFT", "CHANGES_REQUESTED", "PUBLISHED"].includes(currentStatus) &&
+      ["administrador", "chefe de redação"].includes(
+        (profile?.role?.name ?? "").toLowerCase()
+      ) ? (
         <TooltipProvider delayDuration={600}>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -82,102 +101,6 @@ const CellActions = ({ article }: Props) => {
                 sideOffset={5}
               >
                 <span>Editar artigo</span>
-                <TooltipArrow
-                  className="fill-primary-light"
-                  width={11}
-                  height={5}
-                />
-              </TooltipContent>
-            </TooltipPortal>
-          </Tooltip>
-        </TooltipProvider>
-      ) : currentStatus === "PENDING_REVIEW" ? (
-        <>
-          <TooltipProvider delayDuration={600}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <FolderSearch2
-                  onClick={() => setIsModalOpen(true)}
-                  size={20}
-                  className="text-primary cursor-pointer"
-                />
-              </TooltipTrigger>
-              <TooltipPortal>
-                <TooltipContent
-                  className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
-                  sideOffset={5}
-                >
-                  <span>Revisar artigo</span>
-                  <TooltipArrow
-                    className="fill-primary-light"
-                    width={11}
-                    height={5}
-                  />
-                </TooltipContent>
-              </TooltipPortal>
-            </Tooltip>
-          </TooltipProvider>
-
-          <ArticleViewModal
-            open={isModalOpen}
-            onOpenChange={setIsModalOpen}
-            article={article}
-          />
-        </>
-      ) : currentStatus === "REJECTED" ? (
-        <>
-          <TooltipProvider delayDuration={600}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Eye
-                  onClick={() => setOpen(true)}
-                  size={20}
-                  className="text-primary cursor-pointer"
-                />
-              </TooltipTrigger>
-              <TooltipPortal>
-                <TooltipContent
-                  className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
-                  sideOffset={5}
-                >
-                  <span>Motivo Rejeição</span>
-                  <TooltipArrow
-                    className="fill-primary-light"
-                    width={11}
-                    height={5}
-                  />
-                </TooltipContent>
-              </TooltipPortal>
-            </Tooltip>
-          </TooltipProvider>
-          <RejectedModal
-            open={open}
-            onOpenChange={setOpen}
-            articleId={article.id}
-          />
-        </>
-      ) : currentStatus === "PUBLISHED" ? (
-        <TooltipProvider delayDuration={600}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <ExternalLink
-                onClick={() =>
-                  window.open(
-                    `/noticia/${generateSlug(article.category.name)}/${
-                      article.slug
-                    }`
-                  )
-                }
-                size={20}
-                className="text-primary cursor-pointer"
-              />
-            </TooltipTrigger>
-            <TooltipPortal>
-              <TooltipContent
-                className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
-                sideOffset={5}
-              >
-                <span>Ver artigo publicado</span>
                 <TooltipArrow
                   className="fill-primary-light"
                   width={11}
@@ -272,11 +195,26 @@ export const columns: ColumnDef<Article>[] = [
   {
     accessorKey: "portal",
     header: () => <div className="text-center w-[150px]">Portal</div>,
-    cell: ({ row }) => (
-      <div className="text-center w-[150px]">
-        {row?.original.portals.map((portal) => portal.name).join(" - ")}
-      </div>
-    ),
+    cell: ({ row }) => {
+      const article = row.original;
+
+      return (
+        <div className="text-center w-[150px] space-y-1">
+          {article.portals.map((portal) => (
+            <div
+              key={portal.id}
+              className="flex items-center justify-center gap-1"
+            >
+              <span>{portal.name}</span>
+              <LinkRedirect
+                article={article}
+                portalReferer={portal.link_referer}
+              />
+            </div>
+          ))}
+        </div>
+      );
+    },
   },
 
   {
