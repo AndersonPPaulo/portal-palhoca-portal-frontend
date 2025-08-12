@@ -8,15 +8,18 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { TooltipArrow, TooltipPortal } from "@radix-ui/react-tooltip";
-import { Article } from "@/providers/article";
+import { Article, ArticleContext } from "@/providers/article";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   ChartLine,
+  Check,
   Edit,
   ExternalLink,
   Eye,
+  EyeOff,
   FolderSearch2,
   Info,
+  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useContext, useState } from "react";
@@ -67,12 +70,23 @@ const generateSlug = (text: string) =>
 
 const CellActions = ({ article }: Props) => {
   const { profile } = useContext(UserContext);
+  const { UpdateArticleStatus } = useContext(ArticleContext);
   const { push } = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [open, setOpen] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   // Obter o status mais recente ordenando pelo changed_at
-  const currentStatus = React.useMemo(() => {
+  type ArticleStatus =
+    | ""
+    | "CHANGES_REQUESTED"
+    | "PENDING_REVIEW"
+    | "DRAFT"
+    | "REJECTED"
+    | "PUBLISHED"
+    | "UNPUBLISHED";
+
+  const currentStatus: ArticleStatus = React.useMemo(() => {
     if (!article.status_history || article.status_history.length === 0) {
       return "";
     }
@@ -84,16 +98,119 @@ const CellActions = ({ article }: Props) => {
     );
 
     // Retornar o status do primeiro item (o mais recente)
-    return sortedHistory[0].status;
+    return sortedHistory[0].status as ArticleStatus;
   }, [article.status_history]);
 
+  const handleToggleStatus = () => {
+    setShowConfirmation(true);
+  };
+
+  const confirmToggleStatus = () => {
+    const newStatus =
+      currentStatus === "PUBLISHED" ? "UNPUBLISHED" : "PUBLISHED";
+    UpdateArticleStatus({ newStatus }, article.id);
+    setShowConfirmation(false);
+  };
+
+  const cancelToggleStatus = () => {
+    setShowConfirmation(false);
+  };
+
   return (
-    <div className="flex gap-6">
+    <div className="flex gap-6 items-center justify-between relative">
+      {/* Botão de Toggle Publicação - apenas para PUBLISHED ou UNPUBLISHED */}
+      {(currentStatus === "PUBLISHED" || currentStatus === "UNPUBLISHED") && (
+        <div className="relative">
+          {!showConfirmation ? (
+            <TooltipProvider delayDuration={600}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  {currentStatus === "PUBLISHED" ? (
+                    <Eye
+                      onClick={handleToggleStatus}
+                      size={20}
+                      className="text-green-500 cursor-pointer hover:text-green-600"
+                    />
+                  ) : (
+                    <EyeOff
+                      onClick={handleToggleStatus}
+                      size={20}
+                      className="text-green-500 cursor-pointer hover:text-green-600"
+                    />
+                  )}
+                </TooltipTrigger>
+                <TooltipPortal>
+                  <TooltipContent
+                    className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
+                    sideOffset={5}
+                  >
+                    <span>
+                      {currentStatus === "PUBLISHED"
+                        ? "Despublicar artigo"
+                        : "Publicar artigo"}
+                    </span>
+                    <TooltipArrow
+                      className="fill-primary-light"
+                      width={11}
+                      height={5}
+                    />
+                  </TooltipContent>
+                </TooltipPortal>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            // Botões de confirmação
+            <div className="flex gap-2 items-center bg-white border rounded-xl p-1 shadow-sm ">
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Check
+                      onClick={confirmToggleStatus}
+                      size={22}
+                      className="text-green-500 cursor-pointer hover:text-green-600 p-1 hover:bg-green-50 rounded"
+                    />
+                  </TooltipTrigger>
+                  <TooltipPortal>
+                    <TooltipContent
+                      className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
+                      sideOffset={5}
+                    >
+                      <span>Confirmar</span>
+                    </TooltipContent>
+                  </TooltipPortal>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <X
+                      onClick={cancelToggleStatus}
+                      size={22}
+                      className="text-red-500 cursor-pointer hover:text-red-600 p-1 hover:bg-red-50 rounded"
+                    />
+                  </TooltipTrigger>
+                  <TooltipPortal>
+                    <TooltipContent
+                      className="rounded-2xl shadow-sm bg-primary-light text-[16px] text-primary px-4 py-2 animate-fadeIn"
+                      sideOffset={5}
+                    >
+                      <span>Cancelar</span>
+                    </TooltipContent>
+                  </TooltipPortal>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
+        </div>
+      )}
+
       <DialogDelete
         context="articles"
         item_name={article.slug}
         item_id={article.id}
       />
+
       {["DRAFT", "CHANGES_REQUESTED", "PUBLISHED"].includes(currentStatus) &&
       ["administrador", "chefe de redação"].includes(
         (profile?.role?.name ?? "").toLowerCase()

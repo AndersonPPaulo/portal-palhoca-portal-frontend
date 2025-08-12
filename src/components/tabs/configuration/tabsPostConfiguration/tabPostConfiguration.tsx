@@ -12,7 +12,7 @@ export interface TabConfig {
   allowedRoles: string[];
 }
 
-export const tabPostConfigurations:TabConfig[] = [
+export const tabPostConfigurations: TabConfig[] = [
   {
     value: "PUBLISHED",
     name: "Noticias",
@@ -20,6 +20,21 @@ export const tabPostConfigurations:TabConfig[] = [
     title: "Noticias",
     description: "As noticias publicadas em seu site.",
     component: <Articles status="PUBLISHED" />,
+    path: "/postagens/artigos/criar",
+    allowedRoles: [
+      "administrador",
+      "chefe de redação",
+      "jornalista",
+      "colunista",
+    ],
+  },
+  {
+    value: "UNPUBLISHED",
+    name: "Noticias",
+    label: "Despublicadas",
+    title: "Noticias",
+    description: "As noticias despublicadas em seu site.",
+    component: <Articles status="UNPUBLISHED" />,
     path: "/postagens/artigos/criar",
     allowedRoles: [
       "administrador",

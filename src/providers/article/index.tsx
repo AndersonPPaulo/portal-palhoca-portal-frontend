@@ -62,7 +62,12 @@ interface UpdateArticleHighlightProps {
 }
 
 interface UpdateArticleStatusProps {
-  newStatus: "PUBLISHED" | "REJECTED" | "CHANGES_REQUESTED" | "DRAFT";
+  newStatus:
+    | "PUBLISHED"
+    | "REJECTED"
+    | "CHANGES_REQUESTED"
+    | "DRAFT"
+    | "UNPUBLISHED";
   reason_reject?: string;
   change_request_description?: string;
   chiefEditorId?: string;
@@ -343,7 +348,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
 
     try {
       const response = await api.patch("/article", highlightData, config);
-      console.log('response', response);
+      console.log("response", response);
       toast.success("Destaque atualizado com sucesso!");
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Erro ao atualizar destaque");
@@ -413,6 +418,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
         REJECTED: "Erro ao rejeitar artigo",
         CHANGES_REQUESTED: "Erro ao solicitar alterações",
         DRAFT: "Erro ao retornar artigo para rascunho",
+        UNPUBLISHED: "Erro ao despublicar artigo",
       };
 
       toast.error(err.response?.data?.message || errorMessages[data.newStatus]);
