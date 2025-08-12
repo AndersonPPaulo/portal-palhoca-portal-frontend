@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Article, ArticleContext } from "@/providers/article";
 import { Star } from "lucide-react";
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import ArticleHighlightModal from ".";
 
 // Componente separado para a célula de highlight
@@ -12,6 +12,11 @@ export const HighlightCell = ({ article }: { article: Article }) => {
 
   const [isHighlightModalOpen, setIsHighlightModalOpen] = useState(false);
   const [localArticle, setLocalArticle] = useState(article);
+
+  // Sincronizar o estado local quando a prop article mudar
+  useEffect(() => {
+    setLocalArticle(article);
+  }, [article]);
 
   const handleUpdateArticle = async (updatedArticle: Article) => {
     await UpdateArticleHighlight(
