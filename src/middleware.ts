@@ -17,10 +17,13 @@ export function middleware(req: NextRequest) {
     (req.nextUrl.pathname.startsWith("/dashboard") ||
       req.nextUrl.pathname.startsWith("/postagens") ||
       req.nextUrl.pathname.startsWith("/autores") ||
-      req.nextUrl.pathname.startsWith("/minha-conta")||
-      req.nextUrl.pathname.startsWith("/comercios")
-    )
-
+      req.nextUrl.pathname.startsWith("/minha-conta") ||
+      req.nextUrl.pathname.startsWith("/portais") ||
+      req.nextUrl.pathname.startsWith("/tags") ||
+      req.nextUrl.pathname.startsWith("/comercio") ||
+      req.nextUrl.pathname.startsWith("/banners") ||
+      req.nextUrl.pathname.startsWith("/usuários") ||
+      req.nextUrl.pathname.startsWith("/comercios"))
   ) {
     return NextResponse.next();
   }
@@ -35,6 +38,11 @@ export const config = {
     "/minha-conta/:path*",
     "/autores/:path*",
     "/postagens/:path*",
-    "/comercios/:path*"
+    "/portais/:path*",
+    "/tags/:path*",
+    "/comercio/:path*",
+    "/banners/:path*",
+    "/usuários/:path*",
+    "/comercios/:path*",
   ],
 };

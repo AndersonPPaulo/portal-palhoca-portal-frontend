@@ -32,7 +32,6 @@ const articleSchema = z.object({
   content: z
     .string()
     .min(300, "Conteúdo é obrigatório mínimo de 300 caracteres"),
-  highlight: z.boolean().default(false),
   thumbnail: z.string(),
   thumbnailDescription: z.string().optional().default(""),
   categoryId: z.string().min(1, "Adicione uma categoria"),
@@ -172,7 +171,6 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       reading_time: Number(article.reading_time),
       resume_content: article.resume_content,
       content: article.content,
-      highlight: article.highlight === true,
       categoryId: article.category?.id,
       tagIds: article.tags?.map((tag) => tag.id) || [],
       chiefEditorId: profile?.chiefEditor?.id,
@@ -321,6 +319,15 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     }
   };
 
+    const lastStatus =
+    findArticle?.status_history && findArticle.status_history.length > 0
+      ? findArticle.status_history.reduce((latest, item) => {
+          return new Date(item.changed_at) > new Date(latest.changed_at)
+            ? item
+            : latest;
+        }, findArticle.status_history[0])
+      : undefined;
+
   const submitArticle = async (data: ArticleFormData, setToDraft: boolean) => {
     try {
       const validatedTags = validateTagSelection(data.tagIds);
@@ -341,7 +348,6 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         reading_time: data.reading_time,
         resume_content: data.resume_content,
         content: data.content,
-        highlight: data.highlight,
         categoryId: data.categoryId,
         tagIds: data.tagIds,
         portalIds: data.portalIds,
@@ -366,8 +372,14 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         }
       }
 
-      const statusMsg = setToDraft ? "Rascunho" : "Pendente de Revisão";
-      toast.success(`Artigo atualizado com sucesso! Status: ${statusMsg}`);
+      if(lastStatus?.status==="DRAFT"  || lastStatus?.status==="PENDING_REVIEW") {
+        const statusMsg = setToDraft ? "Rascunho" : "Pendente de Revisão";
+        toast.success(`Artigo atualizado com sucesso! Status: ${statusMsg}`);
+      }
+
+      if (lastStatus?.status === "PUBLISHED") {
+        toast.success(`Artigo atualizado com sucesso!`);
+      }
 
       // Recarregar dados do local listing após submissão
       if (ListAuthorArticles) {
@@ -407,6 +419,8 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   };
 
   const contentLength = stripHtml(editorContent).length;
+
+
 
   return (
     <div className="w-full h-full flex flex-col bg-white rounded-[24px]">
@@ -488,7 +502,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
                   min={1}
                 />
                 {errors.reading_time && (
-                  <span className="text-sm text-red-500">
+                  <span className="text-sm text-red-500">https://us-east-1.console.aws.amazon.com/console/home?region=us-east-1
                     {errors.reading_time.message}
                   </span>
                 )}
@@ -629,7 +643,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
               type="button"
               onClick={handleSendForReview}
               className={`${
-                findArticle?.status_history[0].status === "PUBLISHED"
+                lastStatus?.status === "PUBLISHED"
                   ? "bg-green-500 text-white hover:bg-green-600"
                   : "bg-blue-500 text-white hover:bg-blue-600"
               } rounded-3xl min-h-[48px] text-[16px] pt-3 px-6`}
@@ -637,7 +651,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
             >
               {isSubmitting
                 ? "Salvando..."
-                : findArticle?.status_history[0].status === "PUBLISHED"
+                : lastStatus?.status === "PUBLISHED"
                 ? "Atualizar"
                 : "Enviar para Revisão"}
             </Button>

@@ -316,7 +316,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
     };
 
     try {
-      const response = await api.patch("/article", data, config);
+       await api.patch("/article", data, config);
       toast.success("Artigo atualizado com sucesso!");
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Erro ao atualizar artigo");
