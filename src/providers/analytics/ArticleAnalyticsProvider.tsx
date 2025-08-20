@@ -35,9 +35,45 @@ interface ITotalEventsResponse {
   events: TotalArticleEvent[];
 }
 
-interface IUpdateVirtualEventResponse {
-  message: string;
-  updated: any;
+export interface ExtraData {
+  ip?: string;
+  page?: string;
+  section?: string;
+  gridCols?: number;
+  gridRows?: number;
+  gridSize?: number;
+  position?: string;
+  viewType?: string;
+  gridIndex?: number;
+  sortOrder?: string;
+  timestamp?: string;
+  userAgent?: string;
+  deviceType?: string;
+  articleTitle?: string;
+  categoryName?: string;
+  gridPosition?: string;
+  intersectionRatio?: number;
+  [key: string]: unknown; // garante que pode ter qualquer outro campo
+}
+
+export interface IEvent {
+  id: string;
+  event_type: EventType;
+  extra_data?: ExtraData;
+  timestamp: string;
+  article: {
+    id: string;
+    title: string;
+    reading_time: number;
+    category: {
+      id: string;
+      name: string;
+    };
+  };
+}
+
+export interface IVirtualEventResponse {
+  response: { articleEvents: IEvent[] };
 }
 
 interface IUpdateVirtualEventProps {
@@ -51,7 +87,9 @@ interface IArticleAnalyticsData {
   GetEventsByArticle(articleId: string): Promise<void>;
   GetTotalEvents(): Promise<void>;
   UpdateVirtualEvent(data: IUpdateVirtualEventProps): Promise<void>;
+  Get100EventsArticle(): Promise<IVirtualEventResponse>;
 
+  last100EventsArticle: IEvent[];
   articleEvents: Record<string, ArticleEvent[]>;
   totalEvents: TotalArticleEvent[];
   loading: boolean;
@@ -75,6 +113,22 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
   const [totalEvents, setTotalEvents] = useState<TotalArticleEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [last100EventsArticle, setLast100EventsArticle] = useState<IEvent[]>(
+    []
+  );
+
+  const Get100EventsArticle = async (): Promise<IVirtualEventResponse> => {
+    try {
+      const res = await api.get<IVirtualEventResponse>(
+        "/analytics/last-100-event-article"
+      );
+      setLast100EventsArticle(res.data.response.articleEvents);
+      return res.data;
+    } catch (err) {
+      throw err;
+    }
+  };
 
   // Função para buscar eventos por artigo (privada - com auth)
   const GetEventsByArticle = async (articleId: string): Promise<void> => {
@@ -196,6 +250,8 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
         loading,
         error,
         ClearError,
+        Get100EventsArticle,
+        last100EventsArticle,
       }}
     >
       {children}

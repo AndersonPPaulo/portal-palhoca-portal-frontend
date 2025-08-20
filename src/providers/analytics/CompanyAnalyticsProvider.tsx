@@ -3,6 +3,7 @@
 import { api } from "@/service/api";
 import { parseCookies } from "nookies";
 import { createContext, ReactNode, useState } from "react";
+import { ExtraData } from "./ArticleAnalyticsProvider";
 
 // Enums
 export enum EventType {
@@ -46,12 +47,29 @@ interface IUpdateVirtualEventProps {
   newVirtualCount?: number;
 }
 
+export interface IEvent {
+  id: string;
+  event_type: EventType;
+  extra_data?: ExtraData;
+  timestamp: string;
+  company: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface IVirtualEventResponse {
+  response: { companyEvents: IEvent[] };
+}
+
 // Interface principal do contexto
 interface ICompanyAnalyticsData {
   GetEventsByCompany(companyId: string): Promise<void>;
   GetTotalEvents(): Promise<void>;
   UpdateVirtualEvent(data: IUpdateVirtualEventProps): Promise<void>;
+  Get100EventsCompany(): Promise<IVirtualEventResponse>;
 
+  last100EventsCompany: IEvent[];
   companyEvents: Record<string, CompanyEvent[]>;
   totalEvents: TotalCompanyEvent[];
   loading: boolean;
@@ -75,7 +93,21 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
   const [totalEvents, setTotalEvents] = useState<TotalCompanyEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [last100EventsCompany, setLast100EventsCompany] = useState<IEvent[]>(
+    []
+  );
 
+  const Get100EventsCompany = async (): Promise<IVirtualEventResponse> => {
+    try {
+      const res = await api.get<IVirtualEventResponse>(
+        "/analytics/last-100-event-company"
+      );
+      setLast100EventsCompany(res.data.response.companyEvents);
+      return res.data;
+    } catch (err) {
+      throw err;
+    }
+  };
   // Função para buscar eventos por comércio (privada - com auth)
   const GetEventsByCompany = async (companyId: string): Promise<void> => {
     setLoading(true);
@@ -196,6 +228,8 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
         loading,
         error,
         ClearError,
+        Get100EventsCompany,
+        last100EventsCompany,
       }}
     >
       {children}

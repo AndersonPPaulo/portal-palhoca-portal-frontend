@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,17 +9,18 @@ import {
   Eye,
   MousePointer,
   CheckCircle,
-  Clock,
-  MapPin,
-  User,
   FileText,
   Tag,
-  Share2,
+  Bell,
 } from "lucide-react";
+import {
+  ArticleAnalyticsContext,
+  IEvent,
+} from "@/providers/analytics/ArticleAnalyticsProvider";
 
 export interface ArticleEvent {
   id: string;
-  eventType: "view" | "view_end" | "click_view";
+  eventType: "view" | "view_end" | "click";
   articleTitle: string;
   articleCategory: string;
   author: string;
@@ -33,8 +34,6 @@ export interface ArticleEvent {
 }
 
 interface ArticleTrackerProps {
-  events: ArticleEvent[];
-  maxEvents?: number;
   autoRefresh?: boolean;
 }
 
@@ -53,8 +52,8 @@ const eventTypeConfig = {
     bgColor: "bg-green-50",
     borderColor: "border-green-200",
   },
-  click_view: {
-    label: "Compartilhou/Clicou",
+  click: {
+    label: "Clicou",
     icon: MousePointer,
     color: "text-orange-600",
     bgColor: "bg-orange-50",
@@ -72,21 +71,21 @@ const categoryColors: Record<string, string> = {
   Cultura: "bg-indigo-500",
 };
 
-function formatTimeAgo(date: Date): string {
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+function ArticleEventItem({ event }: { event: IEvent }) {
+  const eventConfig = eventTypeConfig[
+    event.event_type as keyof typeof eventTypeConfig
+  ] ?? {
+    label: "Evento desconhecido",
+    icon: Bell, // fallback
+    color: "text-gray-600",
+    bgColor: "bg-gray-50",
+    borderColor: "border-gray-200",
+  };
 
-  if (diffInSeconds < 60) return `${diffInSeconds}s atrás`;
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}min atrás`;
-  if (diffInSeconds < 86400)
-    return `${Math.floor(diffInSeconds / 3600)}h atrás`;
-  return date.toLocaleDateString("pt-BR");
-}
-
-function ArticleEventItem({ event }: { event: ArticleEvent }) {
-  const eventConfig = eventTypeConfig[event.eventType];
   const EventIcon = eventConfig.icon;
-  const categoryColor = categoryColors[event.articleCategory] || "bg-gray-500";
+  const categoryColor = event?.article?.category?.name
+    ? categoryColors[event.article.category.name] || "bg-gray-500"
+    : "bg-gray-500";
 
   return (
     <div
@@ -115,7 +114,7 @@ function ArticleEventItem({ event }: { event: ArticleEvent }) {
             </div>
 
             <h4 className="font-medium text-gray-900 mb-1 line-clamp-2">
-              {event.articleTitle}
+              {event.article.title}
             </h4>
 
             <div className="flex items-center gap-3 text-sm text-gray-600 mb-2">
@@ -124,106 +123,53 @@ function ArticleEventItem({ event }: { event: ArticleEvent }) {
                 className={`${categoryColor} text-white text-xs`}
               >
                 <Tag className="w-3 h-3 mr-1" />
-                {event.articleCategory}
+                {event.article.category.name}
               </Badge>
-              <span>Por: {event.author}</span>
-              <span>{event.readingTime} min de leitura</span>
-            </div>
-
-            {event.readingProgress && event.eventType === "view" && (
-              <div className="mb-2">
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <span>Progresso de leitura:</span>
-                  <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-32">
-                    <div
-                      className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${event.readingProgress}%` }}
-                    />
-                  </div>
-                  <span>{event.readingProgress}%</span>
-                </div>
-              </div>
-            )}
-
-            {event.shareAction && event.eventType === "click_view" && (
-              <div className="mb-2 text-sm text-gray-600">
-                <Share2 className="w-3 h-3 inline mr-1" />
-                Compartilhou via:{" "}
-                <Badge variant="outline" className="text-xs">
-                  {event.shareAction}
-                </Badge>
-              </div>
-            )}
-
-            <div className="flex items-center gap-4 text-xs text-gray-500">
-              <div className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {formatTimeAgo(event.timestamp)}
-              </div>
-              <div className="flex items-center gap-1">
-                <User className="w-3 h-3" />
-                {event.userId}
-              </div>
-              <div className="flex items-center gap-1">
-                <MapPin className="w-3 h-3" />
-                {event.userLocation}
-              </div>
-              {event.referralSource && <span>Via: {event.referralSource}</span>}
+              <span>{event.article.reading_time} min de leitura</span>
             </div>
           </div>
         </div>
 
-        <div className="text-xs text-gray-400">
-          {event.timestamp.toLocaleTimeString("pt-BR")}
-        </div>
+        <div className="text-xs text-gray-400">{event.timestamp}</div>
       </div>
     </div>
   );
 }
 
 export default function ArticleTracker({
-  events,
-  maxEvents = 50,
   autoRefresh = true,
 }: ArticleTrackerProps) {
-  const [filteredEvents, setFilteredEvents] = useState<ArticleEvent[]>(events);
+  const { Get100EventsArticle, last100EventsArticle } = useContext(
+    ArticleAnalyticsContext
+  );
+
+  const [isLive, setIsLive] = useState(autoRefresh);
+
+  useEffect(() => {
+    if (!isLive) return;
+
+    //faça rodar a cada 5 segundos
+    const interval = setInterval(() => {
+      Get100EventsArticle();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [isLive]);
+
   const [eventFilter, setEventFilter] = useState<
     "all" | "view" | "view_end" | "click_view"
   >("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [isLive, setIsLive] = useState(autoRefresh);
 
-  const categories = Array.from(new Set(events.map((e) => e.articleCategory)));
+  const categories = Array.from(
+    new Set(
+      (Array.isArray(last100EventsArticle) ? last100EventsArticle : [])
+        .map((e) => e.article?.category?.name)
+        .filter(Boolean)
+    )
+  );
 
-  useEffect(() => {
-    let filtered = events;
-
-    if (eventFilter !== "all") {
-      filtered = filtered.filter((event) => event.eventType === eventFilter);
-    }
-
-    if (categoryFilter !== "all") {
-      filtered = filtered.filter(
-        (event) => event.articleCategory === categoryFilter
-      );
-    }
-
-    filtered = filtered
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-      .slice(0, maxEvents);
-    setFilteredEvents(filtered);
-  }, [events, eventFilter, categoryFilter, maxEvents]);
-
-  const totalEvents = events.length;
-  const recentEvents = events.filter(
-    (e) => new Date().getTime() - e.timestamp.getTime() < 60000
-  ).length;
-  const completedReads = events.filter(
-    (e) => e.eventType === "view_end"
-  ).length;
-  const shares = events.filter(
-    (e) => e.eventType === "click_view" && e.shareAction
-  ).length;
+  const totalEvents = last100EventsArticle.length;
 
   return (
     <Card className="w-full h-full flex flex-col">
@@ -242,9 +188,6 @@ export default function ArticleTracker({
             </CardTitle>
             <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
               <span>Total: {totalEvents}</span>
-              <span>Último minuto: {recentEvents}</span>
-              <span>Leituras completas: {completedReads}</span>
-              <span>Compartilhamentos: {shares}</span>
             </div>
           </div>
 
@@ -293,7 +236,7 @@ export default function ArticleTracker({
 
       <CardContent className="flex-1 overflow-hidden p-0">
         <ScrollArea className="h-full p-6">
-          {filteredEvents.length === 0 ? (
+          {last100EventsArticle.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p>Nenhum evento de notícia encontrado</p>
@@ -301,7 +244,7 @@ export default function ArticleTracker({
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredEvents.map((event) => (
+              {last100EventsArticle.map((event) => (
                 <ArticleEventItem key={event.id} event={event} />
               ))}
             </div>

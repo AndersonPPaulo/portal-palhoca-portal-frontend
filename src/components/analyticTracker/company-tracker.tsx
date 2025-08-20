@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,25 +14,15 @@ import {
   User,
   Store,
   Star,
+  Bell,
 } from "lucide-react";
 
-export interface CompanyEvent {
-  id: string;
-  eventType: "view" | "view_end" | "click_view";
-  companyName: string;
-  companyCategory: string;
-  companyRating: number;
-  companyAddress: string;
-  timestamp: Date;
-  userId: string;
-  userLocation: string;
-  sessionDuration?: number;
-  actionDetails?: string;
-}
+import {
+  CompanyAnalyticsContext,
+  IEvent,
+} from "@/providers/analytics/CompanyAnalyticsProvider"; // precisa criar provider igual ao de banner
 
 interface CompanyTrackerProps {
-  events: CompanyEvent[];
-  maxEvents?: number;
   autoRefresh?: boolean;
 }
 
@@ -51,16 +41,24 @@ const eventTypeConfig = {
     bgColor: "bg-green-50",
     borderColor: "border-green-200",
   },
-  click_view: {
+  click: {
     label: "Interagiu com Comércio",
     icon: MousePointer,
     color: "text-orange-600",
     bgColor: "bg-orange-50",
     borderColor: "border-orange-200",
   },
+   whatsapp_click: {
+    label: "Clicou no Whatsapp",
+    icon: MousePointer,
+    color: "text-fuchsia-600",
+    bgColor: "bg-fuchsia-50",
+    borderColor: "border-fuchsia-200",
+  },
 };
 
-function formatTimeAgo(date: Date): string {
+function formatTimeAgo(timestamp: string): string {
+  const date = new Date(timestamp);
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
@@ -71,8 +69,17 @@ function formatTimeAgo(date: Date): string {
   return date.toLocaleDateString("pt-BR");
 }
 
-function CompanyEventItem({ event }: { event: CompanyEvent }) {
-  const eventConfig = eventTypeConfig[event.eventType];
+function CompanyEventItem({ event }: { event: IEvent }) {
+  const eventConfig = eventTypeConfig[
+    event.event_type as keyof typeof eventTypeConfig
+  ] ?? {
+    label: "Evento desconhecido",
+    icon: Bell,
+    color: "text-gray-600",
+    bgColor: "bg-gray-50",
+    borderColor: "border-gray-200",
+  };
+
   const EventIcon = eventConfig.icon;
 
   return (
@@ -86,7 +93,6 @@ function CompanyEventItem({ event }: { event: CompanyEvent }) {
           >
             <EventIcon className={`w-4 h-4 ${eventConfig.color}`} />
           </div>
-
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <Store className="w-4 h-4 text-green-500" />
@@ -102,53 +108,20 @@ function CompanyEventItem({ event }: { event: CompanyEvent }) {
             </div>
 
             <h4 className="font-medium text-gray-900 mb-1">
-              {event.companyName}
+              {event.company.name}
             </h4>
-
-            <div className="flex items-center gap-3 text-sm text-gray-600 mb-2">
-              <span className="flex items-center gap-1">
-                <Badge variant="outline" className="text-xs">
-                  {event.companyCategory}
-                </Badge>
-              </span>
-              <span className="flex items-center gap-1">
-                <Star className="w-3 h-3 text-yellow-500" />
-                {event.companyRating.toFixed(1)}
-              </span>
-              <span className="flex items-center gap-1">
-                <MapPin className="w-3 h-3" />
-                {event.companyAddress}
-              </span>
-            </div>
-
-            {event.actionDetails && (
-              <div className="text-sm text-gray-600 mb-2 italic">
-                "{event.actionDetails}"
-              </div>
-            )}
 
             <div className="flex items-center gap-4 text-xs text-gray-500">
               <div className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 {formatTimeAgo(event.timestamp)}
               </div>
-              <div className="flex items-center gap-1">
-                <User className="w-3 h-3" />
-                {event.userId}
-              </div>
-              <div className="flex items-center gap-1">
-                <MapPin className="w-3 h-3" />
-                {event.userLocation}
-              </div>
-              {event.sessionDuration && (
-                <span>Sessão: {event.sessionDuration}s</span>
-              )}
             </div>
           </div>
         </div>
 
         <div className="text-xs text-gray-400">
-          {event.timestamp.toLocaleTimeString("pt-BR")}
+          {new Date(event.timestamp).toLocaleTimeString("pt-BR")}
         </div>
       </div>
     </div>
@@ -156,43 +129,33 @@ function CompanyEventItem({ event }: { event: CompanyEvent }) {
 }
 
 export default function CompanyTracker({
-  events,
-  maxEvents = 50,
   autoRefresh = true,
 }: CompanyTrackerProps) {
-  const [filteredEvents, setFilteredEvents] = useState<CompanyEvent[]>(events);
-  const [eventFilter, setEventFilter] = useState<
-    "all" | "view" | "view_end" | "click_view"
-  >("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const { Get100EventsCompany, last100EventsCompany } = useContext(
+    CompanyAnalyticsContext
+  );
+
   const [isLive, setIsLive] = useState(autoRefresh);
 
-  const categories = Array.from(new Set(events.map((e) => e.companyCategory)));
-
   useEffect(() => {
-    let filtered = events;
+    if (!isLive) return;
 
-    if (eventFilter !== "all") {
-      filtered = filtered.filter((event) => event.eventType === eventFilter);
-    }
+    const interval = setInterval(() => {
+      Get100EventsCompany();
+    }, 5000);
 
-    if (categoryFilter !== "all") {
-      filtered = filtered.filter(
-        (event) => event.companyCategory === categoryFilter
-      );
-    }
+    return () => clearInterval(interval);
+  }, [isLive]);
 
-    filtered = filtered
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-      .slice(0, maxEvents);
-    setFilteredEvents(filtered);
-  }, [events, eventFilter, categoryFilter, maxEvents]);
+  const [eventFilter, setEventFilter] = useState<
+    "all" | "view" | "view_end" | "click" | "whatsapp_click"
+  >("all");
 
-  const totalEvents = events.length;
-  const recentEvents = events.filter(
-    (e) => new Date().getTime() - e.timestamp.getTime() < 60000
-  ).length;
-  const clickEvents = events.filter((e) => e.eventType === "click_view").length;
+  const filteredEvents = last100EventsCompany.filter((event) =>
+    eventFilter === "all" ? true : event.event_type === eventFilter
+  );
+
+  const totalEvents = last100EventsCompany.length;
 
   return (
     <Card className="w-full h-full flex flex-col">
@@ -211,11 +174,8 @@ export default function CompanyTracker({
             </CardTitle>
             <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
               <span>Total: {totalEvents}</span>
-              <span>Último minuto: {recentEvents}</span>
-              <span>Interações: {clickEvents}</span>
             </div>
           </div>
-
           <Button
             variant="outline"
             size="sm"
@@ -226,36 +186,19 @@ export default function CompanyTracker({
           </Button>
         </div>
 
-        <div className="flex items-center gap-4 pt-4 border-t">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Ação:</span>
-            <select
-              value={eventFilter}
-              onChange={(e) => setEventFilter(e.target.value as any)}
-              className="text-xs border rounded px-2 py-1"
-            >
-              <option value="all">Todas</option>
-              <option value="view">Visualizações</option>
-              <option value="view_end">Explorou</option>
-              <option value="click_view">Interações</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Categoria:</span>
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="text-xs border rounded px-2 py-1"
-            >
-              <option value="all">Todas</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="flex items-center gap-2 pt-4 border-t">
+          <span className="text-sm text-gray-600">Filtrar por ação:</span>
+          <select
+            value={eventFilter}
+            onChange={(e) => setEventFilter(e.target.value as any)}
+            className="text-xs border rounded px-2 py-1"
+          >
+            <option value="all">Todas as ações</option>
+            <option value="view">Visualizações</option>
+            <option value="view_end">Explorou</option>
+            <option value="click">Interações</option>
+            <option value="whatsapp_click">Cliques no WhatsApp</option>
+          </select>
         </div>
       </CardHeader>
 

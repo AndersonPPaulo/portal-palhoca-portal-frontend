@@ -1,10 +1,11 @@
 // banner-tracker.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Eye,
   MousePointer,
@@ -13,25 +14,14 @@ import {
   MapPin,
   User,
   Target,
+  Bell,
 } from "lucide-react";
-import { ScrollArea } from "../ui/scroll-area";
-
-export interface BannerEvent {
-  id: string;
-  eventType: "view" | "view_end" | "click_view";
-  bannerTitle: string;
-  bannerPosition: string;
-  campaignId: string;
-  timestamp: Date;
-  userId: string;
-  userLocation: string;
-  deviceType: "desktop" | "mobile" | "tablet";
-  referrer?: string;
-}
+import {
+  BannerAnalyticsContext,
+  IEvent,
+} from "@/providers/analytics/BannerAnalyticsProvider";
 
 interface BannerTrackerProps {
-  events: BannerEvent[];
-  maxEvents?: number;
   autoRefresh?: boolean;
 }
 
@@ -50,7 +40,7 @@ const eventTypeConfig = {
     bgColor: "bg-green-50",
     borderColor: "border-green-200",
   },
-  click_view: {
+  click: {
     label: "Clicou no Banner",
     icon: MousePointer,
     color: "text-orange-600",
@@ -59,7 +49,8 @@ const eventTypeConfig = {
   },
 };
 
-function formatTimeAgo(date: Date): string {
+function formatTimeAgo(timestamp: string): string {
+  const date = new Date(timestamp);
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
@@ -70,8 +61,17 @@ function formatTimeAgo(date: Date): string {
   return date.toLocaleDateString("pt-BR");
 }
 
-function BannerEventItem({ event }: { event: BannerEvent }) {
-  const eventConfig = eventTypeConfig[event.eventType];
+function BannerEventItem({ event }: { event: IEvent }) {
+  const eventConfig = eventTypeConfig[
+    event.event_type as keyof typeof eventTypeConfig
+  ] ?? {
+    label: "Evento desconhecido",
+    icon: Bell,
+    color: "text-gray-600",
+    bgColor: "bg-gray-50",
+    borderColor: "border-gray-200",
+  };
+
   const EventIcon = eventConfig.icon;
 
   return (
@@ -101,37 +101,26 @@ function BannerEventItem({ event }: { event: BannerEvent }) {
             </div>
 
             <h4 className="font-medium text-gray-900 mb-1">
-              {event.bannerTitle}
+              {event.banner.name}
             </h4>
-
-            <div className="text-sm text-gray-600 mb-2">
-              <span className="font-medium">Posição:</span>{" "}
-              {event.bannerPosition} •
-              <span className="font-medium"> Campanha:</span> {event.campaignId}
-            </div>
 
             <div className="flex items-center gap-4 text-xs text-gray-500">
               <div className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 {formatTimeAgo(event.timestamp)}
               </div>
-              <div className="flex items-center gap-1">
-                <User className="w-3 h-3" />
-                {event.userId}
-              </div>
-              <div className="flex items-center gap-1">
-                <MapPin className="w-3 h-3" />
-                {event.userLocation}
-              </div>
-              <Badge variant="outline" className="text-xs">
-                {event.deviceType}
-              </Badge>
+
+              {event.extra_data?.deviceType && (
+                <Badge variant="outline" className="text-xs">
+                  {event.extra_data.deviceType}
+                </Badge>
+              )}
             </div>
           </div>
         </div>
 
         <div className="text-xs text-gray-400">
-          {event.timestamp.toLocaleTimeString("pt-BR")}
+          {new Date(event.timestamp).toLocaleTimeString("pt-BR")}
         </div>
       </div>
     </div>
@@ -139,35 +128,34 @@ function BannerEventItem({ event }: { event: BannerEvent }) {
 }
 
 export default function BannerTracker({
-  events,
-  maxEvents = 50,
   autoRefresh = true,
 }: BannerTrackerProps) {
-  const [filteredEvents, setFilteredEvents] = useState<BannerEvent[]>(events);
-  const [eventFilter, setEventFilter] = useState<
-    "all" | "view" | "view_end" | "click_view"
-  >("all");
+  const { Get100EventsBanner, last100EventsBanner } = useContext(
+    BannerAnalyticsContext
+  );
   const [isLive, setIsLive] = useState(autoRefresh);
 
   useEffect(() => {
-    let filtered = events;
+    if (!isLive) return;
 
-    if (eventFilter !== "all") {
-      filtered = filtered.filter((event) => event.eventType === eventFilter);
-    }
+    //faça rodar a cada 5 segundos
+    const interval = setInterval(() => {
+      Get100EventsBanner();
+    }, 5000);
 
-    filtered = filtered
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-      .slice(0, maxEvents);
-    setFilteredEvents(filtered);
-  }, [events, eventFilter, maxEvents]);
+    return () => clearInterval(interval);
+  }, [isLive]);
 
-  const totalEvents = events.length;
-  const recentEvents = events.filter(
-    (e) => new Date().getTime() - e.timestamp.getTime() < 60000
-  ).length;
-  const clickEvents = events.filter((e) => e.eventType === "click_view").length;
-  const viewEvents = events.filter((e) => e.eventType === "view").length;
+  const [eventFilter, setEventFilter] = useState<
+    "all" | "view" | "view_end" | "click"
+  >("all");
+
+  const filteredEvents = last100EventsBanner.filter((event) =>
+    eventFilter === "all" ? true : event.event_type === eventFilter
+  );
+  console.log("filteredEvents", filteredEvents);
+
+  const totalEvents = last100EventsBanner.length;
 
   return (
     <Card className="w-full h-full flex flex-col">
@@ -186,9 +174,6 @@ export default function BannerTracker({
             </CardTitle>
             <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
               <span>Total: {totalEvents}</span>
-              <span>Último minuto: {recentEvents}</span>
-              <span>Cliques: {clickEvents}</span>
-              <span>Views: {viewEvents}</span>
             </div>
           </div>
 
@@ -212,7 +197,7 @@ export default function BannerTracker({
             <option value="all">Todas as ações</option>
             <option value="view">Visualizações</option>
             <option value="view_end">Visto completo</option>
-            <option value="click_view">Cliques</option>
+            <option value="click">Cliques</option>
           </select>
         </div>
       </CardHeader>

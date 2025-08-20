@@ -3,6 +3,7 @@
 import { api } from "@/service/api";
 import { parseCookies } from "nookies";
 import { createContext, ReactNode, useState } from "react";
+import { ExtraData } from "./ArticleAnalyticsProvider";
 
 // Enums
 export enum EventType {
@@ -35,15 +36,25 @@ interface ITotalEventsResponse {
   events: TotalBannerEvent[];
 }
 
-interface IUpdateVirtualEventResponse {
-  message: string;
-  updated: any;
-}
-
 interface IUpdateVirtualEventProps {
   banner_id: string;
   eventType: EventType;
   newVirtualCount?: number;
+}
+
+export interface IEvent {
+  id: string;
+  event_type: EventType;
+  extra_data?: ExtraData;
+  timestamp: string;
+  banner: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface IVirtualEventResponse {
+  response: { bannerEvents: IEvent[] };
 }
 
 // Interface principal do contexto
@@ -51,7 +62,9 @@ interface IBannerAnalyticsData {
   GetEventsByBanner(bannerId: string): Promise<void>;
   GetTotalEvents(): Promise<void>;
   UpdateVirtualEvent(data: IUpdateVirtualEventProps): Promise<void>;
+  Get100EventsBanner(): Promise<IVirtualEventResponse>;
 
+  last100EventsBanner: IEvent[];
   bannerEvents: Record<string, BannerEvent[]>;
   totalEvents: TotalBannerEvent[];
   loading: boolean;
@@ -75,6 +88,20 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
   const [totalEvents, setTotalEvents] = useState<TotalBannerEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [last100EventsBanner, setLast100EventsBanner] = useState<IEvent[]>([]);
+
+  const Get100EventsBanner = async (): Promise<IVirtualEventResponse> => {
+    try {
+      const res = await api.get<IVirtualEventResponse>(
+        "/analytics/last-100-event-banner"
+      );
+      setLast100EventsBanner(res.data.response.bannerEvents);
+      return res.data;
+    } catch (err) {
+      throw err;
+    }
+  };
 
   // Função para buscar eventos por banner (privada - com auth)
   const GetEventsByBanner = async (bannerId: string): Promise<void> => {
@@ -192,6 +219,8 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
         loading,
         error,
         ClearError,
+        Get100EventsBanner,
+        last100EventsBanner,
       }}
     >
       {children}
