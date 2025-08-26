@@ -70,15 +70,15 @@ export const PortalProvider = ({ children }: IChildrenReact) => {
   };
 
   const [listPortals, setListPortals] = useState<ResponsePromise[]>([]);
-  
+
   const ListPortals = async (): Promise<ResponsePromise[]> => {
     const { "user:token": token } = parseCookies();
-    
+
     try {
-      const response = await api.get("/portal", { 
-        headers: { Authorization: `bearer ${token}` } 
+      const response = await api.get("/portal", {
+        headers: { Authorization: `bearer ${token}` },
       });
-      
+
       setListPortals(response.data.response);
       return response.data.response;
     } catch (err: any) {
@@ -92,11 +92,10 @@ export const PortalProvider = ({ children }: IChildrenReact) => {
     const { "user:token": token } = parseCookies();
     const config = {
       headers: { Authorization: `bearer ${token}` },
-      params: { portalId },
     };
 
     try {
-      await api.delete("/portal", config);
+      await api.delete(`/portal/${portalId}`, config);
       toast.success("Portal deletado com sucesso!");
 
       await ListPortals();

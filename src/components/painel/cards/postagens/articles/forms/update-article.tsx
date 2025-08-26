@@ -143,15 +143,15 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
     // Configurar portais
     if (
-      article.portals &&
-      article.portals.length > 0 &&
+      article.articlePortals &&
+      article.articlePortals.length > 0 &&
       listPortals?.length > 0
     ) {
-      const validPortalIds = article.portals
+      const validPortalIds = article.articlePortals
         .filter((portal) =>
-          listPortals.some((listPortal) => listPortal.id === portal.id)
+          listPortals.some((listPortal) => listPortal.id === portal.portal.id)
         )
-        .map((portal) => portal.id);
+        .map((portal) => portal.portal.id);
 
       setValue("portalIds", validPortalIds);
     }
@@ -174,7 +174,8 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       categoryId: article.category?.id,
       tagIds: article.tags?.map((tag) => tag.id) || [],
       chiefEditorId: profile?.chiefEditor?.id,
-      portalIds: article.portals?.map((portal) => portal.id) || [],
+      portalIds:
+        article.articlePortals?.map((portal) => portal.portal.id) || [],
       thumbnailDescription: article.thumbnail?.description || "",
     });
   }, [
@@ -185,6 +186,9 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     listTags,
     listPortals,
   ]);
+
+  const article_portals = article.articlePortals;
+  console.log("article_portals", article_portals);
 
   useEffect(() => {
     if (article.thumbnail) {
@@ -319,7 +323,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     }
   };
 
-    const lastStatus =
+  const lastStatus =
     findArticle?.status_history && findArticle.status_history.length > 0
       ? findArticle.status_history.reduce((latest, item) => {
           return new Date(item.changed_at) > new Date(latest.changed_at)
@@ -356,6 +360,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         thumbnailDescription: thumbnailDescription,
       };
 
+      console.log("finalData", finalData);
       // Enviar dados para API
       await UpdateArticle(finalData, article.id);
 
@@ -372,7 +377,10 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         }
       }
 
-      if(lastStatus?.status==="DRAFT"  || lastStatus?.status==="PENDING_REVIEW") {
+      if (
+        lastStatus?.status === "DRAFT" ||
+        lastStatus?.status === "PENDING_REVIEW"
+      ) {
         const statusMsg = setToDraft ? "Rascunho" : "Pendente de Revisão";
         toast.success(`Artigo atualizado com sucesso! Status: ${statusMsg}`);
       }
@@ -419,8 +427,6 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   };
 
   const contentLength = stripHtml(editorContent).length;
-
-
 
   return (
     <div className="w-full h-full flex flex-col bg-white rounded-[24px]">
@@ -502,7 +508,8 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
                   min={1}
                 />
                 {errors.reading_time && (
-                  <span className="text-sm text-red-500">https://us-east-1.console.aws.amazon.com/console/home?region=us-east-1
+                  <span className="text-sm text-red-500">
+                    https://us-east-1.console.aws.amazon.com/console/home?region=us-east-1
                     {errors.reading_time.message}
                   </span>
                 )}

@@ -414,30 +414,38 @@ export const columns: ColumnDef<Article>[] = [
     },
   },
   {
-    id: "publication",
-    header: () => <div className="text-center">Publicação</div>,
+    id: "publicationHighlight",
+    header: () => <div className="text-center">Publicação / Destaque</div>,
     cell: ({ row }) => {
-      const { portals, updated_at } = row.original;
+      const { articlePortals, updated_at } = row.original;
 
       return (
-        <div className="flex flex-col items-center justify-center gap-1 text-sm">
-          <div className="space-y-1">
-            {portals.map((portal) => (
+        <div className="flex flex-col gap-1 text-sm items-center">
+          {/* Lista de portais */}
+          <div className="flex items-center justify-center py-1 gap-4">
+            {articlePortals.map((ap) => (
               <div
-                key={portal.id}
-                className="flex items-center justify-center gap-1"
+                key={ap.portal.id}
+                className="flex flex-col py-1"
               >
-                <span className="truncate max-w-[100px] font-medium">
-                  {portal.name}
-                </span>
-                <LinkRedirect
-                  article={row.original}
-                  portalReferer={portal.link_referer}
-                />
+                {/* Nome + link */}
+
+                <div className="flex items-center justify-center mb-1">
+                  <span className="font-medium">{ap.portal.name}</span>
+                  <LinkRedirect
+                    article={row.original}
+                    portalReferer={ap.portal.link_referer}
+                  />
+                </div>
+
+                {/* Destaque como badge */}
+                <HighlightCell article={row.original} portalId={ap.portal.id} />
               </div>
             ))}
           </div>
-          <div className="flex items-center gap-1 text-muted-foreground mt-1 text-xs">
+
+          {/* Data de atualização */}
+          <div className="flex items-center gap-1 text-muted-foreground mt-1 text-xs justify-end">
             <Info size={12} />
             <span>
               Atualizado em{" "}
@@ -449,15 +457,6 @@ export const columns: ColumnDef<Article>[] = [
         </div>
       );
     },
-  },
-  {
-    accessorKey: "highlight",
-    header: () => <div className="text-center">Destaque</div>,
-    cell: ({ row }) => (
-      <div className="flex justify-center">
-        <HighlightCell article={row.original} />
-      </div>
-    ),
   },
   {
     accessorKey: "clicks_view",

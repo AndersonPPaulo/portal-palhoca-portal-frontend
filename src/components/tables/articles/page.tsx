@@ -22,7 +22,8 @@ export default function TableArticles({
   filter,
   activeFilters,
 }: TableArticlesProps) {
-  const { ListAuthorArticles, listArticles } = useContext(ArticleContext);
+  const { ListAuthorArticles, listArticles, refreshFlag } =
+    useContext(ArticleContext);
   const { profile } = useContext(UserContext);
   const [_loading, setLoading] = useState(true);
 
@@ -31,55 +32,61 @@ export default function TableArticles({
     pageSize: 9,
   });
 
-useEffect(() => {
-  const fetchArticles = async () => {
-    setLoading(true);
-    try {
-      if (profile?.id) {
-        const params: ArticleListParams = {
-          status: activeFilters.status,
-          page: pagination.pageIndex + 1,
-          limit: pagination.pageSize,
-          highlight:
-            activeFilters.highlight !== null
-              ? activeFilters.highlight
-              : undefined,
-          title: filter || undefined, // Busca por título e tags
-        };
+  useEffect(() => {
+    const fetchArticles = async () => {
+      setLoading(true);
+      try {
+        if (profile?.id) {
+          const params: ArticleListParams = {
+            status: activeFilters.status,
+            page: pagination.pageIndex + 1,
+            limit: pagination.pageSize,
+            highlight:
+              activeFilters.highlight !== null
+                ? activeFilters.highlight
+                : undefined,
+            title: filter || undefined, // Busca por título e tags
+          };
 
-        // Envia a primeira categoria (caso haja uma selecionada)
-        if (activeFilters.categories.length === 1) {
-          params.category_name = activeFilters.categories[0];
+          // Envia a primeira categoria (caso haja uma selecionada)
+          if (activeFilters.categories.length === 1) {
+            params.category_name = activeFilters.categories[0];
+          }
+
+          // Aplica filtro por nome de criador (opcional: só se backend aceitar `creatorName`)
+          // if (activeFilters.creators.length === 1) {
+          //   params.creatorName = activeFilters.creators[0];
+          // }
+
+          const roleName = profile.role.name.toLowerCase();
+
+          if (roleName === "chefe de redação") {
+            params.chiefEditorId = profile.id;
+            await ListAuthorArticles(undefined, params);
+          } else if (roleName === "jornalista" || roleName === "colunista") {
+            await ListAuthorArticles(profile.id, params);
+          } else {
+            await ListAuthorArticles(undefined, params);
+          }
         }
-
-        // Aplica filtro por nome de criador (opcional: só se backend aceitar `creatorName`)
-        // if (activeFilters.creators.length === 1) {
-        //   params.creatorName = activeFilters.creators[0];
-        // }
-
-        const roleName = profile.role.name.toLowerCase();
-
-        if (roleName === "chefe de redação") {
-          params.chiefEditorId = profile.id;
-          await ListAuthorArticles(undefined, params);
-        } else if (roleName === "jornalista" || roleName === "colunista") {
-          await ListAuthorArticles(profile.id, params);
-        } else {
-          await ListAuthorArticles(undefined, params);
-        }
+      } catch (error) {
+        console.error("Error fetching articles:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching articles:", error);
-    } finally {
-      setLoading(false);
+    };
+
+    if (profile?.id) {
+      fetchArticles();
     }
-  };
-
-  if (profile?.id) {
-    fetchArticles();
-  }
-}, [profile, pagination.pageIndex, pagination.pageSize, activeFilters, filter]);
-
+  }, [
+    profile,
+    pagination.pageIndex,
+    pagination.pageSize,
+    activeFilters,
+    filter,
+    refreshFlag,
+  ]);
 
   const filteredArticles =
     listArticles?.data?.filter((item: Article) => {
@@ -97,7 +104,9 @@ useEffect(() => {
 
       const matchesHighlight =
         activeFilters.highlight === null ||
-        item.highlight === activeFilters.highlight;
+        item.articlePortals.some(
+          (ap) => ap.highlight === activeFilters.highlight
+        );
 
       const matchesCreator =
         (activeFilters.creators?.length ?? 0) === 0 ||

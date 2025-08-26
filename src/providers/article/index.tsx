@@ -6,6 +6,23 @@ import { parseCookies } from "nookies";
 import { createContext, ReactNode, useState } from "react";
 import { toast } from "sonner";
 
+export interface ArticlePortal {
+  id: string;
+  highlight: boolean;
+  highlight_position: number | null;
+  created_at: string;
+  updated_at: string;
+  portal: {
+    id: string;
+    name: string;
+    link_referer: string;
+    status: boolean;
+    created_at: string;
+    updated_at: string;
+    id_portal_old_table: string | null;
+  };
+}
+
 export interface ArticleListParams {
   page?: number;
   limit?: number;
@@ -20,6 +37,7 @@ export interface ArticleListParams {
   portalReferer?: string;
   category_name?: string;
   title?: string;
+  articlePortals?: ArticlePortal[];
 }
 
 export interface ArticleProps {
@@ -35,7 +53,7 @@ export interface ArticleProps {
   categoryId: string;
   tagIds: string[];
   chiefEditorId: string;
-  portals: string[];
+  articlePortals?: ArticlePortal[];
 }
 
 interface UpdateArticleProps {
@@ -45,20 +63,20 @@ interface UpdateArticleProps {
   reading_time?: number;
   resume_content?: string;
   content?: string;
-  highlight?: boolean;
-  highlight_position?: number;
   categoryId?: string;
   tagIds?: string[];
   portalIds?: string[];
   setToDraft?: boolean;
   chiefEditorId?: string;
+  articlePortals?: ArticlePortal[];
 }
 
-interface UpdateArticleHighlightProps {
-  highlight: boolean;
-  highlight_position?: number;
-  portalIds?: string[];
-  chiefEditorId?: string;
+export interface UpdateArticleHighlightProps {
+  portals: {
+    highlight: boolean;
+    highlight_position?: number | null;
+    portalId?: string;
+  }[];
 }
 
 interface UpdateArticleStatusProps {
@@ -80,6 +98,23 @@ export interface ArticleResponse {
   meta: Meta;
 }
 
+type ObjectArticlePortalsProps = {
+  id: string;
+  highlight: boolean;
+  highlight_position?: number | null; // ← mudou
+  created_at: Date;
+  updated_at: Date;
+  portal: {
+    id: string;
+    name: string;
+    link_referer: string;
+    status: boolean;
+    created_at: Date;
+    updated_at: Date;
+    id_portal_old_table: null;
+  };
+};
+
 export interface Article {
   id: string;
   title: string;
@@ -89,8 +124,6 @@ export interface Article {
   resume_content: string;
   content: string;
   clicks_view: string;
-  highlight: boolean;
-  highlight_position?: number | null;
   created_at: string;
   updated_at: string;
   creator: User;
@@ -99,7 +132,7 @@ export interface Article {
   tags: Tag[];
   status_history: StatusHistory[];
   status: string;
-  portals: Portal[];
+  articlePortals: ObjectArticlePortalsProps[];
 }
 
 export interface Thumbnail {
@@ -190,6 +223,8 @@ interface IArticleData {
     data: UpdateArticleStatusProps,
     articleId: string
   ): Promise<Article>;
+
+  refreshFlag: number;
 }
 
 interface ICihldrenReact {
@@ -316,7 +351,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
     };
 
     try {
-       await api.patch("/article", data, config);
+      await api.patch("/article", data, config);
       toast.success("Artigo atualizado com sucesso!");
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Erro ao atualizar artigo");
@@ -324,6 +359,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
     }
   };
 
+  const [refreshFlag, setRefreshFlag] = useState(0);
   // Função específica para atualizar APENAS highlight e highlight_position (rota /article)
   const UpdateArticleHighlight = async (
     data: UpdateArticleHighlightProps,
@@ -331,24 +367,19 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
   ): Promise<void> => {
     const { "user:token": token } = parseCookies();
     const config = {
-      headers: { Authorization: `bearer ${token}` },
-      params: { articleId },
-    };
-
-    // Preparar dados apenas para highlight
-    const highlightData = {
-      highlight: data.highlight,
-      ...(data.highlight &&
-        data.highlight_position && {
-          highlight_position: data.highlight_position,
-        }),
-      ...(data.portalIds && { portalIds: data.portalIds }),
-      ...(data.chiefEditorId && { chiefEditorId: data.chiefEditorId }),
+      headers: { Authorization: `Bearer ${token}` },
     };
 
     try {
-      const response = await api.patch("/article", highlightData, config);
-      console.log("response", response);
+      // Envia exatamente o objeto com "portals"
+      await api.put(
+        `/article/${articleId}/portals`,
+        data, // <- data já possui a estrutura { portals: [...] }
+        config
+      );
+
+      setRefreshFlag((prev) => prev + 1);
+
       toast.success("Destaque atualizado com sucesso!");
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Erro ao atualizar destaque");
@@ -491,6 +522,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
         publishedArticles,
         UpdateArticleHighlight,
         UpdateArticleStatus,
+        refreshFlag
       }}
     >
       {children}
