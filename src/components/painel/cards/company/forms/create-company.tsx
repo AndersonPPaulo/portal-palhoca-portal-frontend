@@ -167,6 +167,18 @@ export default function FormCreateCompany() {
     }
   };
 
+  useEffect(() => {
+    const currentWhatsapp = whatsappDisplay.replace(/\D/g, "");
+    if (currentWhatsapp.length === 11) {
+      const dynamicMessage = generateWhatsappMessage(watch("portalIds"));
+      const message = encodeURIComponent(dynamicMessage);
+      setValue(
+        "linkWhatsapp",
+        `https://wa.me/55${currentWhatsapp}?text=${message}`
+      );
+    }
+  }, [watch("portalIds"), listPortals]);
+
   // Handlers otimizados
   const handleWhatsappChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "").substring(0, 11);
@@ -185,13 +197,30 @@ export default function FormCreateCompany() {
     setWhatsappDisplay(formattedDisplay);
 
     if (value.length === 11) {
-      const message = encodeURIComponent(
-        "Olá, vi o anúncio no Portal Palhoça e gostaria de informações."
-      );
+      // Usar mensagem dinâmica baseada nos portais selecionados
+      const dynamicMessage = generateWhatsappMessage(watch("portalIds"));
+      const message = encodeURIComponent(dynamicMessage);
       setValue("linkWhatsapp", `https://wa.me/55${value}?text=${message}`);
     } else {
       setValue("linkWhatsapp", "");
     }
+  };
+
+  const generateWhatsappMessage = (selectedPortalIds: string[]): string => {
+    if (!selectedPortalIds || selectedPortalIds.length === 0) {
+      return "Olá, gostaria de informações sobre os serviços.";
+    }
+
+    // Pegar o nome do primeiro portal selecionado
+    const selectedPortal = listPortals?.find((portal) =>
+      selectedPortalIds.includes(portal.id)
+    );
+
+    if (selectedPortal) {
+      return `Olá, vi o anúncio no ${selectedPortal.name} e gostaria de informações.`;
+    }
+
+    return "Olá, vi seu anúncio e gostaria de informações.";
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -273,7 +302,7 @@ export default function FormCreateCompany() {
 
   // Submit otimizado do formulário
   const onSubmit = async (data: CompanyFormData) => {
-    console.log('data', data);
+    console.log("data", data);
     try {
       setIsSubmitting(true);
       formSubmittedSuccessfully.current = false;

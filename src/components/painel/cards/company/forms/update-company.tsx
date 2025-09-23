@@ -258,6 +258,24 @@ export default function FormUpdateCompany({
     return () => clearTimeout(timeoutId);
   }, [cep]);
 
+  // Função para gerar mensagem dinâmica
+  const generateWhatsappMessage = (selectedPortalIds: string[]): string => {
+    if (!selectedPortalIds || selectedPortalIds.length === 0) {
+      return "Olá, gostaria de informações sobre os serviços.";
+    }
+
+    // Pegar o nome do primeiro portal selecionado
+    const selectedPortal = listPortals?.find((portal) =>
+      selectedPortalIds.includes(portal.id)
+    );
+
+    if (selectedPortal) {
+      return `Olá, vi o anúncio no ${selectedPortal.name} e gostaria de informações.`;
+    }
+
+    return "Olá, vi seu anúncio e gostaria de informações.";
+  };
+
   // Handler para seleção de localização no mapa
   const handleLocationSelect = (lat: number, lng: number, address?: string) => {
     handleMapLocationSelect(lat, lng, address);
@@ -297,14 +315,26 @@ export default function FormUpdateCompany({
     setWhatsappDisplay(formattedDisplay);
 
     if (value.length === 11) {
-      const message = encodeURIComponent(
-        "Olá, vi o anúncio no Portal Palhoça e gostaria de informações."
-      );
+      // Usar mensagem dinâmica baseada nos portais selecionados
+      const dynamicMessage = generateWhatsappMessage(watch("portalIds"));
+      const message = encodeURIComponent(dynamicMessage);
       setValue("linkWhatsapp", `https://wa.me/55${value}?text=${message}`);
     } else {
       setValue("linkWhatsapp", "");
     }
   };
+
+  useEffect(() => {
+    const currentWhatsapp = whatsappDisplay.replace(/\D/g, "");
+    if (currentWhatsapp.length === 11) {
+      const dynamicMessage = generateWhatsappMessage(watch("portalIds"));
+      const message = encodeURIComponent(dynamicMessage);
+      setValue(
+        "linkWhatsapp",
+        `https://wa.me/55${currentWhatsapp}?text=${message}`
+      );
+    }
+  }, [watch("portalIds"), listPortals]);
 
   // Upload de imagem
   const handleImageUpload = (file: File, previewUrl: string) => {
