@@ -111,6 +111,19 @@ interface GetCEPProps {
   siafi: string;
 }
 
+interface uploadResponseProps {
+  thumbnail: {
+    id: string,
+    url: string,
+    key: string,
+    original_name: string,
+    mime_type: string,
+    size: number,
+    uploaded_at: Date, 
+  },
+  uploadURL: string
+}
+
 interface ICompanyData {
   ListCompany(
     page?: number,
@@ -133,7 +146,7 @@ interface ICompanyData {
     data: UploadCompanyImageProps,
     company_id: string
   ): Promise<void>;
-  UploadCompanyLogo(file: File, company_id: string): Promise<void>;
+  UploadCompanyLogo(file: File, company_id: string): Promise<uploadResponseProps>;
 }
 
 interface IChildrenReact {
@@ -285,7 +298,7 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
   const UploadCompanyLogo = async (
     file: File,
     company_id: string
-  ): Promise<void> => {
+  ): Promise<uploadResponseProps> => {
     const { "user:token": token } = parseCookies();
     const formData = new FormData();
     formData.append("company_image", file);
@@ -298,12 +311,13 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
     };
 
     try {
-      await api.post(
+      const response =   await api.post(
         `/company/${company_id}/upload-company-image`,
         formData,
         config
       );
       toast.success("Logo da empresa enviado com sucesso!");
+      return response.data
     } catch (err: any) {
       toast.error(
         err.response?.data?.message || "Erro ao fazer upload do logo"

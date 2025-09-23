@@ -270,7 +270,7 @@ export default function FormUpdateCompany({
     );
 
     if (selectedPortal) {
-      return `Olá, vi o anúncio no ${selectedPortal.name} e gostaria de informações.`;
+      return `Olá, vi o seu anúncio no Portal ${selectedPortal.name} e gostaria de informações.`;
     }
 
     return "Olá, vi seu anúncio e gostaria de informações.";

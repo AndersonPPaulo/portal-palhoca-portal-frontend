@@ -39,6 +39,7 @@ const companySchema = z.object({
   district: z.string().min(1, "Bairro é obrigatório"),
   city: z.string().min(1, "Cidade é obrigatória"),
   state: z.string().min(1, "Estado é obrigatório"),
+  highlight: z.boolean(),
   address: z.string().min(1, "Endereço é obrigatório"),
   status: z.enum(["active", "inactive", "blocked"]),
   portalIds: z.array(z.string()).min(1, "Selecione pelo menos um portal"),
@@ -58,6 +59,19 @@ const statusLabels: Record<CompanyFormData["status"], string> = {
   inactive: "Inativo",
   blocked: "Bloqueado",
 };
+
+// Opções para os CustomSelects
+const statusOptions: OptionType[] = Object.entries(statusLabels).map(
+  ([value, label]) => ({
+    value,
+    label,
+  })
+);
+
+const highlightOptions: OptionType[] = [
+  { value: "true", label: "Sim" },
+  { value: "false", label: "Não" },
+];
 
 export default function FormCreateCompany() {
   const { back } = useRouter();
@@ -99,6 +113,7 @@ export default function FormCreateCompany() {
       linkLocationWaze: "",
       cep: "",
       email: "",
+      highlight: false,
       street: "",
       number: "",
       complement: "",
@@ -142,6 +157,24 @@ export default function FormCreateCompany() {
     watch("companyCategoryIds"),
   ];
 
+  // Função para gerar mensagem dinâmica do WhatsApp
+  const generateWhatsappMessage = (selectedPortalIds: string[]): string => {
+    if (!selectedPortalIds || selectedPortalIds.length === 0) {
+      return "Olá, gostaria de informações sobre os serviços.";
+    }
+
+    // Pegar o nome do primeiro portal selecionado
+    const selectedPortal = listPortals?.find((portal) =>
+      selectedPortalIds.includes(portal.id)
+    );
+
+    if (selectedPortal) {
+      return `Olá, vi o seu anúncio no Portal ${selectedPortal.name} e gostaria de informações.`;
+    }
+
+    return "Olá, vi seu anúncio e gostaria de informações.";
+  };
+
   // Função otimizada para buscar CEP
   const handleCEPLookup = async (cep: string) => {
     if (cep.length < 8) return;
@@ -167,6 +200,7 @@ export default function FormCreateCompany() {
     }
   };
 
+  // Efeito para atualizar WhatsApp quando portais mudarem
   useEffect(() => {
     const currentWhatsapp = whatsappDisplay.replace(/\D/g, "");
     if (currentWhatsapp.length === 11) {
@@ -204,23 +238,6 @@ export default function FormCreateCompany() {
     } else {
       setValue("linkWhatsapp", "");
     }
-  };
-
-  const generateWhatsappMessage = (selectedPortalIds: string[]): string => {
-    if (!selectedPortalIds || selectedPortalIds.length === 0) {
-      return "Olá, gostaria de informações sobre os serviços.";
-    }
-
-    // Pegar o nome do primeiro portal selecionado
-    const selectedPortal = listPortals?.find((portal) =>
-      selectedPortalIds.includes(portal.id)
-    );
-
-    if (selectedPortal) {
-      return `Olá, vi o anúncio no ${selectedPortal.name} e gostaria de informações.`;
-    }
-
-    return "Olá, vi seu anúncio e gostaria de informações.";
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -281,7 +298,7 @@ export default function FormCreateCompany() {
         const formData = new FormData();
         formData.append("company_image", file);
 
-        await api.post(
+        const res = await api.post(
           `/company/${response.data[0].id}/upload-company-image`,
           formData,
           {
@@ -291,7 +308,14 @@ export default function FormCreateCompany() {
             },
           }
         );
-
+        console.log("res.data.uploadURL", res.data.uploadURL);
+        await fetch(res.data.uploadURL, {
+          method: "PUT",
+          body: formData,
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
         toast.success("Logo enviado com sucesso!");
       }
     } catch (error: any) {
@@ -322,6 +346,7 @@ export default function FormCreateCompany() {
         address: data.address,
         district: data.district,
         status: data.status,
+        highlight: data.highlight,
         portalIds: data.portalIds,
         companyCategoryIds: data.companyCategoryIds,
         latitude: addressData.latitude,
@@ -393,27 +418,37 @@ export default function FormCreateCompany() {
     <div className="w-full h-full flex flex-col bg-white rounded-[24px] scroll-hidden">
       <div className="flex-1 overflow-y-auto no-scrollbar">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 p-6">
-          {/* Header */}
+          {/* Header com CustomSelects */}
           <div className="flex justify-between items-center">
             <ReturnPageButton />
-            <div className="flex flex-col">
-              <label htmlFor="status" className="text-gray-500 mb-1">
-                Status
-              </label>
-              <select
-                id="status"
-                {...register("status")}
-                className="border border-gray-300 rounded-xl px-4 py-2 text-sm"
-              >
-                {Object.entries(statusLabels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              {errors.status && (
-                <span className="text-red-500">{errors.status.message}</span>
-              )}
+            <div className="flex gap-4">
+              {/* Select de Status */}
+              <div className="flex flex-col min-w-[120px]">
+                <CustomSelect
+                  label="Status"
+                  id="status"
+                  placeholder="Selecione o status"
+                  options={statusOptions}
+                  value={watch("status") || ""}
+                  onChange={(value) =>
+                    setValue("status", value as CompanyFormData["status"])
+                  }
+                  error={errors.status?.message}
+                />
+              </div>
+
+              {/* Select de Destaque */}
+              <div className="flex flex-col min-w-[120px]">
+                <CustomSelect
+                  id="highlight"
+                  label="Destaque"
+                  placeholder="Destaque?"
+                  options={highlightOptions}
+                  value={watch("highlight") ? "true" : "false"}
+                  onChange={(value) => setValue("highlight", value === "true")}
+                  error={errors.highlight?.message}
+                />
+              </div>
             </div>
           </div>
 
@@ -461,9 +496,9 @@ export default function FormCreateCompany() {
                     value={watch("document_number")}
                     onChange={handleCnpjChange}
                   />
-                  {errors.phone && (
+                  {errors.document_number && (
                     <span className="text-red-500 text-sm">
-                      {errors.phone.message}
+                      {errors.document_number.message}
                     </span>
                   )}
                 </div>
@@ -749,9 +784,18 @@ export default function FormCreateCompany() {
                       )}
                       {watch("linkWhatsapp") &&
                         whatsappDisplay.length >= 14 && (
-                          <p className="text-green-600 text-xs mt-1">
-                            Link do WhatsApp gerado automaticamente
-                          </p>
+                          <div className="text-green-600 text-xs mt-1">
+                            <p>Link do WhatsApp gerado automaticamente</p>
+                            {watch("linkWhatsapp") && (
+                              <p className="text-gray-500 italic text-xs">
+                                Mensagem: "
+                                {decodeURIComponent(
+                                  watch("linkWhatsapp").split("text=")[1] || ""
+                                )}
+                                "
+                              </p>
+                            )}
+                          </div>
                         )}
                     </div>
                     <div>
@@ -816,7 +860,7 @@ export default function FormCreateCompany() {
             </div>
           </div>
 
-          {/* Seção do Mapa - */}
+          {/* Seção do Mapa */}
           <div className="mt-6">
             <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
               Localização no Mapa
@@ -853,17 +897,17 @@ export default function FormCreateCompany() {
                       </code>
                     </div>
                     <div>
-                      <strong>🗺️ Links Gerados:</strong>
+                      <strong>Links Gerados:</strong>
                       <br />
                       <span className="text-blue-600 text-xs">
-                        ✅ Google Maps &nbsp;&nbsp; ✅ Waze
+                        Google Maps | Waze
                       </span>
                     </div>
                   </div>
                   {addressData.fullAddress && (
                     <div className="mt-2 pt-2 border-t border-green-200">
                       <strong className="text-green-700">
-                        📬 Endereço Completo:
+                        Endereço Completo:
                       </strong>
                       <br />
                       <span className="text-gray-700 font-medium">
@@ -874,7 +918,7 @@ export default function FormCreateCompany() {
                   {!addressData.fullAddress && (
                     <div className="mt-2 pt-2 border-t border-green-200">
                       <strong className="text-blue-700">
-                        📝 Complete o endereço:
+                        Complete o endereço:
                       </strong>
                       <br />
                       <span className="text-gray-600 text-sm">
