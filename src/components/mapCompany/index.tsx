@@ -278,7 +278,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
             address = await mapService.reverseGeocode(latitude, longitude);
           } catch (error) {
             address = `GPS: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-            return error
+            return error;
           }
 
           onLocationSelect(latitude, longitude, address);
@@ -427,6 +427,15 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         </div>
       )}
 
+      {/* Instrução de uso do zoom */}
+      <div className="text-xs text-gray-500 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+        💡 <strong>Dica:</strong> Use os botões{" "}
+        <kbd className="px-2 py-1 bg-gray-200 rounded text-xs font-mono">+</kbd>{" "}
+        e{" "}
+        <kbd className="px-2 py-1 bg-gray-200 rounded text-xs font-mono">-</kbd>{" "}
+        no canto superior esquerdo do mapa para dar zoom
+      </div>
+
       {/* Container do Mapa */}
       <div
         className="relative rounded-lg overflow-hidden border border-gray-300 shadow-sm"
@@ -437,8 +446,9 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
           zoom={initialZoom}
           style={{ height: "100%", width: "100%" }}
           ref={mapRef}
-          scrollWheelZoom={true}
-          zoomControl={true}
+          scrollWheelZoom={false} // Desabilitado - só botões de zoom
+          doubleClickZoom={false} // Desabilitado - só botões de zoom
+          zoomControl={true} // Mantém os botões +/- ativos
           attributionControl={true}
         >
           <TileLayer

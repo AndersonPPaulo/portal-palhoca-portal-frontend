@@ -68,6 +68,7 @@ export default function FormUpdateCompany({
   const router = useRouter();
   const { UpdateCompany, SelfCompany } = useContext(CompanyContext);
   const { listPortals, ListPortals } = useContext(PortalContext);
+  const [whatsappDisplay, setWhatsappDisplay] = useState("");
   const { listCompanyCategory, ListCompanyCategory } = useContext(
     CompanyCategoryContext
   );
@@ -165,6 +166,7 @@ export default function FormUpdateCompany({
     setIsLoading(true);
     reset();
     setSelectedImage(null);
+    setWhatsappDisplay(""); // Reset do whatsapp display
 
     Promise.all([ListPortals(), ListCompanyCategory(100, 1)]);
 
@@ -183,6 +185,12 @@ export default function FormUpdateCompany({
       const categoryIds = data.company_category?.map((cat) => cat.id) || [];
       const portalIds =
         data?.portals?.filter((p) => p && p.id).map((p) => p.id) || [];
+
+      // Extrair e formatar o número do WhatsApp
+      const whatsappFormatted = extractPhoneFromWhatsappLink(
+        data?.linkWhatsapp || ""
+      );
+      setWhatsappDisplay(whatsappFormatted);
 
       reset({
         name: data?.name || "",
@@ -253,6 +261,49 @@ export default function FormUpdateCompany({
   // Handler para seleção de localização no mapa
   const handleLocationSelect = (lat: number, lng: number, address?: string) => {
     handleMapLocationSelect(lat, lng, address);
+  };
+
+  const extractPhoneFromWhatsappLink = (link: string): string => {
+    if (!link) return "";
+
+    // Extrair número do formato: https://wa.me/5548999999999?text=...
+    const match = link.match(/wa\.me\/55(\d{11})/);
+    if (match && match[1]) {
+      const phoneNumber = match[1];
+      // Aplicar máscara: (48) 99999-9999
+      return `(${phoneNumber.substring(0, 2)}) ${phoneNumber.substring(
+        2,
+        7
+      )}-${phoneNumber.substring(7)}`;
+    }
+
+    return "";
+  };
+
+  const handleWhatsappChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, "").substring(0, 11);
+
+    let formattedDisplay = value;
+    if (value.length > 2) {
+      formattedDisplay =
+        value.length <= 7
+          ? `(${value.substring(0, 2)}) ${value.substring(2)}`
+          : `(${value.substring(0, 2)}) ${value.substring(
+              2,
+              7
+            )}-${value.substring(7)}`;
+    }
+
+    setWhatsappDisplay(formattedDisplay);
+
+    if (value.length === 11) {
+      const message = encodeURIComponent(
+        "Olá, vi o anúncio no Portal Palhoça e gostaria de informações."
+      );
+      setValue("linkWhatsapp", `https://wa.me/55${value}?text=${message}`);
+    } else {
+      setValue("linkWhatsapp", "");
+    }
   };
 
   // Upload de imagem
@@ -670,6 +721,7 @@ export default function FormUpdateCompany({
                         {...register("linkLocationMaps")}
                         placeholder="Gerado automaticamente pelo mapa"
                         className="bg-blue-50"
+                        disabled
                       />
                       {errors.linkLocationMaps && (
                         <span className="text-red-500 text-sm">
@@ -682,6 +734,7 @@ export default function FormUpdateCompany({
                       <CustomInput
                         id="linkLocationWaze"
                         label="Link Waze"
+                        disabled
                         {...register("linkLocationWaze")}
                         placeholder="Gerado automaticamente pelo mapa"
                         className="bg-blue-50"
@@ -711,8 +764,9 @@ export default function FormUpdateCompany({
                       <CustomInput
                         id="linkWhatsapp"
                         label="WhatsApp"
-                        {...register("linkWhatsapp")}
-                        placeholder="https://wa.me/..."
+                        placeholder="(48) 99115-8345"
+                        value={whatsappDisplay}
+                        onChange={handleWhatsappChange}
                       />
                       {errors.linkWhatsapp && (
                         <span className="text-red-500 text-sm">
