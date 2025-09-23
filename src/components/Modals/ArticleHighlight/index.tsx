@@ -69,6 +69,7 @@ export default function ArticleHighlightModal({
   setIsOpen,
 }: ArticleHighlightModalProps) {
   const [portals, setPortals] = useState(article.articlePortals || []);
+  console.log("portals", portals);
 
   // Sincroniza o estado sempre que article mudar
   useEffect(() => {
@@ -122,7 +123,11 @@ export default function ArticleHighlightModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="bg-white rounded-xl max-w-lg">
+      <DialogContent
+        className={`bg-white rounded-xl ${
+          portals.length > 2 ? "max-w-lg sm:max-w-4xl" : "max-w-lg"
+        }`}
+      >
         <DialogHeader>
           <DialogTitle>Configurar Destaques do Artigo</DialogTitle>
           <DialogDescription>
@@ -130,7 +135,11 @@ export default function ArticleHighlightModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-6 py-4">
+        <div
+          className={`grid gap-6 py-4 ${
+            portals.length > 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"
+          }`}
+        >
           {portals.map((portal) => (
             <div
               key={portal.id}

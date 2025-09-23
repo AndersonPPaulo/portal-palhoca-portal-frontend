@@ -18,10 +18,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useState, useContext, useEffect } from "react";
 import { format } from "date-fns";
-import { ar, ptBR } from "date-fns/locale";
+import { ptBR } from "date-fns/locale";
 import { ArticleContext, Article } from "@/providers/article";
 import { toast } from "sonner";
-import { UserContext } from "@/providers/user";
 import { useRouter } from "next/navigation";
 import HighlightModal from "@/components/Modals/highlightModal";
 
@@ -36,7 +35,8 @@ export function ArticleViewModal({
   onOpenChange,
   article,
 }: ArticleViewModalProps) {
-  const { UpdateArticle, UpdateArticleStatus } = useContext(ArticleContext);
+  const { UpdateArticle, UpdateArticleStatus, UpdateArticleHighlight } =
+    useContext(ArticleContext);
 
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [showChangesForm, setShowChangesForm] = useState(false);
@@ -144,12 +144,14 @@ export function ArticleViewModal({
 
     try {
       if (isHighlight) {
-        await UpdateArticle(
+        await UpdateArticleHighlight(
           {
-            highlight: true,
-            highlight_position: highlightPosition,
-            chiefEditorId: article.chiefEditor?.id,
-            portalIds: article.portals?.map((portal) => portal.id) || [],
+            portals:
+              article.articlePortals?.map((p) => ({
+                portalId: p.portal.id,
+                highlight: true,
+                highlightPosition: highlightPosition,
+              })) || [],
           },
           article.id
         );
@@ -370,12 +372,12 @@ export function ArticleViewModal({
                     <div className="overflow-hidden">
                       <h3 className="font-semibold mb-2">Portais</h3>
                       <div className="flex flex-wrap gap-2">
-                        {article.portals?.map((portal) => (
+                        {article.articlePortals?.map((portal) => (
                           <span
-                            key={portal.id}
+                            key={portal.portal.id}
                             className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs truncate max-w-full"
                           >
-                            {portal.name}
+                            {portal.portal.name}
                           </span>
                         ))}
                       </div>
@@ -560,8 +562,15 @@ export function ArticleViewModal({
         <HighlightModal
           open={showApprovalModal}
           onOpenChange={setShowApprovalModal}
-          onPublish={handleApproveFromModal}
           newsTitle={article?.title || ""}
+          portals={article.articlePortals.map((p) => ({
+            id: p.portal.id,
+            name: p.portal.name,
+          }))}
+          onPublish={async (data) => {
+            await UpdateArticleHighlight(data, article.id);
+            await UpdateArticleStatus({ newStatus: "PUBLISHED" }, article.id);
+          }}
         />
       )}
     </>

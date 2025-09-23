@@ -2,7 +2,7 @@
 
 import { api } from "@/service/api";
 import { useRouter } from "next/navigation";
-import { parseCookies } from "nookies";
+import { parseCookies, destroyCookie } from "nookies";
 import { createContext, ReactNode, useState } from "react";
 import { toast } from "sonner";
 
@@ -131,7 +131,7 @@ interface IChildrenReact {
 export const UserContext = createContext<IUserData>({} as IUserData);
 
 export const UserProvider = ({ children }: IChildrenReact) => {
-  const { back } = useRouter();
+  const { push, back } = useRouter();
 
   const CreateUser = async (
     data: UserProps
@@ -210,6 +210,12 @@ export const UserProvider = ({ children }: IChildrenReact) => {
     }
   };
 
+  // Exemplo de função para logout ou quando houver erro no token
+  const logout = () => {
+    destroyCookie(undefined, "user:token", { path: "/" });
+    push("/"); // Redireciona para login
+  };
+
   const [profile, setProfile] = useState<ResponsePromise | null>(null);
   const Profile = async (): Promise<ResponsePromise> => {
     const { "user:token": token } = parseCookies();
@@ -225,6 +231,8 @@ export const UserProvider = ({ children }: IChildrenReact) => {
       const errorMessage =
         err.response?.data?.message || "Erro ao carregar perfil";
       toast.error(errorMessage);
+      logout();
+
       throw err;
     }
   };
