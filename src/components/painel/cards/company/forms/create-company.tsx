@@ -31,7 +31,7 @@ const companySchema = z.object({
   linkWhatsapp: z.string().optional(),
   linkLocationMaps: z.string().url("URL inválida").optional().or(z.literal("")),
   linkLocationWaze: z.string().url("URL inválida").optional().or(z.literal("")),
-  cep: z.string().min(8, "CEP deve ter 8 dígitos").max(9, "CEP inválido"),
+  zipcode: z.string().min(8, "CEP deve ter 8 dígitos").max(9, "CEP inválido"),
   street: z.string().min(1, "Rua é obrigatória"),
   number: z.string().min(1, "Número é obrigatório"),
   complement: z.string().optional(),
@@ -46,8 +46,8 @@ const companySchema = z.object({
   companyCategoryIds: z
     .array(z.string())
     .min(1, "Selecione pelo menos uma categoria"),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
+  lat: z.number().optional(),
+  long: z.number().optional(),
   document_number: z.string().min(11, "CNPJ deve ter 14 dígitos"),
   document_type: z.enum(["cnpj", "cpf"]).default("cnpj"),
 });
@@ -75,7 +75,7 @@ const highlightOptions: OptionType[] = [
 
 export default function FormCreateCompany() {
   const { back } = useRouter();
-  const { CreateCompany, ListCompany } = useContext(CompanyContext);
+  const { CreateCompany, SelfCompany } = useContext(CompanyContext);
   const { listPortals, ListPortals } = useContext(PortalContext);
   const { listCompanyCategory, ListCompanyCategory } = useContext(
     CompanyCategoryContext
@@ -111,7 +111,7 @@ export default function FormCreateCompany() {
       linkWhatsapp: "",
       linkLocationMaps: "",
       linkLocationWaze: "",
-      cep: "",
+      zipcode: "",
       email: "",
       highlight: false,
       street: "",
@@ -124,8 +124,8 @@ export default function FormCreateCompany() {
       status: "active",
       portalIds: [],
       companyCategoryIds: [],
-      latitude: undefined,
-      longitude: undefined,
+      lat: undefined,
+      long: undefined,
       document_number: "",
       document_type: "cnpj",
     },
@@ -143,7 +143,7 @@ export default function FormCreateCompany() {
   } = useMapAddressSync(setValue, watch);
 
   // Observar campos necessários
-  const cep = watch("cep");
+  const zipcode = watch("zipcode");
   const [street, number, complement, district, city, state] = [
     watch("street"),
     watch("number"),
@@ -163,7 +163,6 @@ export default function FormCreateCompany() {
       return "Olá, gostaria de informações sobre os serviços.";
     }
 
-    // Pegar o nome do primeiro portal selecionado
     const selectedPortal = listPortals?.find((portal) =>
       selectedPortalIds.includes(portal.id)
     );
@@ -231,7 +230,6 @@ export default function FormCreateCompany() {
     setWhatsappDisplay(formattedDisplay);
 
     if (value.length === 11) {
-      // Usar mensagem dinâmica baseada nos portais selecionados
       const dynamicMessage = generateWhatsappMessage(watch("portalIds"));
       const message = encodeURIComponent(dynamicMessage);
       setValue("linkWhatsapp", `https://wa.me/55${value}?text=${message}`);
@@ -274,7 +272,7 @@ export default function FormCreateCompany() {
     if (value.length > 5) {
       value = value.replace(/^(\d{5})(\d)/, "$1-$2");
     }
-    setValue("cep", value.substring(0, 9));
+    setValue("zipcode", value.substring(0, 9));
   };
 
   // Handler para seleção de localização no mapa
@@ -287,36 +285,43 @@ export default function FormCreateCompany() {
     setSelectedImage({ file, preview: previewUrl });
   };
 
-  const uploadCompanyLogo = async (file: File, companyName: string) => {
+  // Função de upload da logo
+  const uploadCompanyLogo = async (file: File, company_name: string) => {
     try {
       const { "user:token": token } = parseCookies();
-      const response = await ListCompany(1, 1, {
-        name: companyName,
-      });
 
-      if (response?.data?.length > 0) {
-        const formData = new FormData();
-        formData.append("company_image", file);
+      const response = await SelfCompany(company_name);
+      const companyId = response.id;
 
-        const res = await api.post(
-          `/company/${response.data[0].id}/upload-company-image`,
-          formData,
+      const { uploadUrl, displayUrl } = await api
+        .post(
+          `/company/${companyId}/upload-company-image`,
+          {
+            filename: file.name,
+            contentType: file.type,
+          },
           {
             headers: {
-              Authorization: `bearer ${token}`,
-              "Content-Type": "multipart/form-data",
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
             },
           }
-        );
-        console.log("res.data.uploadURL", res.data.uploadURL);
-        await fetch(res.data.uploadURL, {
-          method: "PUT",
-          body: formData,
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
+        )
+        .then((res) => res.data);
+
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: {
+          "Content-Type": file.type,
+        },
+      });
+
+      if (uploadRes.ok) {
         toast.success("Logo enviado com sucesso!");
+        console.log("URL pública:", displayUrl);
+      } else {
+        throw new Error("Falha ao enviar arquivo para o S3");
       }
     } catch (error: any) {
       console.error("Erro no upload do logo:", error);
@@ -331,6 +336,9 @@ export default function FormCreateCompany() {
       setIsSubmitting(true);
       formSubmittedSuccessfully.current = false;
 
+      // Remover hífen do CEP para enviar como zipcode
+      const zipcodeClean = data.zipcode.replace(/\D/g, "");
+
       // Preparar dados da empresa com coordenadas exatas
       const companyData = {
         name: data.name,
@@ -340,29 +348,40 @@ export default function FormCreateCompany() {
         linkInstagram: data.linkInstagram || "",
         responsibleName: data.name,
         email: data.email || "",
+        companyMessage: "", // Campo obrigatório no backend
         linkWhatsapp: data.linkWhatsapp || "",
         linkLocationMaps: data.linkLocationMaps || "",
         linkLocationWaze: data.linkLocationWaze || "",
         address: data.address,
         district: data.district,
+        city: data.city,
+        state: data.state,
         status: data.status,
         highlight: data.highlight,
         portalIds: data.portalIds,
         companyCategoryIds: data.companyCategoryIds,
-        latitude: addressData.latitude,
-        longitude: addressData.longitude,
+        // Coordenadas do mapa (como strings conforme backend)
+        lat: String(addressData.latitude || 0),
+        long: String(addressData.longitude || 0),
+        // CEP sem formatação
+        zipcode: zipcodeClean,
         document_number: data.document_number || "",
         document_type: data.document_type || "cnpj",
       };
 
-      // Criar empresa
-      await CreateCompany(companyData);
-      formSubmittedSuccessfully.current = true;
 
-      // Upload da imagem se houver (async)
-      if (selectedImage?.file) {
-        setTimeout(() => uploadCompanyLogo(selectedImage.file, data.name), 500);
-      }
+      // Criar empresa
+      await CreateCompany(companyData).then((res) => {
+        console.log("Empresa criada:", res);
+        // Upload da imagem se houver (async)
+        if (selectedImage?.file) {
+          setTimeout(
+            () => uploadCompanyLogo(selectedImage.file, data.name),
+            500
+          );
+        }
+      });
+      formSubmittedSuccessfully.current = true;
 
       // Reset completo
       reset();
@@ -381,10 +400,10 @@ export default function FormCreateCompany() {
   // Efeitos otimizados
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (cep && cep.length >= 8) handleCEPLookup(cep);
+      if (zipcode && zipcode.length >= 8) handleCEPLookup(zipcode);
     }, 500);
     return () => clearTimeout(timeoutId);
-  }, [cep]);
+  }, [zipcode]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -562,10 +581,10 @@ export default function FormCreateCompany() {
                   <div className="space-y-4">
                     <div className="relative">
                       <CustomInput
-                        id="cep"
+                        id="zipcode"
                         label="CEP"
                         placeholder="00000-000"
-                        value={watch("cep")}
+                        value={watch("zipcode")}
                         onChange={handleCepChange}
                         className={
                           isUpdatingFromMap
@@ -580,9 +599,9 @@ export default function FormCreateCompany() {
                           <div className="animate-spin h-5 w-5 border-2 border-blue-500 rounded-full border-t-transparent"></div>
                         </div>
                       )}
-                      {errors.cep && (
+                      {errors.zipcode && (
                         <span className="text-red-500 text-sm">
-                          {errors.cep.message}
+                          {errors.zipcode.message}
                         </span>
                       )}
                     </div>
@@ -832,7 +851,6 @@ export default function FormCreateCompany() {
                         shouldValidate: true,
                       })
                     }
-                    isMulti={true}
                     error={errors.portalIds?.message}
                   />
                 </div>
@@ -881,27 +899,29 @@ export default function FormCreateCompany() {
             />
 
             {/* Info das Coordenadas */}
-            {addressData.latitude && (
+            {addressData.latitude && addressData.longitude && (
               <div className="mt-3 p-4 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg">
                 <div className="text-sm">
                   <div className="flex items-center gap-2 font-medium text-green-700 mb-2">
-                    <span>Localização Exata Salva!</span>
+                    <span>Localização Capturada!</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
                     <div>
                       <strong>Coordenadas:</strong>
                       <br />
                       <code className="bg-white px-2 py-1 rounded text-xs">
-                        {addressData.latitude.toFixed(6)},{" "}
-                        {addressData.longitude?.toFixed(6)}
+                        Lat: {addressData.latitude.toFixed(6)}
+                        <br />
+                        Long: {addressData.longitude.toFixed(6)}
                       </code>
                     </div>
                     <div>
-                      <strong>Links Gerados:</strong>
+                      <strong>CEP:</strong>
                       <br />
-                      <span className="text-blue-600 text-xs">
-                        Google Maps | Waze
-                      </span>
+                      <code className="bg-white px-2 py-1 rounded text-xs">
+                        {watch("zipcode")} (
+                        {watch("zipcode").replace(/\D/g, "")})
+                      </code>
                     </div>
                   </div>
                   {addressData.fullAddress && (
@@ -961,7 +981,8 @@ export default function FormCreateCompany() {
                 isSubmitting ||
                 isLoadingCategories ||
                 categoryOptions.length === 0 ||
-                !addressData.latitude
+                !addressData.latitude ||
+                !addressData.longitude
               }
               className="rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
             >
