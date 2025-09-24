@@ -369,6 +369,7 @@ export default function FormCreateCompany() {
         document_type: data.document_type || "cnpj",
       };
 
+      console.log("Dados enviados ao backend:", companyData);
 
       // Criar empresa
       await CreateCompany(companyData).then((res) => {
@@ -838,19 +839,26 @@ export default function FormCreateCompany() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
-                    Portais
+                    Portal
                   </h3>
                   <CustomSelect
                     id="portalIds"
-                    label="Portais Disponíveis"
-                    placeholder="Selecione portais"
+                    label="Portal Disponível"
+                    placeholder="Selecione um portal"
                     options={portalOptions}
-                    value={portalIds}
-                    onChange={(value) =>
-                      setValue("portalIds", value as string[], {
+                    value={
+                      Array.isArray(portalIds) && portalIds.length > 0
+                        ? portalIds[0]
+                        : ""
+                    } // Garantir que é array
+                    onChange={(value) => {
+                      // Garantir que sempre enviamos um array
+                      const newValue = value ? [value as string] : [];
+                      setValue("portalIds", newValue, {
                         shouldValidate: true,
-                      })
-                    }
+                      });
+                    }}
+                    isMulti={false}
                     error={errors.portalIds?.message}
                   />
                 </div>
