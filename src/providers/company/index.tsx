@@ -140,11 +140,11 @@ interface ICompanyData {
   GetCompanyById(companyId: string): Promise<ICompanyProps>;
   company: ICompanyProps | null;
   CreateImageCompany(
-    data: UploadCompanyImageProps,
+    data: { filename: string; contentType: string },
     company_id: string
   ): Promise<void>;
   UploadCompanyLogo(
-    file: {filename: string, contentType: string},
+    file: { filename: string; contentType: string },
     company_id: string
   ): Promise<uploadResponseProps>;
 }
@@ -194,7 +194,9 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
     return response;
   };
 
-  const CreateCompany = async (data: UpdateCompanyProps): Promise<ICompanyProps | void> => {
+  const CreateCompany = async (
+    data: UpdateCompanyProps
+  ): Promise<ICompanyProps | void> => {
     const { "user:token": token } = parseCookies();
     const config = {
       headers: { Authorization: `bearer ${token}` },
@@ -273,7 +275,7 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
   };
 
   const CreateImageCompany = async (
-    data: UploadCompanyImageProps,
+    data: { filename: string; contentType: string },
     company_id: string
   ): Promise<void> => {
     const { "user:token": token } = parseCookies();
@@ -296,23 +298,17 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
   };
 
   const UploadCompanyLogo = async (
-    file: {filename: string, contentType: string},
-    company_id: string
+    file: { filename: string; contentType: string },
+    presignedURL: string
   ): Promise<uploadResponseProps> => {
-    const { "user:token": token } = parseCookies();
     const config = {
       headers: {
-        Authorization: `bearer ${token}`,
-        "Content-Type": "multipart/form-data",
+        "Content-Type": file.contentType,
       },
     };
 
     try {
-      const response = await api.post(
-        `/company/${company_id}/upload-company-image`,
-        file,
-        config
-      );
+      const response = await api.put(presignedURL, file, config);
       toast.success("Logo da empresa enviado com sucesso!");
       return response.data;
     } catch (err: any) {

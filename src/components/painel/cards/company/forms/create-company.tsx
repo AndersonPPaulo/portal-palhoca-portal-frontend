@@ -307,7 +307,12 @@ export default function FormCreateCompany() {
             },
           }
         )
-        .then((res) => res.data);
+        .then((res) => {
+          console.log(res.data);
+          console.log("res.data.uploadUrl", res.data.uploadUrl);
+          return res.data;
+        });
+      console.log("uploadUrl", uploadUrl);
 
       const uploadRes = await fetch(uploadUrl, {
         method: "PUT",
@@ -316,6 +321,7 @@ export default function FormCreateCompany() {
           "Content-Type": file.type,
         },
       });
+      console.log("uploadRes", uploadRes);
 
       if (uploadRes.ok) {
         toast.success("Logo enviado com sucesso!");
