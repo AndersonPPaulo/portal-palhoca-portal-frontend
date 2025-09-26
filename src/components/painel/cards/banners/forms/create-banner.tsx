@@ -20,6 +20,8 @@ import CustomInput from "@/components/input/custom-input";
 import { CompanyContext } from "@/providers/company";
 import { CompanySelectCombobox } from "../comboboxSelect";
 import ReturnPageButton from "@/components/button/returnPage";
+import { PortalContext } from "@/providers/portal";
+import CustomSelect from "@/components/select/custom-select";
 
 const bannerSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -29,16 +31,22 @@ const bannerSchema = z.object({
   date_expiration: z.string().min(1, "Data de expiração é obrigatória"),
   company_id: z.string().min(1),
   banner: z.any().refine((file) => file?.length === 1, "Imagem é obrigatória"),
+  portal_id: z.string().min(1, "Selecione um portal"), // MUDANÇA: de array para string
 });
 
+
+
 type BannerFormData = z.infer<typeof bannerSchema>;
+export type OptionType = { value: string; label: string };
 
 export function CreateBannerForm() {
   const { CreateBanner } = useContext(BannerContext);
   const { ListCompany, listCompany } = useContext(CompanyContext);
+  const { listPortals, ListPortals } = useContext(PortalContext);
 
   useEffect(() => {
     ListCompany(); // buscar todas as empresas
+    ListPortals(); // MUDANÇA: adicionar busca dos portais
   }, []);
 
   const {
@@ -115,6 +123,7 @@ export function CreateBannerForm() {
       await CreateBanner({
         ...data,
         banner: data.banner[0],
+        portal_id: data.portal_id, // MUDANÇA: enviar como string diretamente
         date_active: new Date(data.date_active),
         date_expiration: new Date(data.date_expiration),
       });
@@ -248,10 +257,14 @@ export function CreateBannerForm() {
     };
   };
 
+  const portalOptions: OptionType[] = Array.isArray(listPortals)
+    ? listPortals.map((portal) => ({ value: portal.id, label: portal.name }))
+    : [];
+
   const previewDimensions = calculatePreviewDimensions();
 
   return (
-    <div className="w-full mx-auto">
+    <div className="w-full h-min-[1200px] mx-auto">
       <form
         onSubmit={handleSubmit(onSubmit)}
         className="grid grid-cols-1 lg:grid-cols-2 gap-6 bg-white rounded-xl shadow overflow-hidden"
@@ -371,6 +384,30 @@ export function CreateBannerForm() {
               )}
             </div>
           )}
+
+          {/* Portal - */}
+          <div>
+            <h3 className="text-lg font-semibold z text-gray-800 mb-4 pb-2 border-b border-gray-200">
+              Portal
+            </h3>
+            <div className="block">
+            <CustomSelect
+              id="portal_id"
+              label="Portal Disponível"
+              placeholder="Selecione um portal"
+              options={portalOptions}
+              value={watch("portal_id") || ""} // MUDANÇA: valor direto sem array
+              onChange={(value) => {
+                // MUDANÇA: enviar diretamente como string
+                setValue("portal_id", value as string, {
+                  shouldValidate: true,
+                });
+              }}
+              isMulti={false}
+              error={errors.portal_id?.message}
+            />
+            </div>
+          </div>
         </div>
 
         {/* Coluna 2 - Upload e Preview */}

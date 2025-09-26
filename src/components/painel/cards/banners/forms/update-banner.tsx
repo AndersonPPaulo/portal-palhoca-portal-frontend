@@ -19,10 +19,14 @@ import { CompanySelectCombobox } from "../comboboxSelect";
 import { useRouter } from "next/navigation";
 import ReturnPageButton from "@/components/button/returnPage";
 import formatDateForInput from "@/utils/formatDateForInput";
+import { PortalContext } from "@/providers/portal";
+import CustomSelect from "@/components/select/custom-select";
 
 interface IBannerFormProps {
   bannerData?: Partial<BannerItem>;
 }
+
+export type OptionType = { value: string; label: string };
 
 const defaultValues = {
   name: "",
@@ -32,6 +36,7 @@ const defaultValues = {
   dateExpiration: "",
   status: "true",
   companyId: "",
+  portalId: "",
   bannerFile: null,
   previewBanner: null,
   imageDimensions: null,
@@ -44,6 +49,7 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
 
   const { UpdateBanner } = useContext(BannerContext);
   const { ListCompany, listCompany } = useContext(CompanyContext);
+  const { listPortals, ListPortals } = useContext(PortalContext);
 
   const [name, setName] = useState(bannerData?.name ?? "");
   const [linkDirection, setLinkDirection] = useState(
@@ -62,6 +68,7 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
     bannerData?.status?.toString() ?? "true"
   );
   const [companyId, setCompanyId] = useState(bannerData?.company?.id ?? "");
+  const [portalId, setPortalId] = useState(bannerData?.portal?.id ?? "");
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [previewBanner, setPreviewBanner] = useState<string | null>(
     bannerData?.url ?? null
@@ -76,7 +83,15 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
 
   useEffect(() => {
     ListCompany();
+    ListPortals();
   }, []);
+
+  // useEffect específico para atualizar o portalId quando bannerData mudar
+  useEffect(() => {
+    if (bannerData?.portal?.id) {
+      setPortalId(bannerData.portal.id);
+    }
+  }, [bannerData]);
 
   useEffect(() => {
     if (bannerData?.url && !bannerFile) {
@@ -124,7 +139,7 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
       }
     },
     []
-  ); // Sem dependências pois usa apenas parâmetros
+  );
 
   // useEffect para validação das dimensões quando nova imagem é selecionada
   useEffect(() => {
@@ -174,17 +189,22 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
       );
       setStatus(bannerData.status?.toString() ?? defaultValues.status);
       setCompanyId(bannerData.company?.id ?? defaultValues.companyId);
+      // Fix this line:
+      setPortalId(bannerData.portal?.id ?? defaultValues.portalId);
       setPreviewBanner(bannerData.url ?? defaultValues.previewBanner);
+
+      // Log for debug
+      console.log("Banner Data Portal:", bannerData.portal);
+      console.log("Portal ID being set:", bannerData.portal?.id);
     }
 
-    // Estados sempre resetados
+    // Always reset these states
     setBannerFile(defaultValues.bannerFile);
     setImageDimensions(defaultValues.imageDimensions);
     setImageSizeValid(defaultValues.imageSizeValid);
     setImageLoadError(defaultValues.imageLoadError);
   }, [bannerData]);
 
-  // Use o resetForm no useEffect:
   useEffect(() => {
     resetForm();
   }, [resetForm]);
@@ -208,6 +228,16 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
         created_at: bannerData?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
         banner: bannerFile ?? undefined,
+        // Fix: Send the portal as expected by UpdateBanner
+        portal: {
+          id: portalId,
+          name: listPortals?.find((p) => p.id === portalId)?.name || "",
+          link_referer: "",
+          status: true,
+          created_at: "",
+          updated_at: "",
+          id_portal_old_table: "",
+        },
       };
 
       await UpdateBanner(bannerItem, bannerData?.id || "");
@@ -384,6 +414,10 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
     }
   };
 
+  const portalOptions: OptionType[] = Array.isArray(listPortals)
+    ? listPortals.map((portal) => ({ value: portal.id, label: portal.name }))
+    : [];
+
   const previewDimensions = calculatePreviewDimensions();
 
   const getImageStatusInfo = () => {
@@ -530,6 +564,25 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
               />
             </div>
           )}
+
+          {/* Portal Section */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
+              Portal
+            </h3>
+            <div className="block">
+              <CustomSelect
+                id="portal_id"
+                label="Portal Disponível"
+                placeholder="Selecione um portal"
+                options={portalOptions}
+                value={portalId}
+                onChange={(value) => setPortalId(value as string)}
+                isMulti={false}
+                error=""
+              />
+            </div>
+          </div>
         </div>
 
         {/* Coluna 2 - Upload e Preview */}
@@ -630,7 +683,7 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
                     {/* Para imagens menores */}
                     {previewDimensions.isSmaller ? (
                       <div
-                        className="relative border-2 border-blue-300 rounded-md  bg-gray-100 flex items-center justify-center"
+                        className="relative border-2 border-blue-300 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center"
                         style={{
                           width: `${previewDimensions.previewBannerWidth}px`,
                           height: `${previewDimensions.previewBannerHeight}px`,
@@ -663,9 +716,9 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
                         </div>
                       </div>
                     ) : (
-                      /* Lógica para imagens maiores ou iguais */
+                      /* Lógica original para imagens maiores ou iguais */
                       <div
-                        className="relative border-2 border-gray-300 rounded-md  bg-gray-50"
+                        className="relative border-2 border-gray-300 rounded-md overflow-hidden bg-gray-50"
                         style={{
                           width: `${previewDimensions.previewImageWidth}px`,
                           height: `${previewDimensions.previewImageHeight}px`,
@@ -683,107 +736,51 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
                           <>
                             {/* Área visível (não será cortada) */}
                             <div
-                              className="absolute border-4 border-green-400 bg-transparent"
+                              className="absolute border-4 border-green-400"
                               style={{
                                 left: `${previewDimensions.visibleX}px`,
                                 top: `${previewDimensions.visibleY}px`,
                                 width: `${previewDimensions.visibleWidth}px`,
                                 height: `${previewDimensions.visibleHeight}px`,
+                                backgroundColor: "transparent",
+                                boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.6)",
                               }}
                             >
-                              <div className="absolute z-40 -top-8 left-0 bg-green-500 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                              <div className="absolute -top-8 left-0 bg-green-500 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
                                 ✓ ÁREA VISÍVEL
                               </div>
                             </div>
 
-                            {/* Overlays para áreas que serão cortadas */}
-                            {/* Overlay superior */}
+                            {/* Labels para áreas cortadas */}
                             {previewDimensions.visibleY > 10 && (
-                              <div
-                                className="absolute bg-black bg-opacity-60"
-                                style={{
-                                  left: 0,
-                                  top: 0,
-                                  width: "100%",
-                                  height: `${previewDimensions.visibleY}px`,
-                                }}
-                              >
-                                <div className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-xs px-2 py-1 rounded">
-                                  ❌ SERÁ CORTADA
-                                </div>
+                              <div className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-xs px-2 py-1 rounded">
+                                ❌ SERÁ CORTADA
                               </div>
                             )}
 
-                            {/* Overlay inferior */}
                             {previewDimensions.visibleY +
                               previewDimensions.visibleHeight <
                               previewDimensions.previewImageHeight - 10 && (
-                              <div
-                                className="absolute bg-black bg-opacity-60"
-                                style={{
-                                  left: 0,
-                                  top: `${
-                                    previewDimensions.visibleY +
-                                    previewDimensions.visibleHeight
-                                  }px`,
-                                  width: "100%",
-                                  height: `${
-                                    previewDimensions.previewImageHeight -
-                                    (previewDimensions.visibleY +
-                                      previewDimensions.visibleHeight)
-                                  }px`,
-                                }}
-                              >
-                                <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-xs px-2 py-1 rounded">
-                                  ❌ SERÁ CORTADA
-                                </div>
+                              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-xs px-2 py-1 rounded">
+                                ❌ SERÁ CORTADA
                               </div>
                             )}
 
-                            {/* Overlay esquerdo */}
                             {previewDimensions.visibleX > 10 && (
-                              <div
-                                className="absolute bg-black bg-opacity-60"
-                                style={{
-                                  left: 0,
-                                  top: 0,
-                                  width: `${previewDimensions.visibleX}px`,
-                                  height: "100%",
-                                }}
-                              >
-                                <div className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-red-500 text-white text-xs px-2 py-1 rounded">
-                                  <span className="transform -rotate-90 block">
-                                    ❌ CORTADA
-                                  </span>
-                                </div>
+                              <div className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-red-500 text-white text-xs px-2 py-1 rounded">
+                                <span className="transform -rotate-90 block">
+                                  ❌ CORTADA
+                                </span>
                               </div>
                             )}
 
-                            {/* Overlay direito */}
                             {previewDimensions.visibleX +
                               previewDimensions.visibleWidth <
                               previewDimensions.previewImageWidth - 10 && (
-                              <div
-                                className="absolute bg-black bg-opacity-60"
-                                style={{
-                                  left: `${
-                                    previewDimensions.visibleX +
-                                    previewDimensions.visibleWidth
-                                  }px`,
-                                  top: 0,
-                                  width: `${
-                                    previewDimensions.previewImageWidth -
-                                    (previewDimensions.visibleX +
-                                      previewDimensions.visibleWidth)
-                                  }px`,
-                                  height: "100%",
-                                }}
-                              >
-                                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-red-500 text-white text-xs px-2 py-1 rounded">
-                                  <span className="transform -rotate-90 block">
-                                    ❌ CORTADA
-                                  </span>
-                                </div>
+                              <div className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-red-500 text-white text-xs px-2 py-1 rounded">
+                                <span className="transform -rotate-90 block">
+                                  ❌ CORTADA
+                                </span>
                               </div>
                             )}
                           </>
