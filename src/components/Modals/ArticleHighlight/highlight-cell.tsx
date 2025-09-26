@@ -48,7 +48,6 @@ export const HighlightCell = ({ article, portalId }: HighlightCellProps) => {
     updatedArticle: UpdateArticleHighlightProps
   ) => {
     await UpdateArticleHighlight(updatedArticle, localArticle.id).then((res) => {
-      console.log('res', res);
       // setLocalArticle(updatedArticle);
       setIsHighlightModalOpen(false);
     });

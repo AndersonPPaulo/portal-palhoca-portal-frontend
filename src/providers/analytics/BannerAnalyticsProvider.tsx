@@ -117,13 +117,11 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
       .get(`/analytics/event-banner/${bannerId}/banner`, config)
       .then((res) => {
         const responseData: IEventsByBannerResponse = res.data.response;
-        console.log("res.data.response", res.data.response);
         setBannerEvents((prev) => ({
           ...prev,
           [bannerId]: responseData.events || [],
         }));
         setLoading(false);
-        console.log("responseData.events", responseData.events);
       })
       .catch((err) => {
         setError(
@@ -133,7 +131,6 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
         return err;
       });
 
-    console.log("response", response);
     return response;
   };
 

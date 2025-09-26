@@ -13,7 +13,6 @@ interface TableCompanyProps {
 
 export default function TableCompany({ filter }: TableCompanyProps) {
   const { ListCompany, listCompany } = useContext(CompanyContext);
-  console.log('listCompany', listCompany)
   const [loading, setLoading] = useState(true);
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(9);

@@ -203,7 +203,6 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
     };
     try {
       const response = await api.post("/company", data, config);
-      console.log("response", response);
       toast.success("Empresa criada com sucesso!");
       push("/comercio");
     } catch (err: any) {

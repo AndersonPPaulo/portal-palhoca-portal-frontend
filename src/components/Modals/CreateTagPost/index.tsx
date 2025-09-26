@@ -82,7 +82,6 @@ export default function CreateTagModal({
         onClose();
       }, 1000);
     } catch (error: any) {
-      console.log("error", error);
       setIsSubmitting(false);
       toast.error(error.message || "Erro ao criar tag");
       console.error("Erro ao criar tag:", error);

@@ -308,11 +308,8 @@ export default function FormCreateCompany() {
           }
         )
         .then((res) => {
-          console.log(res.data);
-          console.log("res.data.uploadUrl", res.data.uploadUrl);
           return res.data;
         });
-      console.log("uploadUrl", uploadUrl);
 
       const uploadRes = await fetch(uploadUrl, {
         method: "PUT",
@@ -321,11 +318,9 @@ export default function FormCreateCompany() {
           "Content-Type": file.type,
         },
       });
-      console.log("uploadRes", uploadRes);
 
       if (uploadRes.ok) {
         toast.success("Logo enviado com sucesso!");
-        console.log("URL pública:", displayUrl);
       } else {
         throw new Error("Falha ao enviar arquivo para o S3");
       }
@@ -337,7 +332,6 @@ export default function FormCreateCompany() {
 
   // Submit otimizado do formulário
   const onSubmit = async (data: CompanyFormData) => {
-    console.log("data", data);
     try {
       setIsSubmitting(true);
       formSubmittedSuccessfully.current = false;
@@ -375,11 +369,8 @@ export default function FormCreateCompany() {
         document_type: data.document_type || "cnpj",
       };
 
-      console.log("Dados enviados ao backend:", companyData);
-
       // Criar empresa
       await CreateCompany(companyData).then((res) => {
-        console.log("Empresa criada:", res);
         // Upload da imagem se houver (async)
         if (selectedImage?.file) {
           setTimeout(

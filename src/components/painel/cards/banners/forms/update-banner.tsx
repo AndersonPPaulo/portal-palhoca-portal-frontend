@@ -193,9 +193,6 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
       setPortalId(bannerData.portal?.id ?? defaultValues.portalId);
       setPreviewBanner(bannerData.url ?? defaultValues.previewBanner);
 
-      // Log for debug
-      console.log("Banner Data Portal:", bannerData.portal);
-      console.log("Portal ID being set:", bannerData.portal?.id);
     }
 
     // Always reset these states

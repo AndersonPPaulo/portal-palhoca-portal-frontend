@@ -106,7 +106,6 @@ export const BannerProvider = ({ children }: ICihldrenReact) => {
     const response = await api
       .post("/banner", formData, config)
       .then((res) => {
-        console.log("res", res.data);
         toast.success("Banner criado com sucesso!");
         back();
       })
@@ -208,7 +207,6 @@ export const BannerProvider = ({ children }: ICihldrenReact) => {
     const response = await api
       .get(`/banner/${id}`, config)
       .then((res) => {
-        console.log("Banner recebido:", res.data.response); // DEBUG: verificar dados recebidos
         setBanner(res.data.response);
       })
       .catch((err) => {
