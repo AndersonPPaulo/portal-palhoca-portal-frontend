@@ -76,17 +76,6 @@ export default function BannerAnalyticsModal({
       enableDebug={process.env.NODE_ENV === "development"}
       customTitle="Analytics do Banner"
       customDescription="Este banner ainda não possui eventos registrados."
-      onDataLoaded={(data) => {
-        console.log(`📊 Dados do banner ${bannerTitle} carregados:`, data);
-      }}
-      onEventUpdated={(eventType, newValue) => {
-        console.log(`🎯 Evento ${eventType} atualizado para ${newValue}`);
-        // Aqui você pode adicionar lógica adicional, como:
-        // - Enviar para analytics externos (Google Analytics, etc)
-        // - Notificar outros componentes
-        // - Atualizar cache global
-        // - Atualizar rankings de banners
-      }}
     />
   );
 }

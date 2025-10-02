@@ -15,6 +15,7 @@ export interface IBannerCreate {
   company_id?: string;
   status?: boolean;
   banner?: File;
+  portal_id: string;
 }
 
 interface Company {
@@ -36,6 +37,15 @@ export interface BannerItem {
   updated_at: string;
   company: Company;
   banner?: File;
+  portal: {
+    id: string;
+    name: string;
+    link_referer: string;
+    status: boolean;
+    created_at: string;
+    updated_at: string;
+    id_portal_old_table: string;
+  };
 }
 
 interface IBanner {
@@ -85,6 +95,7 @@ export const BannerProvider = ({ children }: ICihldrenReact) => {
     formData.append("status", data.status?.toString() ?? "");
     formData.append("company_id", data.company_id ?? "");
     formData.append("banner", data.banner ?? "");
+    formData.append("portal_id", data.portal_id ?? "");
 
     const config = {
       headers: {
@@ -94,7 +105,7 @@ export const BannerProvider = ({ children }: ICihldrenReact) => {
     };
     const response = await api
       .post("/banner", formData, config)
-      .then(() => {
+      .then((res) => {
         toast.success("Banner criado com sucesso!");
         back();
       })
@@ -142,6 +153,49 @@ export const BannerProvider = ({ children }: ICihldrenReact) => {
   };
 
   const UpdateBanner = async (data: BannerItem, id: string): Promise<void> => {
+  const { "user:token": token } = parseCookies();
+
+  const config = {
+    headers: {
+      Authorization: `bearer ${token}`,
+      "Content-Type": "multipart/form-data",
+    },
+  };
+
+  const formData = new FormData();
+  formData.append("name", data.name ?? "");
+  formData.append("link_direction", data.link_direction ?? "");
+  formData.append("banner_style", data.banner_style ?? "");
+  formData.append("date_active", data.date_active?.toString() ?? "");
+  formData.append("date_expiration", data.date_expiration?.toString() ?? "");
+  formData.append("status", data.status?.toString() ?? "");
+  
+  // Fix: Extract the portal ID properly
+  const portalId = typeof data.portal === 'string' 
+    ? data.portal
+    : data.portal?.id ?? "";
+  formData.append("portal_id", portalId);
+
+  // Only add banner file if it exists
+  if (data.banner) {
+    formData.append("banner", data.banner);
+  }
+
+  const response = await api
+    .patch(`/banner/${id}`, formData, config)
+    .then((res) => {
+      toast.success("Banner atualizado com sucesso!");
+      push("/banners");
+    })
+    .catch((err) => {
+      console.error("Erro ao atualizar banner:", err);
+      toast.error("Erro ao atualizar o banner");
+    });
+
+  return response;
+};
+  const [banner, setBanner] = useState<BannerItem>({} as BannerItem);
+  const GetBanner = async (id: string): Promise<void> => {
     const { "user:token": token } = parseCookies();
 
     const config = {
@@ -150,37 +204,14 @@ export const BannerProvider = ({ children }: ICihldrenReact) => {
       },
     };
 
-    const formData = new FormData();
-    formData.append("name", data.name ?? "");
-    formData.append("link_direction", data.link_direction ?? "");
-    formData.append("banner_style", data.banner_style ?? "");
-    formData.append("date_active", data.date_active?.toString() ?? "");
-    formData.append("date_expiration", data.date_expiration?.toString() ?? "");
-    formData.append("status", data.status?.toString() ?? "");
-    formData.append("banner", data.banner ?? "");
-
     const response = await api
-      .patch(`/banner/${id}`, formData, config)
-      .then((res) => {
-        toast.success("Banner atualizado com sucesso!");
-        push("/banners");
-      })
-      .catch((err) => {
-        toast.error("Erro ao atualizar o banner");
-      });
-
-    return response;
-  };
-
-  const [banner, setBanner] = useState<BannerItem>({} as BannerItem);
-  const GetBanner = async (id: string): Promise<void> => {
-    const response = await api
-      .get(`/banner/${id}`)
+      .get(`/banner/${id}`, config)
       .then((res) => {
         setBanner(res.data.response);
       })
       .catch((err) => {
-        toast.error("Erro ao atualizar o banner");
+        console.error("Erro ao buscar banner:", err);
+        toast.error("Erro ao carregar o banner");
       });
 
     return response;

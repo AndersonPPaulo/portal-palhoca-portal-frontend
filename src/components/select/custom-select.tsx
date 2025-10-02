@@ -16,7 +16,7 @@ interface CustomSelectProps {
   isMulti?: boolean;
   error?: string;
   noOptionsMessage?: string;
-  disable?:boolean
+  disable?: boolean;
 }
 
 // Estilo comum para todos os ReactSelects
@@ -53,6 +53,11 @@ export const selectStyles = {
   menu: (base: any) => ({
     ...base,
     borderRadius: "24px",
+    zIndex: 9999, // ADICIONADO: z-index alto para o menu
+  }),
+  menuPortal: (base: any) => ({
+    ...base,
+    zIndex: 9999, // ADICIONADO: z-index alto para o portal do menu
   }),
   menuList: (base: any) => ({
     ...base,
@@ -87,13 +92,14 @@ const CustomSelect = ({
   isMulti = false,
   error,
   noOptionsMessage = "Nenhuma opção disponível",
-  disable = false
+  disable = false,
 }: CustomSelectProps) => {
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true); // somente no cliente
   }, []);
+
   // Se for multi-select, retornar as opções selecionadas
   const getSelectedOptions = useCallback(() => {
     if (isMulti) {
@@ -140,6 +146,8 @@ const CustomSelect = ({
           onChange={handleChange}
           options={options}
           styles={selectStyles}
+          menuPortalTarget={document.body} // ADICIONADO: renderizar o menu no body
+          menuPosition="fixed" // ADICIONADO: posição fixa para evitar problemas de overflow
         />
       )}
       {error && <p className="text-sm text-red-500 px-6 mt-1">{error}</p>}

@@ -12,6 +12,7 @@ import {
   FileText,
   Tag,
   Bell,
+  Clock,
 } from "lucide-react";
 import {
   ArticleAnalyticsContext,
@@ -82,6 +83,18 @@ function ArticleEventItem({ event }: { event: IEvent }) {
     borderColor: "border-gray-200",
   };
 
+  function formatTimeAgo(timestamp: string): string {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return `${diffInSeconds}s atrás`;
+    if (diffInSeconds < 3600)
+      return `${Math.floor(diffInSeconds / 60)}min atrás`;
+    if (diffInSeconds < 86400)
+      return `${Math.floor(diffInSeconds / 3600)}h atrás`;
+    return date.toLocaleDateString("pt-BR");
+  }
   const EventIcon = eventConfig.icon;
   const categoryColor = event?.article?.category?.name
     ? categoryColors[event.article.category.name] || "bg-gray-500"
@@ -125,12 +138,15 @@ function ArticleEventItem({ event }: { event: IEvent }) {
                 <Tag className="w-3 h-3 mr-1" />
                 {event.article.category.name}
               </Badge>
-              <span>{event.article.reading_time} min de leitura</span>
+              <div className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {formatTimeAgo(event.timestamp)}
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="text-xs text-gray-400">{event.timestamp}</div>
+        <div className="text-xs text-gray-400">{new Date(event.timestamp).toLocaleTimeString("pt-BR")}</div>
       </div>
     </div>
   );

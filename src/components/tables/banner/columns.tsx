@@ -185,6 +185,17 @@ export const columns = (
     ),
   },
   {
+    accessorKey: "portal",
+    header: () => <div className="text-center w-[120px]">Portal</div>,
+    cell: ({ row }) => (
+      <div className="flex justify-center w-[120px]">
+        <span className="text-sm font-bold text-gray-700 dark:text-gray-300 font-mono transition-opacity duration-200 hover:opacity-80">
+          {row.original.portal?.name}
+        </span>
+      </div>
+    ),
+  },
+  {
     accessorKey: "status",
     header: () => <div className="text-center w-[150px]">Status</div>,
     cell: ({ row }) => (
@@ -201,7 +212,7 @@ export const columns = (
       </div>
     ),
   },
-   {
+  {
     accessorKey: "Analíticos",
     header: () => <div className="text-center w-[150px]">Analíticos</div>,
     cell: ({ row }) => {

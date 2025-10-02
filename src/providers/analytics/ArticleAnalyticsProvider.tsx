@@ -144,13 +144,11 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
       .get(`/analytics/event-article/${articleId}/article`, config)
       .then((res) => {
         const responseData: IEventsByArticleResponse = res.data.response;
-        console.log("res.data.response", res.data.response);
         setArticleEvents((prev) => ({
           ...prev,
           [articleId]: responseData.events || [],
         }));
         setLoading(false);
-        console.log("responseData.events", responseData.events);
       })
       .catch((err) => {
         setError(
@@ -160,7 +158,6 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
         return err;
       });
 
-    console.log("response", response);
     return response;
   };
 

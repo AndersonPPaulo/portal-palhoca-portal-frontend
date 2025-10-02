@@ -47,6 +47,9 @@ interface UpdateCompanyProps {
   responsibleName: string;
   document_number: string;
   document_type: "cnpj" | "cpf";
+  lat: string;
+  long: string;
+  zipcode: string;
 }
 
 export interface UploadCompanyImageProps {
@@ -84,10 +87,11 @@ export interface ICompanyProps extends UpdateCompanyProps {
   status: "active" | "inactive" | "blocked" | "new_lead" | "in_process";
   email: string;
   city?: string;
-  latitude?: number;
-  longitude?: number;
   document_number: string;
   document_type: "cnpj" | "cpf";
+  lat: string;
+  long: string;
+  zipcode: string;
 }
 
 export type CompanyProps = {
@@ -111,6 +115,12 @@ interface GetCEPProps {
   siafi: string;
 }
 
+interface uploadResponseProps {
+  url: string;
+  uploadURL: string;
+  displayURL: string;
+}
+
 interface ICompanyData {
   ListCompany(
     page?: number,
@@ -121,7 +131,7 @@ interface ICompanyData {
       isActive?: boolean | string;
     }
   ): Promise<CompanyProps>;
-  CreateCompany(data: UpdateCompanyProps): Promise<void>;
+  CreateCompany(data: UpdateCompanyProps): Promise<ICompanyProps | void>;
   apiCep: GetCEPProps | null;
   setApiCep: React.Dispatch<React.SetStateAction<GetCEPProps | null>>;
   UpdateCompany(data: UpdateCompanyProps, id: string): Promise<void>;
@@ -130,10 +140,13 @@ interface ICompanyData {
   GetCompanyById(companyId: string): Promise<ICompanyProps>;
   company: ICompanyProps | null;
   CreateImageCompany(
-    data: UploadCompanyImageProps,
+    data: { filename: string; contentType: string },
     company_id: string
   ): Promise<void>;
-  UploadCompanyLogo(file: File, company_id: string): Promise<void>;
+  UploadCompanyLogo(
+    file: { filename: string; contentType: string },
+    company_id: string
+  ): Promise<uploadResponseProps>;
 }
 
 interface IChildrenReact {
@@ -181,14 +194,15 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
     return response;
   };
 
-  const CreateCompany = async (data: UpdateCompanyProps): Promise<void> => {
+  const CreateCompany = async (
+    data: UpdateCompanyProps
+  ): Promise<ICompanyProps | void> => {
     const { "user:token": token } = parseCookies();
     const config = {
       headers: { Authorization: `bearer ${token}` },
     };
     try {
       const response = await api.post("/company", data, config);
-      console.log("response", response);
       toast.success("Empresa criada com sucesso!");
       push("/comercio");
     } catch (err: any) {
@@ -260,7 +274,7 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
   };
 
   const CreateImageCompany = async (
-    data: UploadCompanyImageProps,
+    data: { filename: string; contentType: string },
     company_id: string
   ): Promise<void> => {
     const { "user:token": token } = parseCookies();
@@ -283,27 +297,19 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
   };
 
   const UploadCompanyLogo = async (
-    file: File,
-    company_id: string
-  ): Promise<void> => {
-    const { "user:token": token } = parseCookies();
-    const formData = new FormData();
-    formData.append("company_image", file);
-
+    file: { filename: string; contentType: string },
+    presignedURL: string
+  ): Promise<uploadResponseProps> => {
     const config = {
       headers: {
-        Authorization: `bearer ${token}`,
-        "Content-Type": "multipart/form-data",
+        "Content-Type": file.contentType,
       },
     };
 
     try {
-      await api.post(
-        `/company/${company_id}/upload-company-image`,
-        formData,
-        config
-      );
+      const response = await api.put(presignedURL, file, config);
       toast.success("Logo da empresa enviado com sucesso!");
+      return response.data;
     } catch (err: any) {
       toast.error(
         err.response?.data?.message || "Erro ao fazer upload do logo"

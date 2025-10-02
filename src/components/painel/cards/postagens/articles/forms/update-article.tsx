@@ -188,7 +188,6 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   ]);
 
   const article_portals = article.articlePortals;
-  console.log("article_portals", article_portals);
 
   useEffect(() => {
     if (article.thumbnail) {
@@ -360,7 +359,6 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         thumbnailDescription: thumbnailDescription,
       };
 
-      console.log("finalData", finalData);
       // Enviar dados para API
       await UpdateArticle(finalData, article.id);
 

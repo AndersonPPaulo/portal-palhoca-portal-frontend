@@ -455,12 +455,10 @@ export const useMapAddressSync = <T extends FormData>(
                   extractedData.state = extractedData.state || cepData.uf;
                 }
               } catch (cepError) {
-                console.log("CEP lookup falhou, continuando sem CEP");
               }
             }
           }
         } catch (geocodeError) {
-          console.log("Geocoding falhou, usando apenas coordenadas");
         }
 
         // ATUALIZAÇÃO SELETIVA: Manter dados existentes nos campos não encontrados

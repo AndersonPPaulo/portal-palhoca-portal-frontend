@@ -122,13 +122,11 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
       .get(`/analytics/event-company/${companyId}/company`, config)
       .then((res) => {
         const responseData: IEventsByCompanyResponse = res.data.response;
-        console.log("res.data.response", res.data.response);
         setCompanyEvents((prev) => ({
           ...prev,
           [companyId]: responseData.events || [],
         }));
         setLoading(false);
-        console.log("responseData.events", responseData.events);
       })
       .catch((err) => {
         setError(
@@ -138,7 +136,6 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
         return err;
       });
 
-    console.log("response", response);
     return response;
   };
 

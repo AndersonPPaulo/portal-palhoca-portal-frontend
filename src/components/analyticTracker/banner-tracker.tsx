@@ -153,8 +153,6 @@ export default function BannerTracker({
   const filteredEvents = last100EventsBanner.filter((event) =>
     eventFilter === "all" ? true : event.event_type === eventFilter
   );
-  console.log("filteredEvents", filteredEvents);
-
   const totalEvents = last100EventsBanner.length;
 
   return (

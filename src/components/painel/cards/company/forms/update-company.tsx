@@ -2,11 +2,11 @@
 
 import { toast } from "sonner";
 import ThumbnailUploader from "@/components/thumbnail";
-import CustomSelect from "@/components/select/custom-select";
+import CustomSelect, { OptionType } from "@/components/select/custom-select";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useContext, useState, useEffect } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import CustomInput from "@/components/input/custom-input";
 import { useParams, useRouter } from "next/navigation";
 import { CompanyContext } from "@/providers/company";
@@ -16,7 +16,6 @@ import { PortalContext } from "@/providers/portal";
 import { parseCookies } from "nookies";
 import { api } from "@/service/api";
 import { CompanyCategoryContext } from "@/providers/company-category/index.tsx";
-
 import { useMapAddressSync } from "@/hooks/useMapAddressSync";
 import "leaflet/dist/leaflet.css";
 import MapComponent from "@/components/mapCompany";
@@ -32,21 +31,22 @@ const companySchema = z.object({
   linkWhatsapp: z.string().url("URL inválida").optional().or(z.literal("")),
   linkLocationMaps: z.string().url("URL inválida").optional().or(z.literal("")),
   linkLocationWaze: z.string().url("URL inválida").optional().or(z.literal("")),
-  cep: z.string().min(8, "CEP deve ter 8 dígitos").max(9, "CEP inválido"),
+  zipcode: z.string().min(8, "CEP deve ter 8 dígitos").max(9, "CEP inválido"),
   street: z.string().min(1, "Rua é obrigatória"),
   number: z.string().min(1, "Número é obrigatório"),
   complement: z.string().optional(),
   district: z.string().min(1, "Bairro é obrigatório"),
   city: z.string().min(1, "Cidade é obrigatória"),
   state: z.string().min(1, "Estado é obrigatório"),
+  highlight: z.boolean(),
   address: z.string().min(1, "Endereço é obrigatório"),
   status: z.enum(["active", "inactive", "blocked", "new_lead", "in_process"]),
   portalIds: z.array(z.string()).min(1, "Selecione pelo menos um portal"),
   companyCategoryIds: z
     .array(z.string())
     .min(1, "Selecione pelo menos uma categoria"),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
+  lat: z.number().optional(),
+  long: z.number().optional(),
 });
 
 type CompanyFormData = z.infer<typeof companySchema>;
@@ -59,6 +59,19 @@ const statusLabels = {
   in_process: "Em Processo",
 };
 
+// Opções para os CustomSelects
+const statusOptions: OptionType[] = Object.entries(statusLabels).map(
+  ([value, label]) => ({
+    value,
+    label,
+  })
+);
+
+const highlightOptions: OptionType[] = [
+  { value: "true", label: "Sim" },
+  { value: "false", label: "Não" },
+];
+
 export default function FormUpdateCompany({
   companyData,
 }: {
@@ -68,6 +81,7 @@ export default function FormUpdateCompany({
   const router = useRouter();
   const { UpdateCompany, SelfCompany } = useContext(CompanyContext);
   const { listPortals, ListPortals } = useContext(PortalContext);
+  const [whatsappDisplay, setWhatsappDisplay] = useState("");
   const { listCompanyCategory, ListCompanyCategory } = useContext(
     CompanyCategoryContext
   );
@@ -80,6 +94,10 @@ export default function FormUpdateCompany({
     preview: string;
   } | null>(null);
 
+  // Controle para evitar busca de CEP na renderização inicial
+  const isInitialLoad = useRef(true);
+  const previousCep = useRef("");
+
   // Função melhorada para analisar endereço
   function parseAddress(address: string) {
     if (!address)
@@ -90,7 +108,7 @@ export default function FormUpdateCompany({
         district: "",
         city: "",
         state: "",
-        cep: "",
+        zipcode: "",
       };
 
     const parts = address.split(" - ");
@@ -101,10 +119,9 @@ export default function FormUpdateCompany({
       district: "",
       city: "",
       state: "",
-      cep: "",
+      zipcode: "",
     };
 
-    // Rua, número, complemento
     if (parts.length > 0) {
       const streetParts = parts[0].split(",").map((part) => part.trim());
       result.street = streetParts[0] || "";
@@ -112,20 +129,17 @@ export default function FormUpdateCompany({
       if (streetParts.length > 2) result.complement = streetParts[2];
     }
 
-    // Bairro
     if (parts.length > 1) result.district = parts[1];
 
-    // Cidade/Estado
     if (parts.length > 2 && parts[2].includes("/")) {
       const [city, state] = parts[2].split("/");
       result.city = city.trim();
       result.state = state.trim();
     }
 
-    // CEP
     if (parts.length > 3) {
       const cepMatch = parts[3].match(/\d{5}-?\d{3}/);
-      if (cepMatch) result.cep = cepMatch[0];
+      if (cepMatch) result.zipcode = cepMatch[0];
     }
 
     return result;
@@ -153,18 +167,47 @@ export default function FormUpdateCompany({
   } = useMapAddressSync(setValue, watch);
 
   // Valores observados do formulário
-  const cep = watch("cep");
-  const street = watch("street");
-  const number = watch("number");
-  const complement = watch("complement");
-  const district = watch("district");
-  const city = watch("city");
-  const state = watch("state");
+  const zipcode = watch("zipcode");
+
+  // Função para gerar mensagem dinâmica do WhatsApp
+  const generateWhatsappMessage = (selectedPortalIds: string[]): string => {
+    if (!selectedPortalIds || selectedPortalIds.length === 0) {
+      return "Olá, gostaria de informações sobre os serviços.";
+    }
+
+    const selectedPortal = listPortals?.find((portal) =>
+      selectedPortalIds.includes(portal.id)
+    );
+
+    if (selectedPortal) {
+      return `Olá, vi o seu anúncio no Portal ${selectedPortal.name} e gostaria de informações.`;
+    }
+
+    return "Olá, vi seu anúncio e gostaria de informações.";
+  };
+
+  // Função para extrair número do WhatsApp
+  const extractPhoneFromWhatsappLink = (link: string): string => {
+    if (!link) return "";
+
+    const match = link.match(/wa\.me\/55(\d{11})/);
+    if (match && match[1]) {
+      const phoneNumber = match[1];
+      return `(${phoneNumber.substring(0, 2)}) ${phoneNumber.substring(
+        2,
+        7
+      )}-${phoneNumber.substring(7)}`;
+    }
+
+    return "";
+  };
 
   useEffect(() => {
     setIsLoading(true);
     reset();
     setSelectedImage(null);
+    setWhatsappDisplay("");
+    isInitialLoad.current = true;
 
     Promise.all([ListPortals(), ListCompanyCategory(100, 1)]);
 
@@ -184,6 +227,20 @@ export default function FormUpdateCompany({
       const portalIds =
         data?.portals?.filter((p) => p && p.id).map((p) => p.id) || [];
 
+      const whatsappFormatted = extractPhoneFromWhatsappLink(
+        data?.linkWhatsapp || ""
+      );
+      setWhatsappDisplay(whatsappFormatted);
+
+      // Formatar CEP do backend
+      const zipcodeFromBackend = data?.zipcode || addressParts.zipcode || "";
+      const zipcodeFormatted =
+        zipcodeFromBackend.length === 8
+          ? zipcodeFromBackend.replace(/^(\d{5})(\d{3})/, "$1-$2")
+          : zipcodeFromBackend;
+
+      previousCep.current = zipcodeFormatted;
+
       reset({
         name: data?.name || "",
         phone: data?.phone || "",
@@ -200,14 +257,20 @@ export default function FormUpdateCompany({
         district: addressParts.district,
         city: addressParts.city,
         state: addressParts.state,
-        cep: addressParts.cep,
+        zipcode: zipcodeFormatted,
         address: data?.address || "",
         status: data?.status,
+        highlight: data?.highlight || false,
         portalIds: portalIds,
         companyCategoryIds: categoryIds,
-        latitude: data?.latitude || undefined,
-        longitude: data?.longitude || undefined,
+        lat: data?.lat ? parseFloat(data.lat) : undefined,
+        long: data?.long ? parseFloat(data.long) : undefined,
       });
+
+      // Marcar que o carregamento inicial terminou
+      setTimeout(() => {
+        isInitialLoad.current = false;
+      }, 500);
     };
 
     loadData().finally(() => {
@@ -215,7 +278,7 @@ export default function FormUpdateCompany({
     });
   }, [parameter.id]);
 
-  // Busca de CEP otimizada
+  // Busca de CEP - APENAS se for editado, não na carga inicial
   const getCepData = async (cepValue: string) => {
     if (cepValue.length < 8) return;
 
@@ -239,21 +302,67 @@ export default function FormUpdateCompany({
     }
   };
 
-  // Verificar e buscar CEP quando parar de digitar
+  // Verificar e buscar CEP SOMENTE se foi editado
   useEffect(() => {
+    // Não buscar na carga inicial
+    if (isInitialLoad.current) return;
+
+    // Não buscar se o CEP não mudou
+    if (zipcode === previousCep.current) return;
+
     const timeoutId = setTimeout(() => {
-      if (cep && cep.length >= 8) {
-        getCepData(cep);
+      if (zipcode && zipcode.length >= 8) {
+        getCepData(zipcode);
+        previousCep.current = zipcode;
       }
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [cep]);
+  }, [zipcode]);
 
   // Handler para seleção de localização no mapa
   const handleLocationSelect = (lat: number, lng: number, address?: string) => {
     handleMapLocationSelect(lat, lng, address);
   };
+
+  // Handler para mudanças no WhatsApp
+  const handleWhatsappChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, "").substring(0, 11);
+
+    let formattedDisplay = value;
+    if (value.length > 2) {
+      formattedDisplay =
+        value.length <= 7
+          ? `(${value.substring(0, 2)}) ${value.substring(2)}`
+          : `(${value.substring(0, 2)}) ${value.substring(
+              2,
+              7
+            )}-${value.substring(7)}`;
+    }
+
+    setWhatsappDisplay(formattedDisplay);
+
+    if (value.length === 11) {
+      const dynamicMessage = generateWhatsappMessage(watch("portalIds"));
+      const message = encodeURIComponent(dynamicMessage);
+      setValue("linkWhatsapp", `https://wa.me/55${value}?text=${message}`);
+    } else {
+      setValue("linkWhatsapp", "");
+    }
+  };
+
+  // Atualizar WhatsApp quando portais mudarem
+  useEffect(() => {
+    const currentWhatsapp = whatsappDisplay.replace(/\D/g, "");
+    if (currentWhatsapp.length === 11) {
+      const dynamicMessage = generateWhatsappMessage(watch("portalIds"));
+      const message = encodeURIComponent(dynamicMessage);
+      setValue(
+        "linkWhatsapp",
+        `https://wa.me/55${currentWhatsapp}?text=${message}`
+      );
+    }
+  }, [watch("portalIds"), listPortals]);
 
   // Upload de imagem
   const handleImageUpload = (file: File, previewUrl: string) => {
@@ -281,16 +390,20 @@ export default function FormUpdateCompany({
     }
   };
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: CompanyFormData) => {
     try {
       setIsSubmitting(true);
+
+      // Limpar CEP (remover hífen)
+      const zipcodeClean = data.zipcode.replace(/\D/g, "");
 
       const companyUpdateData = {
         name: data.name,
         phone: data.phone || "",
         email: data.email || "",
         openingHours: data.openingHours,
-        responsibleName: data.responsibleName || "",
+        responsibleName: data.name,
+        companyMessage: "",
         description: data.description || "",
         linkInstagram: data.linkInstagram || "",
         linkWhatsapp: data.linkWhatsapp || "",
@@ -298,12 +411,15 @@ export default function FormUpdateCompany({
         linkLocationWaze: data.linkLocationWaze || "",
         address: data.address,
         district: data.district,
+        city: data.city,
+        state: data.state,
         status: data.status,
+        highlight: data.highlight,
         portalIds: data.portalIds,
         companyCategoryIds: data.companyCategoryIds,
-        latitude: addressData.latitude || data.latitude,
-        longitude: addressData.longitude || data.longitude,
-        cep: data.cep,
+        lat: String(addressData.latitude || data.lat || 0),
+        long: String(addressData.longitude || data.long || 0),
+        zipcode: zipcodeClean,
         document_number: companyData?.document_number || "",
         document_type: companyData?.document_type || "",
       };
@@ -315,7 +431,7 @@ export default function FormUpdateCompany({
         await uploadCompanyLogo(selectedImage.file, companyId);
       }
 
-      toast.success("🎉 Empresa atualizada com sucesso!");
+      toast.success("Empresa atualizada com sucesso!");
       router.back();
     } catch (error) {
       toast.error("Erro ao atualizar empresa. Tente novamente.");
@@ -328,7 +444,7 @@ export default function FormUpdateCompany({
   const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "");
     if (value.length > 5) value = value.replace(/^(\d{5})(\d)/, "$1-$2");
-    setValue("cep", value.substring(0, 9));
+    setValue("zipcode", value.substring(0, 9));
   };
 
   // Formatação de telefone
@@ -367,29 +483,39 @@ export default function FormUpdateCompany({
     <div className="w-full h-full flex flex-col bg-white rounded-[24px] scroll-hidden">
       <div className="flex-1 overflow-y-auto no-scrollbar">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 p-6">
-          {/* Header */}
+          {/* Header com CustomSelects */}
           <div className="flex justify-between items-center">
             <div>
               <ReturnPageButton />
             </div>
-            <div className="flex flex-col">
-              <label htmlFor="status" className="text-gray-500 mb-1">
-                Status
-              </label>
-              <select
-                id="status"
-                {...register("status")}
-                className="border border-gray-300 rounded-xl px-4 py-2 text-sm"
-              >
-                {Object.entries(statusLabels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              {errors.status && (
-                <span className="text-red-500">{errors.status.message}</span>
-              )}
+            <div className="flex gap-4">
+              {/* Select de Status */}
+              <div className="flex flex-col min-w-[120px]">
+                <CustomSelect
+                  label="Status"
+                  id="status"
+                  placeholder="Selecione o status"
+                  options={statusOptions}
+                  value={watch("status") || ""}
+                  onChange={(value) =>
+                    setValue("status", value as CompanyFormData["status"])
+                  }
+                  error={errors.status?.message}
+                />
+              </div>
+
+              {/* Select de Destaque */}
+              <div className="flex flex-col min-w-[120px]">
+                <CustomSelect
+                  id="highlight"
+                  label="Destaque"
+                  placeholder="Destaque?"
+                  options={highlightOptions}
+                  value={watch("highlight") ? "true" : "false"}
+                  onChange={(value) => setValue("highlight", value === "true")}
+                  error={errors.highlight?.message}
+                />
+              </div>
             </div>
           </div>
 
@@ -498,10 +624,10 @@ export default function FormUpdateCompany({
                     <div>
                       <div className="relative">
                         <CustomInput
-                          id="cep"
+                          id="zipcode"
                           label="CEP"
                           placeholder="00000-000"
-                          value={watch("cep")}
+                          value={watch("zipcode")}
                           onChange={handleCepChange}
                           className={
                             isUpdatingFromMap
@@ -517,9 +643,9 @@ export default function FormUpdateCompany({
                           </div>
                         )}
                       </div>
-                      {errors.cep && (
+                      {errors.zipcode && (
                         <span className="text-red-500 text-sm">
-                          {errors.cep.message}
+                          {errors.zipcode.message}
                         </span>
                       )}
                     </div>
@@ -670,6 +796,7 @@ export default function FormUpdateCompany({
                         {...register("linkLocationMaps")}
                         placeholder="Gerado automaticamente pelo mapa"
                         className="bg-blue-50"
+                        disabled
                       />
                       {errors.linkLocationMaps && (
                         <span className="text-red-500 text-sm">
@@ -682,6 +809,7 @@ export default function FormUpdateCompany({
                       <CustomInput
                         id="linkLocationWaze"
                         label="Link Waze"
+                        disabled
                         {...register("linkLocationWaze")}
                         placeholder="Gerado automaticamente pelo mapa"
                         className="bg-blue-50"
@@ -711,14 +839,30 @@ export default function FormUpdateCompany({
                       <CustomInput
                         id="linkWhatsapp"
                         label="WhatsApp"
-                        {...register("linkWhatsapp")}
-                        placeholder="https://wa.me/..."
+                        placeholder="(48) 99115-8345"
+                        value={whatsappDisplay}
+                        onChange={handleWhatsappChange}
                       />
                       {errors.linkWhatsapp && (
                         <span className="text-red-500 text-sm">
                           {errors.linkWhatsapp.message}
                         </span>
                       )}
+                      {watch("linkWhatsapp") &&
+                        whatsappDisplay.length >= 14 && (
+                          <div className="text-green-600 text-xs mt-1">
+                            <p>Link do WhatsApp atualizado automaticamente</p>
+                            {watch("linkWhatsapp") && (
+                              <p className="text-gray-500 italic text-xs">
+                                Mensagem: "
+                                {decodeURIComponent(
+                                  watch("linkWhatsapp").split("text=")[1] || ""
+                                )}
+                                "
+                              </p>
+                            )}
+                          </div>
+                        )}
                     </div>
                     <div>
                       <CustomInput
@@ -741,21 +885,28 @@ export default function FormUpdateCompany({
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
-                    Portais
+                    Portal
                   </h3>
                   <div className="mb-2">
                     <CustomSelect
                       id="portalIds"
-                      label="Portais Disponíveis"
-                      placeholder="Selecione um ou mais portais"
+                      label="Portal Disponível"
+                      placeholder="Selecione um portal"
                       options={portalOptions}
-                      value={watch("portalIds")}
-                      onChange={(value) =>
-                        setValue("portalIds", value as string[], {
-                          shouldValidate: true,
-                        })
+                      value={
+                        Array.isArray(watch("portalIds")) &&
+                        watch("portalIds").length > 0
+                          ? watch("portalIds")[0]
+                          : ""
                       }
-                      isMulti={true}
+                      onChange={(value) => {
+                        // Transforma o valor único em array com um elemento
+                        const newValue = value ? [value as string] : [];
+                        setValue("portalIds", newValue, {
+                          shouldValidate: true,
+                        });
+                      }}
+                      isMulti={false}
                       error={errors.portalIds?.message}
                       noOptionsMessage="Nenhum portal disponível"
                     />
@@ -788,7 +939,7 @@ export default function FormUpdateCompany({
             </div>
           </div>
 
-          {/* Seção do Mapa - NOVA */}
+          {/* Seção do Mapa */}
           <div className="mt-6">
             <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
               Atualizar Localização no Mapa
@@ -799,21 +950,17 @@ export default function FormUpdateCompany({
             <MapComponent
               key={mapKey}
               onLocationSelect={handleLocationSelect}
-              initialLat={
-                addressData.latitude || watch("latitude") || -27.644317
-              }
-              initialLng={
-                addressData.longitude || watch("longitude") || -48.669188
-              }
+              initialLat={addressData.latitude || watch("lat") || -27.644317}
+              initialLng={addressData.longitude || watch("long") || -48.669188}
               height="600px"
               showSearch={true}
               showCurrentLocation={true}
-              markerDraggable={false}
+              markerDraggable={true}
               className="w-full"
             />
 
             {/* Info das Coordenadas */}
-            {(addressData.latitude || watch("latitude")) && (
+            {(addressData.latitude || watch("lat")) && (
               <div className="mt-3 p-4 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg">
                 <div className="text-sm">
                   <div className="flex items-center gap-2 font-medium text-green-700 mb-2">
@@ -821,30 +968,29 @@ export default function FormUpdateCompany({
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
                     <div>
-                      <strong>📍 Coordenadas:</strong>
+                      <strong>Coordenadas:</strong>
                       <br />
                       <code className="bg-white px-2 py-1 rounded text-xs">
-                        {(addressData.latitude || watch("latitude"))?.toFixed(
-                          6
-                        )}
-                        ,{" "}
-                        {(addressData.longitude || watch("longitude"))?.toFixed(
-                          6
-                        )}
+                        Lat:{" "}
+                        {(addressData.latitude || watch("lat"))?.toFixed(6)}
+                        <br />
+                        Long:{" "}
+                        {(addressData.longitude || watch("long"))?.toFixed(6)}
                       </code>
                     </div>
                     <div>
-                      <strong>🗺️ Links:</strong>
+                      <strong>CEP:</strong>
                       <br />
-                      <span className="text-blue-600 text-xs">
-                        ✅ Google Maps &nbsp;&nbsp; ✅ Waze
-                      </span>
+                      <code className="bg-white px-2 py-1 rounded text-xs">
+                        {watch("zipcode")} (
+                        {watch("zipcode").replace(/\D/g, "")})
+                      </code>
                     </div>
                   </div>
                   {addressData.fullAddress && (
                     <div className="mt-2 pt-2 border-t border-green-200">
                       <strong className="text-green-700">
-                        📬 Endereço Completo:
+                        Endereço Completo:
                       </strong>
                       <br />
                       <span className="text-gray-700 font-medium">
@@ -855,7 +1001,7 @@ export default function FormUpdateCompany({
                   {!addressData.fullAddress && watch("address") && (
                     <div className="mt-2 pt-2 border-t border-green-200">
                       <strong className="text-green-700">
-                        📬 Endereço Atual:
+                        Endereço Atual:
                       </strong>
                       <br />
                       <span className="text-gray-700 font-medium">
@@ -905,9 +1051,6 @@ export default function FormUpdateCompany({
               ) : (
                 <div className="flex items-center gap-2">
                   <span>Atualizar Empresa</span>
-                  {(addressData.latitude || watch("latitude")) && (
-                    <span className="text-green-200"></span>
-                  )}
                 </div>
               )}
             </Button>
