@@ -69,7 +69,6 @@ export default function ArticleHighlightModal({
   setIsOpen,
 }: ArticleHighlightModalProps) {
   const [portals, setPortals] = useState(article.articlePortals || []);
-  console.log("portals", portals);
 
   // Sincroniza o estado sempre que article mudar
   useEffect(() => {

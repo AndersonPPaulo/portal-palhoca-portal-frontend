@@ -37,7 +37,6 @@ export default function InfoPainel() {
         const response = await api.get("/highlights-by-portal", {
           params: { role: profile?.role.name },
         });
-        console.log("data", response.data);
         setHighlightByPortal(response.data);
       } catch (err) {
         console.error("Erro ao carregar destaques por portal:", err);

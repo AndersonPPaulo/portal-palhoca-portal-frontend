@@ -50,6 +50,7 @@ interface UpdateCompanyProps {
   lat: string;
   long: string;
   zipcode: string;
+  highlight?: boolean;
 }
 
 export interface UploadCompanyImageProps {
