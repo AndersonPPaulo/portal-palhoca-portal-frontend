@@ -5,7 +5,11 @@ import { toast } from "sonner";
 import CustomInput from "../input/custom-input";
 
 interface ThumbnailUploaderProps {
-  onImageUpload?: (imageFile: File, previewUrl: string, description?: string) => void;
+  onImageUpload?: (
+    imageFile: File,
+    previewUrl: string,
+    description?: string
+  ) => void;
   initialImage?: string;
   // Props para personalização de textos
   label?: string;
@@ -19,7 +23,7 @@ interface ThumbnailUploaderProps {
   processingText?: string;
   successMessage?: string;
   // Props para configurações
-  maxFileSize?: number; 
+  maxFileSize?: number;
   acceptedFormats?: string[];
   required?: boolean;
   showDescription?: boolean;
@@ -44,7 +48,7 @@ export default function ThumbnailUploader({
   cancelButtonText = "Cancelar",
   processingText = "Processando...",
   successMessage = "Imagem selecionada com sucesso!",
-  maxFileSize = 5, 
+  maxFileSize = 5,
   acceptedFormats = ["image/*"],
   required = false,
   showDescription = true,
@@ -53,7 +57,7 @@ export default function ThumbnailUploader({
   height = "h-48",
   borderRadius = "rounded-lg",
   modalWidth = "max-w-md",
-  previewHeight = "h-48"
+  previewHeight = "h-48",
 }: ThumbnailUploaderProps) {
   const [showModal, setShowModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -97,7 +101,11 @@ export default function ThumbnailUploader({
       }
 
       if (onImageUpload) {
-        onImageUpload(selectedFile, previewUrl!, showDescription ? description : undefined);
+        onImageUpload(
+          selectedFile,
+          previewUrl!,
+          showDescription ? description : undefined
+        );
       }
 
       toast.success(successMessage);
@@ -116,18 +124,18 @@ export default function ThumbnailUploader({
       const file = e.target.files[0];
 
       // Verificar se é uma imagem
-      if (!file.type.startsWith("image/")) {
-        setError(true);
-        toast.error("O arquivo deve ser uma imagem!");
-        return;
-      }
+      // if (!file.type.startsWith("image/")) {
+      //   setError(true);
+      //   toast.error("O arquivo deve ser uma imagem!");
+      //   return;
+      // }
 
       // Verificar tamanho do arquivo
-      if (file.size > maxFileSize * 1024 * 1024) {
-        setError(true);
-        toast.error(`A imagem deve ter no máximo ${maxFileSize}MB`);
-        return;
-      }
+      // if (file.size > maxFileSize * 1024 * 1024) {
+      //   setError(true);
+      //   toast.error(`A imagem deve ter no máximo ${maxFileSize}MB`);
+      //   return;
+      // }
 
       setSelectedFile(file);
 
@@ -140,21 +148,26 @@ export default function ThumbnailUploader({
   // Formatação dinâmica do subtexto com tamanho máximo
   const getDynamicSubtext = () => {
     const formats = acceptedFormats
-      .map(format => format.replace("image/", "").toUpperCase())
+      .map((format) => format.replace("image/", "").toUpperCase())
       .join(", ");
-    return uploadAreaSubtext.includes("max") 
+    return uploadAreaSubtext.includes("max")
       ? uploadAreaSubtext.replace(/max\. \d+MB/, `max. ${maxFileSize}MB`)
       : `${formats} (max. ${maxFileSize}MB)`;
   };
 
   // Função para obter border radius para imagem (um pouco menor que o container)
   const getImageBorderRadius = () => {
-    switch(borderRadius) {
-      case 'rounded-full': return 'rounded-full';
-      case 'rounded-xl': return 'rounded-lg';
-      case 'rounded-2xl': return 'rounded-xl';
-      case 'rounded-3xl': return 'rounded-2xl';
-      default: return 'rounded-md';
+    switch (borderRadius) {
+      case "rounded-full":
+        return "rounded-full";
+      case "rounded-xl":
+        return "rounded-lg";
+      case "rounded-2xl":
+        return "rounded-xl";
+      case "rounded-3xl":
+        return "rounded-2xl";
+      default:
+        return "rounded-md";
     }
   };
 
@@ -169,7 +182,7 @@ export default function ThumbnailUploader({
         <div
           className={`border-2 border-dashed border-gray-300 ${borderRadius} p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors`}
           onClick={openModal}
-          style={{ minHeight: height === 'h-auto' ? 'auto' : undefined }}
+          style={{ minHeight: height === "h-auto" ? "auto" : undefined }}
         >
           {previewUrl ? (
             <div className={`relative w-full ${height} mb-2`}>
@@ -185,7 +198,9 @@ export default function ThumbnailUploader({
               )}
             </div>
           ) : (
-            <div className={`flex flex-col items-center justify-center ${height}`}>
+            <div
+              className={`flex flex-col items-center justify-center ${height}`}
+            >
               <svg
                 className="w-12 h-12 text-gray-400 mb-2"
                 fill="none"
@@ -212,7 +227,9 @@ export default function ThumbnailUploader({
       {/* Modal de upload de imagem */}
       {showModal && (
         <div className="fixed inset-0 z-50 top-0 left-0 h-full w-full flex flex-col items-center justify-center bg-zinc-900 bg-opacity-50">
-          <div className={`flex flex-col bg-white p-6 ${borderRadius} ${modalWidth} w-full mx-4`}>
+          <div
+            className={`flex flex-col bg-white p-6 ${borderRadius} ${modalWidth} w-full mx-4`}
+          >
             <div className="flex justify-between items-center mb-4">
               <span className="font-semibold text-xl">{modalTitle}</span>
               <button
@@ -239,7 +256,9 @@ export default function ThumbnailUploader({
             {/* Preview da imagem */}
             {previewUrl && (
               <div className="mb-4">
-                <div className={`relative w-full ${previewHeight} ${getImageBorderRadius()} overflow-hidden`}>
+                <div
+                  className={`relative w-full ${previewHeight} ${getImageBorderRadius()} overflow-hidden`}
+                >
                   <img
                     src={previewUrl}
                     alt="Preview"
@@ -258,7 +277,9 @@ export default function ThumbnailUploader({
                 type="file"
                 accept={acceptedFormats.join(",")}
                 onChange={handleFileChange}
-                className={`w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:${borderRadius === 'rounded-lg' ? 'rounded' : borderRadius} file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100`}
+                className={`w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:${
+                  borderRadius === "rounded-lg" ? "rounded" : borderRadius
+                } file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100`}
               />
               {error && (
                 <p className="mt-1 text-sm text-red-600">
@@ -294,14 +315,18 @@ export default function ThumbnailUploader({
             <div className="flex justify-end gap-2 mt-4">
               <button
                 onClick={closeModal}
-                className={`border border-red-300 hover:bg-red-700 hover:text-white text-red-700 px-4 py-2 ${borderRadius === 'rounded-lg' ? 'rounded' : borderRadius} transition-colors`}
+                className={`border border-red-300 hover:bg-red-700 hover:text-white text-red-700 px-4 py-2 ${
+                  borderRadius === "rounded-lg" ? "rounded" : borderRadius
+                } transition-colors`}
                 disabled={loading}
               >
                 {cancelButtonText}
               </button>
               <button
                 onClick={saveImage}
-                className={`bg-green-700 hover:bg-green-600 text-white px-4 py-2 ${borderRadius === 'rounded-lg' ? 'rounded' : borderRadius} flex items-center justify-center min-w-[100px] transition-colors`}
+                className={`bg-green-700 hover:bg-green-600 text-white px-4 py-2 ${
+                  borderRadius === "rounded-lg" ? "rounded" : borderRadius
+                } flex items-center justify-center min-w-[100px] transition-colors`}
                 disabled={loading || !selectedFile}
               >
                 {loading ? (

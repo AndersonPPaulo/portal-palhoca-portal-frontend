@@ -20,6 +20,7 @@ import { CompanyCategoryContext } from "@/providers/company-category/index.tsx";
 import MapComponent from "@/components/mapCompany";
 import { cn } from "@/lib/utils";
 import "leaflet/dist/leaflet.css";
+import axios from "axios";
 
 // Schema de validação
 const companySchema = z.object({
@@ -293,43 +294,34 @@ export default function FormCreateCompany() {
       const response = await SelfCompany(company_name);
       const companyId = response.id;
 
-      const { uploadUrl, displayUrl } = await api
-        .post(
-          `/company/${companyId}/upload-company-image`,
-          {
-            filename: file.name,
-            contentType: file.type,
+      const response_upload = await api.post(
+        `/company/${companyId}/upload-company-image`,
+        {
+          filename: file.name,
+          contentType: file.type,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
           },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        )
-        .then((res) => {
-          return res.data;
-        });
+        }
+      );
 
-      const uploadRes = await fetch(uploadUrl, {
-        method: "PUT",
-        body: file,
+      const presignedUrl = response_upload.data.uploadUrl;
+
+      const uploadRes = await api.put(presignedUrl, file, {
         headers: {
-          "Content-Type": file.type,
+          "Content-Type": file.type, // importante para manter o tipo do arquivo
         },
       });
 
-      if (uploadRes.ok) {
-        toast.success("Logo enviado com sucesso!");
-      } else {
-        throw new Error("Falha ao enviar arquivo para o S3");
+      if (uploadRes.status == 200) {
+        toast.success("Imagem da empresa cadastrada com sucesso!");
       }
     } catch (error: any) {
-      console.error("Erro no upload do logo:", error);
       toast.error("Erro ao fazer upload do logo");
     }
   };
-
   // Submit otimizado do formulário
   const onSubmit = async (data: CompanyFormData) => {
     try {
