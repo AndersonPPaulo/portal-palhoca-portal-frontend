@@ -150,16 +150,86 @@ class AddressService {
     return null;
   }
 
-  // Extrair dados estruturados - TOLERANTE
+  // NOVA FUNÇÃO: Parse melhorado do display_name
+  parseDisplayName(displayName: string): Partial<AddressData> {
+    // Formato esperado: "Rua João Pinto, 91 - Florianópolis - Santa Catarina/XV - 88010-420"
+    const result: Partial<AddressData> = {};
+
+    // Extrair CEP
+    const cepMatch = displayName.match(/\d{5}-?\d{3}/);
+    if (cepMatch) {
+      result.cep = cepMatch[0].replace(/(\d{5})(\d{3})/, "$1-$2");
+    }
+
+    // Remover CEP do texto para facilitar o parse
+    let workingText = displayName.replace(/\d{5}-?\d{3}/, "").trim();
+
+    // Remover separadores extras no final
+    workingText = workingText.replace(/\s*-\s*$/, "");
+
+    // Dividir por " - "
+    const parts = workingText
+      .split(" - ")
+      .map((p) => p.trim())
+      .filter((p) => p);
+
+    if (parts.length === 0) return result;
+
+    // Parte 1: Rua e número (ex: "Rua João Pinto, 91")
+    if (parts[0]) {
+      const streetParts = parts[0].split(",").map((p) => p.trim());
+      result.street = streetParts[0] || "";
+      result.number = streetParts[1] || "";
+    }
+
+    // Parte 2: Bairro (ex: "Florianópolis")
+    if (parts[1]) {
+      result.district = parts[1];
+    }
+
+    // Parte 3: Cidade/Estado (ex: "Santa Catarina/XV")
+    if (parts[2]) {
+      // Verificar se tem o formato "Cidade/Estado"
+      if (parts[2].includes("/")) {
+        const [cityOrState, state] = parts[2].split("/").map((p) => p.trim());
+
+        // Se o segundo item tem 2 caracteres, é UF (Estado)
+        if (state && state.length === 2) {
+          result.state = state;
+          result.city = cityOrState;
+        } else {
+          // Caso contrário, o primeiro é estado completo
+          result.state = cityOrState;
+          result.city = state || cityOrState;
+        }
+      } else {
+        // Se não tem "/", assume que é cidade
+        result.city = parts[2];
+      }
+    }
+
+    // Parte 4: Pode ser estado adicional ou cidade
+    if (parts[3]) {
+      // Se ainda não temos cidade, este é a cidade
+      if (!result.city) {
+        result.city = parts[3];
+      }
+    }
+
+    return result;
+  }
+
+  // Extrair dados estruturados - MELHORADO
   extractStructuredData(data: NominatimResult): Partial<AddressData> {
-    if (!data.address) {
-      return this.parseDisplayNameFallback(data.display_name || "");
+    // Priorizar parse do display_name quando não temos dados estruturados
+    if (!data.address || Object.keys(data.address).length < 3) {
+      return this.parseDisplayName(data.display_name || "");
     }
 
     const addr = data.address;
     const extracted: Partial<AddressData> = {};
 
-    // CEP (opcional)
+    // CEP
     if (addr.postcode) {
       const cleanCep = addr.postcode.replace(/\D/g, "");
       if (cleanCep.length >= 8) {
@@ -167,17 +237,21 @@ class AddressService {
       }
     }
 
-    // Dados de endereço (todos opcionais)
+    // Rua e número
     extracted.street = addr.road || addr.street || "";
     extracted.number = addr.house_number || "";
 
+    // Bairro
     const neighborhood = addr.suburb || addr.neighbourhood || addr.residential;
     if (neighborhood && neighborhood !== extracted.street) {
       extracted.district = neighborhood;
     }
 
+    // Cidade
     extracted.city =
       addr.city || addr.town || addr.village || addr.municipality || "";
+
+    // Estado
     extracted.state = addr.state || "";
 
     return extracted;
@@ -212,70 +286,23 @@ class AddressService {
       parts.push(streetAddress);
     }
 
-    // Outros dados
+    // Bairro
     const neighborhood = addr.suburb || addr.neighbourhood || addr.residential;
     if (neighborhood && neighborhood !== street) parts.push(neighborhood);
 
+    // Cidade
     const city = addr.city || addr.town || addr.village || addr.municipality;
     if (city) parts.push(city);
 
+    // Estado
     if (addr.state) parts.push(addr.state);
+
+    // CEP
     if (addr.postcode) parts.push(addr.postcode);
 
-    // Aceitar qualquer quantidade de dados
     return parts.length >= 1
       ? parts.join(", ")
       : this.filterDisplayName(data.display_name);
-  }
-
-  // Fallback para display_name
-  private parseDisplayNameFallback(displayName: string): Partial<AddressData> {
-    const parts = displayName.split(", ").map((part) => part.trim());
-    const extracted: Partial<AddressData> = {};
-
-    const cepMatch = displayName.match(/\d{5}-?\d{3}/);
-    if (cepMatch) {
-      extracted.cep = cepMatch[0].replace(/(\d{5})(\d{3})/, "$1-$2");
-    }
-
-    const stateMatches = displayName.match(/\b[A-Z]{2}\b/g);
-    if (stateMatches) {
-      extracted.state = stateMatches[stateMatches.length - 1];
-    }
-
-    const filteredParts = parts.filter(
-      (part) =>
-        !/\d{5}-?\d{3}/.test(part) &&
-        !/^[A-Z]{2}$/.test(part) &&
-        !part.toLowerCase().includes("brasil")
-    );
-
-    if (filteredParts.length >= 2) {
-      extracted.city = filteredParts[filteredParts.length - 1];
-      if (filteredParts.length >= 2) {
-        extracted.district = filteredParts[filteredParts.length - 2];
-      }
-
-      for (let i = 0; i < Math.min(2, filteredParts.length - 2); i++) {
-        const part = filteredParts[i];
-        if (
-          part.toLowerCase().includes("rua") ||
-          part.toLowerCase().includes("avenida") ||
-          /\d+/.test(part)
-        ) {
-          const numberMatch = part.match(/(\d+)/);
-          if (numberMatch) {
-            extracted.number = numberMatch[1];
-            extracted.street = part.replace(/,?\s*\d+.*/, "").trim();
-          } else {
-            extracted.street = part;
-          }
-          break;
-        }
-      }
-    }
-
-    return extracted;
   }
 
   // Filtrar display_name
@@ -412,9 +439,11 @@ export const useMapAddressSync = <T extends FormData>(
       setIsUpdatingFromMap(true);
 
       try {
-        //  PRIORIDADE 1: Salvar coordenadas e gerar links precisos
+        // PRIORIDADE 1: Salvar coordenadas e gerar links precisos
         setValueSafe("latitude", lat);
         setValueSafe("longitude", lng);
+        setValueSafe("lat", lat);
+        setValueSafe("long", lng);
 
         const links = addressService.generateNavigationLinks(lat, lng);
         setValueSafe("linkLocationMaps", links.googleMaps);
@@ -422,7 +451,7 @@ export const useMapAddressSync = <T extends FormData>(
 
         await new Promise((resolve) => setTimeout(resolve, 200));
 
-        // PRIORIDADE 2: Tentar buscar dados de endereço (opcional)
+        // PRIORIDADE 2: Buscar dados de endereço
         let extractedData: Partial<AddressData> = {};
 
         try {
@@ -430,15 +459,13 @@ export const useMapAddressSync = <T extends FormData>(
             address = await addressService.reverseGeocode(lat, lng);
           }
 
+          console.log("📍 Endereço recebido do mapa:", address);
+
           if (address && !address.startsWith("Coordenadas:")) {
-            // Criar um objeto compatível com NominatimResult
-            const mockResult: NominatimResult = {
-              display_name: address,
-              address: undefined,
-              lat: lat.toString(),
-              lon: lng.toString(),
-            };
-            extractedData = addressService.extractStructuredData(mockResult);
+            // Usar a nova função de parse melhorada
+            extractedData = addressService.parseDisplayName(address);
+
+            console.log("🔍 Dados extraídos:", extractedData);
 
             // Se temos CEP, tentar melhorar com dados da API do CEP
             if (extractedData.cep) {
@@ -447,23 +474,28 @@ export const useMapAddressSync = <T extends FormData>(
                   extractedData.cep
                 );
                 if (cepData) {
+                  // Usar dados do CEP apenas se não temos dados melhores
                   extractedData.street =
                     extractedData.street || cepData.logradouro;
                   extractedData.district =
                     extractedData.district || cepData.bairro;
                   extractedData.city = extractedData.city || cepData.localidade;
                   extractedData.state = extractedData.state || cepData.uf;
+
+                  console.log("✅ Dados melhorados com CEP:", extractedData);
                 }
               } catch (cepError) {
+                console.log("⚠️ Erro ao buscar CEP:", cepError);
               }
             }
           }
         } catch (geocodeError) {
+          console.error("❌ Erro na geocodificação:", geocodeError);
         }
 
         // ATUALIZAÇÃO SELETIVA: Manter dados existentes nos campos não encontrados
         const currentData = {
-          cep: watchSafe("cep"),
+          cep: watchSafe("zipcode"),
           street: watchSafe("street"),
           number: watchSafe("number"),
           complement: watchSafe("complement"),
@@ -501,7 +533,9 @@ export const useMapAddressSync = <T extends FormData>(
               : currentData.state,
         };
 
-        // Montar endereço completo a partir dos dados atualizados
+        console.log("💾 Dados que serão salvos:", updatedData);
+
+        // Montar endereço completo
         const fullAddress = addressService.formatCompleteAddress(updatedData);
 
         // Atualizar estado
@@ -514,33 +548,16 @@ export const useMapAddressSync = <T extends FormData>(
 
         setAddressData(newAddressData);
 
-        // Atualizar APENAS os campos que foram alterados
-        Object.entries(updatedData).forEach(([key, value]) => {
-          if (value && value !== currentData[key as keyof typeof currentData]) {
-            setValueSafe(key, value);
-          }
-        });
-
-        // Sempre atualizar o endereço completo
+        // Atualizar campos no formulário
+        setValueSafe("zipcode", updatedData.cep);
+        setValueSafe("street", updatedData.street);
+        setValueSafe("number", updatedData.number);
+        setValueSafe("district", updatedData.district);
+        setValueSafe("city", updatedData.city);
+        setValueSafe("state", updatedData.state);
         setValueSafe("address", fullAddress);
 
-        const updatedFields = Object.entries(updatedData).filter(
-          ([key, value]) =>
-            value &&
-            value !== currentData[key as keyof typeof currentData] &&
-            ["street", "number", "district", "city", "cep"].includes(key)
-        );
-
-        const updatedFieldNames = updatedFields.map(([key]) => {
-          const fieldMap: Record<string, string> = {
-            street: "rua",
-            number: "número",
-            district: "bairro",
-            city: "cidade",
-            cep: "CEP",
-          };
-          return fieldMap[key] || key;
-        });
+        toast.success("📍 Localização atualizada com sucesso!");
       } finally {
         setIsUpdatingFromMap(false);
       }
@@ -551,7 +568,7 @@ export const useMapAddressSync = <T extends FormData>(
   // Função para atualizar endereço completo baseado nos campos do formulário
   const updateFullAddress = useCallback(() => {
     const currentData = {
-      cep: watchSafe("cep"),
+      cep: watchSafe("zipcode"),
       street: watchSafe("street"),
       number: watchSafe("number"),
       complement: watchSafe("complement"),
@@ -598,8 +615,9 @@ export const useMapAddressSync = <T extends FormData>(
       if (coordinates) {
         setValueSafe("latitude", coordinates.lat);
         setValueSafe("longitude", coordinates.lng);
+        setValueSafe("lat", coordinates.lat);
+        setValueSafe("long", coordinates.lng);
 
-        // Atualizar estado com coordenadas, mantendo dados dos campos
         setAddressData((prev) => ({
           ...prev,
           latitude: coordinates.lat,
@@ -607,7 +625,7 @@ export const useMapAddressSync = <T extends FormData>(
         }));
 
         setMapKey((prev) => prev + 1);
-        toast.success(" Mapa atualizado a partir do endereço!");
+        toast.success("🗺️ Mapa atualizado a partir do endereço!");
       }
     } catch (error) {
       console.error("Erro ao atualizar mapa:", error);
@@ -633,7 +651,7 @@ export const useMapAddressSync = <T extends FormData>(
     updateFullAddress();
   }, [
     updateFullAddress,
-    watchSafe("cep"),
+    watchSafe("zipcode"),
     watchSafe("street"),
     watchSafe("number"),
     watchSafe("complement"),
@@ -648,8 +666,7 @@ export const useMapAddressSync = <T extends FormData>(
     mapKey,
     isUpdatingFromMap,
     isUpdatingFromInputs,
-    updateFullAddress, // Exportar para uso no formulário
-    // Exportar funções úteis
+    updateFullAddress,
     searchAddress: addressService.searchAddress.bind(addressService),
     fetchCEPData: addressService.fetchCEPData.bind(addressService),
   };

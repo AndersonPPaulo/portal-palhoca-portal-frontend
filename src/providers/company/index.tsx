@@ -64,6 +64,7 @@ export interface UploadCompanyImageProps {
 }
 
 export interface ICompanyProps extends UpdateCompanyProps {
+  highlight: boolean;
   id: string;
   created_at?: Date;
   update_at?: Date;

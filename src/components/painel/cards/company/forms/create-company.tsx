@@ -807,7 +807,7 @@ export default function FormCreateCompany() {
                               <p className="text-gray-500 italic text-xs">
                                 Mensagem: "
                                 {decodeURIComponent(
-                                  watch("linkWhatsapp").split("text=")[1] || ""
+                                  watch("linkWhatsapp")?.split("text=")[1] || ""
                                 )}
                                 "
                               </p>
