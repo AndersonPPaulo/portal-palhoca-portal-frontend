@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/tooltip";
 import { ICompanyProps, CompanyContext } from "@/providers/company";
 import { ColumnDef } from "@tanstack/react-table";
-import { format, set } from "date-fns";
+import { format } from "date-fns";
 import { ChartLine, Edit, Star, StarOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState, useContext } from "react";
@@ -17,17 +17,18 @@ import { toast } from "sonner";
 
 const CellActions = (company: ICompanyProps) => {
   const { push } = useRouter();
-  const { 
-    UpdateCompany, 
-    ListCompany, 
+  const {
+    UpdateCompany,
     listCompany,
-    currentFilters, 
-    currentPage, 
-    currentLimit 
+    currentFilters,
+    currentPage,
+    currentLimit,
   } = useContext(CompanyContext);
   const [loading, setLoading] = useState(false);
   // ✅ Estado local para controlar o highlight de forma otimista
-  const [optimisticHighlight, setOptimisticHighlight] = useState(company.highlight);
+  const [optimisticHighlight, setOptimisticHighlight] = useState(
+    company.highlight
+  );
 
   // ✅ Sincronizar quando os dados da empresa mudarem
   React.useEffect(() => {
@@ -36,12 +37,12 @@ const CellActions = (company: ICompanyProps) => {
 
   const handleToggleHighlight = async () => {
     const newHighlightValue = !optimisticHighlight;
-    
+
     try {
       setLoading(true);
       // ✅ Atualiza o ícone IMEDIATAMENTE (otimista)
       setOptimisticHighlight(newHighlightValue);
-      
+
       // Enviar todos os campos obrigatórios que o backend espera
       const updateData = {
         name: company.name,
@@ -55,8 +56,9 @@ const CellActions = (company: ICompanyProps) => {
         long: company.long,
         zipcode: company.zipcode,
         highlight: newHighlightValue,
-        companyCategoryIds: company.company_category?.map(cat => cat.id) || [],
-        portalIds: company.portals?.map(portal => portal.id) || [],
+        companyCategoryIds:
+          company.company_category?.map((cat) => cat.id) || [],
+        portalIds: company.portals?.map((portal) => portal.id) || [],
         phone: company.phone,
         description: company.description,
         linkInstagram: company.linkInstagram,
@@ -69,21 +71,22 @@ const CellActions = (company: ICompanyProps) => {
       };
 
       await UpdateCompany(updateData, company.id);
-      
+
       // ✅ Atualizar localmente sem fazer nova requisição
       // Isso evita perder os filtros e é mais rápido
       if (listCompany) {
-        const updatedData = listCompany.data.map(c => 
+        const updatedData = listCompany.data.map((c) =>
           c.id === company.id ? { ...c, highlight: newHighlightValue } : c
         );
         listCompany.data = updatedData;
       }
-      
     } catch (err: any) {
       // ✅ Se der erro, volta ao estado anterior
       setOptimisticHighlight(!newHighlightValue);
       console.error("Erro ao atualizar destaque:", err);
-      toast.error(err.response?.data?.message || "Erro ao atualizar destaque do comércio");
+      toast.error(
+        err.response?.data?.message || "Erro ao atualizar destaque do comércio"
+      );
     } finally {
       setLoading(false);
     }
@@ -156,7 +159,6 @@ const CellActions = (company: ICompanyProps) => {
   );
 };
 
-
 // Célula de analíticos
 const AnalyticsCell = ({ company }: { company: ICompanyProps }) => {
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
@@ -214,7 +216,7 @@ export const columns: ColumnDef<ICompanyProps>[] = [
     id: "info",
     header: () => <div className="text-start">Informações</div>,
     cell: ({ row }) => {
-      const { created_at, status } = row.original;
+      const { created_at, status, portals } = row.original;
       const formattedDate = created_at ? format(created_at, "dd/MM/yyyy") : "-";
 
       const statusTextMap: Record<string, string> = {
@@ -234,16 +236,26 @@ export const columns: ColumnDef<ICompanyProps>[] = [
       const statusText = statusTextMap[status] || "Em processo";
       const statusColor = statusColorMap[status] || "bg-orange-500";
 
+      const portalName = portals && portals.length > 0 ? portals[0].name : null;
+
       return (
         <div className="flex flex-col gap-1">
           <div className="text-sm text-gray-800">
             <span className="font-medium">Cadastrado:</span> {formattedDate}
           </div>
-          <span
-            className={`text-white ${statusColor} font-bold px-3 py-1 rounded-full text-sm w-fit`}
-          >
-            {statusText}
-          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className={`text-white ${statusColor} font-bold px-3 py-1 rounded-full text-sm w-fit`}
+            >
+              {statusText}
+            </span>
+            {/* ✅ Mostrar portal se existir */}
+            {portalName && (
+              <span className="bg-blue-100 text-blue-700 font-semibold px-3 py-1 rounded-full text-sm w-fit">
+                {portalName}
+              </span>
+            )}
+          </div>
         </div>
       );
     },

@@ -279,7 +279,7 @@ export default function ReusableAnalyticsModal({
                 </p>
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                    {entityType.toUpperCase()}: {entityId}
+                    {entityType.toUpperCase()}: {entityTitle}
                   </span>
                   {hasData && (
                     <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
