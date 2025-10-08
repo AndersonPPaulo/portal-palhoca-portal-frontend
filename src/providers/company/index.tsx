@@ -122,16 +122,18 @@ interface uploadResponseProps {
   uploadURL: string;
   displayURL: string;
 }
+interface ListCompanyOptions {
+  name?: string;
+  categories?: string[];
+  highlight?: boolean;
+  isActive?: boolean | string;
+}
 
 interface ICompanyData {
   ListCompany(
     page?: number,
     limit?: number,
-    options?: {
-      name?: string;
-      category?: string;
-      isActive?: boolean | string;
-    }
+    options?: ListCompanyOptions
   ): Promise<CompanyProps>;
   CreateCompany(data: UpdateCompanyProps): Promise<ICompanyProps | void>;
   apiCep: GetCEPProps | null;
@@ -149,7 +151,11 @@ interface ICompanyData {
     file: { filename: string; contentType: string },
     company_id: string
   ): Promise<uploadResponseProps>;
+  currentFilters: ListCompanyOptions; // ✅ Adicionar
+  currentPage: number; // ✅ Adicionar
+  currentLimit: number; // ✅ Adicionar
 }
+
 
 interface IChildrenReact {
   children: ReactNode;
@@ -160,37 +166,62 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
   const { push } = useRouter();
   const [listCompany, setListCompany] = useState<CompanyProps | null>(null);
   const [apiCep, setApiCep] = useState<GetCEPProps | null>(null);
+  const [currentFilters, setCurrentFilters] = useState<ListCompanyOptions>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [currentLimit, setCurrentLimit] = useState(9);
 
-  const ListCompany = async (
+ const ListCompany = async (
     page: number = 1,
     limit: number = 9,
-    options: {
-      name?: string;
-      category?: string;
-      isActive?: boolean | string;
-    } = {}
+    options: ListCompanyOptions = {}
   ): Promise<CompanyProps> => {
-    const config = {
-      params: {
-        limit,
-        page,
-        ...options,
-        isActive:
-          typeof options.isActive === "boolean"
-            ? String(options.isActive)
-            : options.isActive,
-      },
+    // ✅ Armazenar os filtros, página e limite usados
+    setCurrentFilters(options);
+    setCurrentPage(page);
+    setCurrentLimit(limit);
+
+    const params: any = {
+      limit,
+      page,
     };
+
+    if (options.name) {
+      params.name = options.name;
+    }
+
+    if (options.categories && options.categories.length > 0) {
+      params.categories = options.categories.join(',');
+    }
+
+    if (options.highlight !== undefined && options.highlight !== null) {
+      params.highlight = String(options.highlight);
+    }
+
+    if (options.isActive !== undefined && options.isActive !== null) {
+      params.isActive =
+        typeof options.isActive === "boolean"
+          ? String(options.isActive)
+          : options.isActive;
+    }
+
+    const config = { params };
 
     const response = await api
       .get("/company", config)
       .then((res) => {
         setListCompany(res.data);
+        return res.data;
       })
       .catch((err) => {
         console.error("Erro ao listar empresas:", err);
         toast.error(err.response?.data?.message || "Erro ao listar empresas");
-        return err;
+        return {
+          total: 0,
+          page: 0,
+          limit: 0,
+          totalPages: 0,
+          data: [],
+        };
       });
 
     return response;
@@ -324,6 +355,9 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
       value={{
         CreateImageCompany,
         ListCompany,
+         currentFilters, 
+        currentPage, 
+        currentLimit, 
         CreateCompany,
         UpdateCompany,
         listCompany,

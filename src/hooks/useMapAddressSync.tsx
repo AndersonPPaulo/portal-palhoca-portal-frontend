@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { UseFormSetValue, UseFormWatch } from "react-hook-form";
 import axios from "axios";
@@ -150,9 +150,8 @@ class AddressService {
     return null;
   }
 
-  // NOVA FUNÇÃO: Parse melhorado do display_name
+  // Parse melhorado do display_name
   parseDisplayName(displayName: string): Partial<AddressData> {
-    // Formato esperado: "Rua João Pinto, 91 - Florianópolis - Santa Catarina/XV - 88010-420"
     const result: Partial<AddressData> = {};
 
     // Extrair CEP
@@ -163,8 +162,6 @@ class AddressService {
 
     // Remover CEP do texto para facilitar o parse
     let workingText = displayName.replace(/\d{5}-?\d{3}/, "").trim();
-
-    // Remover separadores extras no final
     workingText = workingText.replace(/\s*-\s*$/, "");
 
     // Dividir por " - "
@@ -175,42 +172,36 @@ class AddressService {
 
     if (parts.length === 0) return result;
 
-    // Parte 1: Rua e número (ex: "Rua João Pinto, 91")
+    // Parte 1: Rua e número
     if (parts[0]) {
       const streetParts = parts[0].split(",").map((p) => p.trim());
       result.street = streetParts[0] || "";
       result.number = streetParts[1] || "";
     }
 
-    // Parte 2: Bairro (ex: "Florianópolis")
+    // Parte 2: Bairro
     if (parts[1]) {
       result.district = parts[1];
     }
 
-    // Parte 3: Cidade/Estado (ex: "Santa Catarina/XV")
+    // Parte 3: Cidade/Estado
     if (parts[2]) {
-      // Verificar se tem o formato "Cidade/Estado"
       if (parts[2].includes("/")) {
         const [cityOrState, state] = parts[2].split("/").map((p) => p.trim());
-
-        // Se o segundo item tem 2 caracteres, é UF (Estado)
         if (state && state.length === 2) {
           result.state = state;
           result.city = cityOrState;
         } else {
-          // Caso contrário, o primeiro é estado completo
           result.state = cityOrState;
           result.city = state || cityOrState;
         }
       } else {
-        // Se não tem "/", assume que é cidade
         result.city = parts[2];
       }
     }
 
     // Parte 4: Pode ser estado adicional ou cidade
     if (parts[3]) {
-      // Se ainda não temos cidade, este é a cidade
       if (!result.city) {
         result.city = parts[3];
       }
@@ -219,9 +210,8 @@ class AddressService {
     return result;
   }
 
-  // Extrair dados estruturados - MELHORADO
+  // Extrair dados estruturados
   extractStructuredData(data: NominatimResult): Partial<AddressData> {
-    // Priorizar parse do display_name quando não temos dados estruturados
     if (!data.address || Object.keys(data.address).length < 3) {
       return this.parseDisplayName(data.display_name || "");
     }
@@ -257,7 +247,7 @@ class AddressService {
     return extracted;
   }
 
-  // Formatar endereço - ACEITA DADOS PARCIAIS
+  // Formatar endereço
   private formatAddress(data: NominatimResult): string {
     if (!data.address) {
       return this.filterDisplayName(data.display_name);
@@ -406,6 +396,9 @@ export const useMapAddressSync = <T extends FormData>(
   const [isUpdatingFromMap, setIsUpdatingFromMap] = useState(false);
   const [isUpdatingFromInputs, setIsUpdatingFromInputs] = useState(false);
   const [mapKey, setMapKey] = useState(0);
+  
+  // NOVO: Ref para controlar inicialização
+  const hasInitialized = useRef(false);
 
   // Helpers para setValue/watch com segurança
   const setValueSafe = useCallback(
@@ -430,6 +423,40 @@ export const useMapAddressSync = <T extends FormData>(
     },
     [watch]
   );
+
+  // NOVO: Effect para inicializar coordenadas do backend
+  useEffect(() => {
+    if (!hasInitialized.current) {
+      const backendLat = watchSafe("lat");
+      const backendLong = watchSafe("long");
+      const backendMapsLink = watchSafe("linkLocationMaps");
+      const backendWazeLink = watchSafe("linkLocationWaze");
+      
+      // Verificar se temos coordenadas do backend
+      if (backendLat && backendLong) {
+        console.log("🎯 Coordenadas carregadas do backend:", { backendLat, backendLong });
+        
+        setAddressData((prev) => ({
+          ...prev,
+          latitude: backendLat,
+          longitude: backendLong,
+        }));
+        
+        // Se NÃO temos links salvos no backend, gerar novos
+        if (!backendMapsLink || !backendWazeLink) {
+          console.log("🔗 Gerando links de navegação (não existiam no backend)");
+          const links = addressService.generateNavigationLinks(backendLat, backendLong);
+          setValueSafe("linkLocationMaps", links.googleMaps);
+          setValueSafe("linkLocationWaze", links.waze);
+        } else {
+          console.log("✅ Links do Maps e Waze já existem no backend");
+          // Links já estão setados pelo reset() do formulário
+        }
+      }
+      
+      hasInitialized.current = true;
+    }
+  }, [watchSafe, setValueSafe]);
 
   // Função principal - ATUALIZAÇÃO SELETIVA DOS CAMPOS
   const handleMapLocationSelect = useCallback(
@@ -462,9 +489,7 @@ export const useMapAddressSync = <T extends FormData>(
           console.log("📍 Endereço recebido do mapa:", address);
 
           if (address && !address.startsWith("Coordenadas:")) {
-            // Usar a nova função de parse melhorada
             extractedData = addressService.parseDisplayName(address);
-
             console.log("🔍 Dados extraídos:", extractedData);
 
             // Se temos CEP, tentar melhorar com dados da API do CEP
@@ -474,14 +499,12 @@ export const useMapAddressSync = <T extends FormData>(
                   extractedData.cep
                 );
                 if (cepData) {
-                  // Usar dados do CEP apenas se não temos dados melhores
                   extractedData.street =
                     extractedData.street || cepData.logradouro;
                   extractedData.district =
                     extractedData.district || cepData.bairro;
                   extractedData.city = extractedData.city || cepData.localidade;
                   extractedData.state = extractedData.state || cepData.uf;
-
                   console.log("✅ Dados melhorados com CEP:", extractedData);
                 }
               } catch (cepError) {
@@ -590,7 +613,7 @@ export const useMapAddressSync = <T extends FormData>(
 
   // Atualizar mapa quando inputs mudam
   const updateMapFromInputs = useCallback(async () => {
-    if (isUpdatingFromMap) return;
+    if (isUpdatingFromMap || !hasInitialized.current) return;
 
     const currentData = {
       street: watchSafe("street"),
@@ -648,7 +671,9 @@ export const useMapAddressSync = <T extends FormData>(
 
   // Atualizar endereço completo sempre que campos mudarem
   useEffect(() => {
-    updateFullAddress();
+    if (hasInitialized.current) {
+      updateFullAddress();
+    }
   }, [
     updateFullAddress,
     watchSafe("zipcode"),
