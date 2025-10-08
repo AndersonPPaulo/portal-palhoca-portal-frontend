@@ -369,23 +369,36 @@ export default function FormUpdateCompany({
     setSelectedImage({ file, preview: previewUrl });
   };
 
-  // Upload do logo
-  const uploadCompanyLogo = async (file: File, companyId: string) => {
+  // Função de upload da logo
+  const uploadCompanyLogo = async (file: File, company_id: string) => {
     try {
       const { "user:token": token } = parseCookies();
 
-      const formData = new FormData();
-      formData.append("company_image", file);
+      const response_upload = await api.post(
+        `/company/${company_id}/upload-company-image`,
+        {
+          filename: file.name,
+          contentType: file.type,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-      await api.post(`/company/${companyId}/upload-company-image`, formData, {
+      const presignedUrl = response_upload.data.uploadUrl;
+
+      const uploadRes = await api.put(presignedUrl, file, {
         headers: {
-          Authorization: `bearer ${token}`,
-          "Content-Type": "multipart/form-data",
+          "Content-Type": file.type, // importante para manter o tipo do arquivo
         },
       });
 
-      toast.success("Logo da empresa atualizado com sucesso!");
-    } catch (error) {
+      if (uploadRes.status == 200) {
+        toast.success("Imagem da empresa cadastrada com sucesso!");
+      }
+    } catch (error: any) {
       toast.error("Erro ao fazer upload do logo");
     }
   };
@@ -432,11 +445,11 @@ export default function FormUpdateCompany({
       }
 
       toast.success("Empresa atualizada com sucesso!");
-      router.back();
     } catch (error) {
       toast.error("Erro ao atualizar empresa. Tente novamente.");
     } finally {
       setIsSubmitting(false);
+      router.push("/comercio");
     }
   };
 

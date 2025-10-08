@@ -224,7 +224,6 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
     try {
       await api.patch(`/company/${id}`, data, config);
       toast.success("Empresa atualizada com sucesso!");
-      push("/comercio");
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Erro ao atualizar empresa");
       throw err;
