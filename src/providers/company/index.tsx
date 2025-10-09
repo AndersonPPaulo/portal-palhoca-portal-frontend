@@ -94,6 +94,7 @@ export interface ICompanyProps extends UpdateCompanyProps {
   lat: string;
   long: string;
   zipcode: string;
+  state: string;
 }
 
 export type CompanyProps = {

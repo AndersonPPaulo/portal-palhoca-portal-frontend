@@ -180,7 +180,7 @@ export default function FormUpdateCompany({
     );
 
     if (selectedPortal) {
-      return `Olá, vi o seu anúncio no Portal ${selectedPortal.name} e gostaria de informações.`;
+      return `Olá, vi o seu anúncio no ${selectedPortal.name} e gostaria de informações.`;
     }
 
     return "Olá, vi seu anúncio e gostaria de informações.";
@@ -233,7 +233,7 @@ export default function FormUpdateCompany({
       setWhatsappDisplay(whatsappFormatted);
 
       // Formatar CEP do backend
-      const zipcodeFromBackend = data?.zipcode || addressParts.zipcode || "";
+      const zipcodeFromBackend = data?.zipcode || "";
       const zipcodeFormatted =
         zipcodeFromBackend.length === 8
           ? zipcodeFromBackend.replace(/^(\d{5})(\d{3})/, "$1-$2")
@@ -254,9 +254,9 @@ export default function FormUpdateCompany({
         street: addressParts.street,
         number: addressParts.number,
         complement: addressParts.complement,
-        district: addressParts.district,
-        city: addressParts.city,
-        state: addressParts.state,
+        district: data?.district || "",
+        city: data?.city || "",
+        state: data?.state || "",
         zipcode: zipcodeFormatted,
         address: data?.address || "",
         status: data?.status,

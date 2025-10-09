@@ -150,7 +150,7 @@ class AddressService {
     return null;
   }
 
-  // Parse melhorado do display_name
+  // Parse melhorado do display_name - SEM NÚMERO
   parseDisplayName(displayName: string): Partial<AddressData> {
     const result: Partial<AddressData> = {};
 
@@ -172,11 +172,11 @@ class AddressService {
 
     if (parts.length === 0) return result;
 
-    // Parte 1: Rua e número
+    // Parte 1: Rua (SEM número)
     if (parts[0]) {
       const streetParts = parts[0].split(",").map((p) => p.trim());
       result.street = streetParts[0] || "";
-      result.number = streetParts[1] || "";
+      // REMOVIDO: result.number = streetParts[1] || "";
     }
 
     // Parte 2: Bairro
@@ -210,7 +210,7 @@ class AddressService {
     return result;
   }
 
-  // Extrair dados estruturados
+  // Extrair dados estruturados - SEM NÚMERO
   extractStructuredData(data: NominatimResult): Partial<AddressData> {
     if (!data.address || Object.keys(data.address).length < 3) {
       return this.parseDisplayName(data.display_name || "");
@@ -227,9 +227,9 @@ class AddressService {
       }
     }
 
-    // Rua e número
+    // Rua (SEM número)
     extracted.street = addr.road || addr.street || "";
-    extracted.number = addr.house_number || "";
+    // REMOVIDO: extracted.number = addr.house_number || "";
 
     // Bairro
     const neighborhood = addr.suburb || addr.neighbourhood || addr.residential;
@@ -247,7 +247,7 @@ class AddressService {
     return extracted;
   }
 
-  // Formatar endereço
+  // Formatar endereço - incluindo número do formulário
   private formatAddress(data: NominatimResult): string {
     if (!data.address) {
       return this.filterDisplayName(data.display_name);
@@ -266,14 +266,10 @@ class AddressService {
       parts.push(businessName);
     }
 
-    // Rua + número
+    // Rua (sem número aqui)
     const street = addr.road || addr.street;
-    const number = addr.house_number;
-
     if (street) {
-      let streetAddress = street;
-      if (number) streetAddress += `, ${number}`;
-      parts.push(streetAddress);
+      parts.push(street);
     }
 
     // Bairro
@@ -375,7 +371,7 @@ class AddressService {
 // Instância do serviço
 const addressService = new AddressService();
 
-// Hook principal otimizado
+// Hook principal otimizado - SEM ATUALIZAR NÚMERO
 export const useMapAddressSync = <T extends FormData>(
   setValue: UseFormSetValue<T>,
   watch: UseFormWatch<T>
@@ -397,7 +393,6 @@ export const useMapAddressSync = <T extends FormData>(
   const [isUpdatingFromInputs, setIsUpdatingFromInputs] = useState(false);
   const [mapKey, setMapKey] = useState(0);
   
-  // NOVO: Ref para controlar inicialização
   const hasInitialized = useRef(false);
 
   // Helpers para setValue/watch com segurança
@@ -424,7 +419,7 @@ export const useMapAddressSync = <T extends FormData>(
     [watch]
   );
 
-  // NOVO: Effect para inicializar coordenadas do backend
+  // Effect para inicializar coordenadas do backend
   useEffect(() => {
     if (!hasInitialized.current) {
       const backendLat = watchSafe("lat");
@@ -432,7 +427,6 @@ export const useMapAddressSync = <T extends FormData>(
       const backendMapsLink = watchSafe("linkLocationMaps");
       const backendWazeLink = watchSafe("linkLocationWaze");
       
-      // Verificar se temos coordenadas do backend
       if (backendLat && backendLong) {
         console.log("🎯 Coordenadas carregadas do backend:", { backendLat, backendLong });
         
@@ -442,15 +436,11 @@ export const useMapAddressSync = <T extends FormData>(
           longitude: backendLong,
         }));
         
-        // Se NÃO temos links salvos no backend, gerar novos
         if (!backendMapsLink || !backendWazeLink) {
-          console.log("🔗 Gerando links de navegação (não existiam no backend)");
+          console.log("🔗 Gerando links de navegação");
           const links = addressService.generateNavigationLinks(backendLat, backendLong);
           setValueSafe("linkLocationMaps", links.googleMaps);
           setValueSafe("linkLocationWaze", links.waze);
-        } else {
-          console.log("✅ Links do Maps e Waze já existem no backend");
-          // Links já estão setados pelo reset() do formulário
         }
       }
       
@@ -458,7 +448,7 @@ export const useMapAddressSync = <T extends FormData>(
     }
   }, [watchSafe, setValueSafe]);
 
-  // Função principal - ATUALIZAÇÃO SELETIVA DOS CAMPOS
+  // Função principal - ATUALIZAÇÃO SELETIVA SEM NÚMERO
   const handleMapLocationSelect = useCallback(
     async (lat: number, lng: number, address?: string) => {
       if (isUpdatingFromInputs) return;
@@ -490,7 +480,7 @@ export const useMapAddressSync = <T extends FormData>(
 
           if (address && !address.startsWith("Coordenadas:")) {
             extractedData = addressService.parseDisplayName(address);
-            console.log("🔍 Dados extraídos:", extractedData);
+            console.log("🔍 Dados extraídos (sem número):", extractedData);
 
             // Se temos CEP, tentar melhorar com dados da API do CEP
             if (extractedData.cep) {
@@ -516,18 +506,18 @@ export const useMapAddressSync = <T extends FormData>(
           console.error("❌ Erro na geocodificação:", geocodeError);
         }
 
-        // ATUALIZAÇÃO SELETIVA: Manter dados existentes nos campos não encontrados
+        // ATUALIZAÇÃO SELETIVA: Manter NÚMERO existente + outros dados
         const currentData = {
           cep: watchSafe("zipcode"),
           street: watchSafe("street"),
-          number: watchSafe("number"),
+          number: watchSafe("number"), // SEMPRE manter o número atual
           complement: watchSafe("complement"),
           district: watchSafe("district"),
           city: watchSafe("city"),
           state: watchSafe("state"),
         };
 
-        // Atualizar APENAS os campos que tiverem dados válidos encontrados
+        // Atualizar APENAS os campos encontrados (EXCETO número)
         const updatedData = {
           cep:
             extractedData.cep && extractedData.cep.trim()
@@ -537,10 +527,7 @@ export const useMapAddressSync = <T extends FormData>(
             extractedData.street && extractedData.street.trim()
               ? extractedData.street
               : currentData.street,
-          number:
-            extractedData.number && extractedData.number.trim()
-              ? extractedData.number
-              : currentData.number,
+          number: currentData.number, // SEMPRE preservar número atual
           complement: currentData.complement,
           district:
             extractedData.district && extractedData.district.trim()
@@ -556,7 +543,7 @@ export const useMapAddressSync = <T extends FormData>(
               : currentData.state,
         };
 
-        console.log("💾 Dados que serão salvos:", updatedData);
+        console.log("💾 Dados que serão salvos (número preservado):", updatedData);
 
         // Montar endereço completo
         const fullAddress = addressService.formatCompleteAddress(updatedData);
@@ -571,16 +558,16 @@ export const useMapAddressSync = <T extends FormData>(
 
         setAddressData(newAddressData);
 
-        // Atualizar campos no formulário
+        // Atualizar campos no formulário (SEM número)
         setValueSafe("zipcode", updatedData.cep);
         setValueSafe("street", updatedData.street);
-        setValueSafe("number", updatedData.number);
+        // NÃO atualizar: setValueSafe("number", updatedData.number);
         setValueSafe("district", updatedData.district);
         setValueSafe("city", updatedData.city);
         setValueSafe("state", updatedData.state);
         setValueSafe("address", fullAddress);
 
-        toast.success("📍 Localização atualizada com sucesso!");
+        toast.success("📍 Localização atualizada (número preservado)!");
       } finally {
         setIsUpdatingFromMap(false);
       }
