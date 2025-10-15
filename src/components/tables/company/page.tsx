@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from "react";
-import { columns } from "./columns";
+import { useResponsiveColumns } from "./columns";
 import { DataTable } from "./data-table";
 import { CompanyContext } from "@/providers/company";
 
@@ -17,6 +17,7 @@ export default function TableCompany({ filter }: TableCompanyProps) {
   const [loading, setLoading] = useState(true);
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(9);
+  const columns = useResponsiveColumns();
 
   useEffect(() => {
     const fetchCompanies = async () => {

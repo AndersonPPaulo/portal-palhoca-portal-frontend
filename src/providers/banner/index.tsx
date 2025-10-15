@@ -40,7 +40,7 @@ export interface BannerItem {
   portal: {
     id: string;
     name: string;
-    link_referer: string;
+    portalReferer: string;
     status: boolean;
     created_at: string;
     updated_at: string;

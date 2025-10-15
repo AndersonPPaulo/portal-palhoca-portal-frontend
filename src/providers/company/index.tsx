@@ -176,7 +176,7 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
     limit: number = 9,
     options: ListCompanyOptions = {}
   ): Promise<CompanyProps> => {
-    // ✅ Armazenar os filtros, página e limite usados
+    // Armazenar os filtros, página e limite usados
     setCurrentFilters(options);
     setCurrentPage(page);
     setCurrentLimit(limit);

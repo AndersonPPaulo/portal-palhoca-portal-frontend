@@ -12,7 +12,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { ChartLine, Edit, Star, StarOff } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { toast } from "sonner";
 
 const CellActions = (company: ICompanyProps) => {
@@ -25,12 +25,10 @@ const CellActions = (company: ICompanyProps) => {
     currentLimit,
   } = useContext(CompanyContext);
   const [loading, setLoading] = useState(false);
-  // ✅ Estado local para controlar o highlight de forma otimista
   const [optimisticHighlight, setOptimisticHighlight] = useState(
     company.highlight
   );
 
-  // ✅ Sincronizar quando os dados da empresa mudarem
   React.useEffect(() => {
     setOptimisticHighlight(company.highlight);
   }, [company.highlight]);
@@ -40,10 +38,8 @@ const CellActions = (company: ICompanyProps) => {
 
     try {
       setLoading(true);
-      // ✅ Atualiza o ícone IMEDIATAMENTE (otimista)
       setOptimisticHighlight(newHighlightValue);
 
-      // Enviar todos os campos obrigatórios que o backend espera
       const updateData = {
         name: company.name,
         email: company.email,
@@ -72,8 +68,6 @@ const CellActions = (company: ICompanyProps) => {
 
       await UpdateCompany(updateData, company.id);
 
-      // ✅ Atualizar localmente sem fazer nova requisição
-      // Isso evita perder os filtros e é mais rápido
       if (listCompany) {
         const updatedData = listCompany.data.map((c) =>
           c.id === company.id ? { ...c, highlight: newHighlightValue } : c
@@ -81,7 +75,6 @@ const CellActions = (company: ICompanyProps) => {
         listCompany.data = updatedData;
       }
     } catch (err: any) {
-      // ✅ Se der erro, volta ao estado anterior
       setOptimisticHighlight(!newHighlightValue);
       console.error("Erro ao atualizar destaque:", err);
       toast.error(
@@ -94,7 +87,6 @@ const CellActions = (company: ICompanyProps) => {
 
   return (
     <div className="flex gap-6 items-center">
-      {/* Editar Comércio */}
       <TooltipProvider delayDuration={600}>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -113,7 +105,6 @@ const CellActions = (company: ICompanyProps) => {
         </Tooltip>
       </TooltipProvider>
 
-      {/* Toggle Highlight */}
       <TooltipProvider delayDuration={600}>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -122,7 +113,6 @@ const CellActions = (company: ICompanyProps) => {
               disabled={loading}
               className="focus:outline-none"
             >
-              {/* ✅ Usa o estado otimista ao invés do company.highlight */}
               {optimisticHighlight ? (
                 <Star
                   size={22}
@@ -159,7 +149,6 @@ const CellActions = (company: ICompanyProps) => {
   );
 };
 
-// Célula de analíticos
 const AnalyticsCell = ({ company }: { company: ICompanyProps }) => {
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
 
@@ -194,7 +183,26 @@ const AnalyticsCell = ({ company }: { company: ICompanyProps }) => {
   );
 };
 
-export const columns: ColumnDef<ICompanyProps>[] = [
+// ✅ Hook para detectar se está em mobile
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768); // 768px = breakpoint md do Tailwind
+    };
+
+    checkIsMobile();
+    window.addEventListener("resize", checkIsMobile);
+
+    return () => window.removeEventListener("resize", checkIsMobile);
+  }, []);
+
+  return isMobile;
+};
+
+// ✅ Colunas completas (Desktop)
+const desktopColumns: ColumnDef<ICompanyProps>[] = [
   {
     accessorKey: "name",
     header: () => <div>Comércio</div>,
@@ -249,7 +257,6 @@ export const columns: ColumnDef<ICompanyProps>[] = [
             >
               {statusText}
             </span>
-            {/* ✅ Mostrar portal se existir */}
             {portalName && (
               <span className="bg-blue-100 text-blue-700 font-semibold px-3 py-1 rounded-full text-sm w-fit">
                 {portalName}
@@ -274,3 +281,49 @@ export const columns: ColumnDef<ICompanyProps>[] = [
     ),
   },
 ];
+
+// ✅ Colunas simplificadas (Mobile) - Apenas Nome, Analíticos e Ações
+const mobileColumns: ColumnDef<ICompanyProps>[] = [
+  {
+    accessorKey: "name",
+    header: () => <div>Comércio</div>,
+    cell: ({ row }) => (
+      <div className="text-sm font-medium">{row.original.name}</div>
+    ),
+  },
+  {
+    id: "category",
+    header: () => <div className="text-center ml-2">Categoria</div>,
+    cell: ({ row }) => {
+      const categories = row.original.company_category;
+      const categoryName = categories && categories.length > 0 
+        ? categories[0].name 
+        : "-";
+      
+      return (
+        <div className="text-center text-sm text-gray-700">
+          {categoryName}
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: "Analíticos",
+    header: () => <div className="text-center">Analíticos</div>,
+    cell: ({ row }) => <AnalyticsCell company={row.original} />,
+  },
+  {
+    id: "actions",
+    header: () => <div className="text-center">Ações</div>,
+    cell: ({ row }) => (
+      <div className="flex justify-center">{CellActions(row.original)}</div>
+    ),
+  },
+];
+
+export const useResponsiveColumns = () => {
+  const isMobile = useIsMobile();
+  return isMobile ? mobileColumns : desktopColumns;
+};
+
+export const columns = desktopColumns;

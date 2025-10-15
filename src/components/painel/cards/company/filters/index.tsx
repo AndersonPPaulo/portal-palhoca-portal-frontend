@@ -22,10 +22,30 @@ interface FilterProps {
   onFilterChange: (filters: FilterState) => void;
 }
 
+//Hook para detectar se está em mobile
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkIsMobile();
+    window.addEventListener("resize", checkIsMobile);
+
+    return () => window.removeEventListener("resize", checkIsMobile);
+  }, []);
+
+  return isMobile;
+};
+
 const CompanyFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
   const { listCompanyCategory, ListCompanyCategory } = useContext(
     CompanyCategoryContext
   );
+
+  const isMobile = useIsMobile();
 
   const [categories, setCategories] = useState<
     Array<{ id: string; name: string }>
@@ -232,7 +252,7 @@ const CompanyFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
 
   return (
     <div className="flex flex-col w-full gap-4">
-      <div className="flex items-center gap-4">
+      <div className={`flex ${isMobile ? 'flex-col' : 'items-center'} gap-4`}>
         <div className="flex-grow">
           <span className="text-body-g ms-4">Empresa:</span>
           <CustomInput
@@ -244,9 +264,19 @@ const CompanyFilter = ({ filter, setFilter, onFilterChange }: FilterProps) => {
           />
         </div>
 
-        {renderCategoryFilter()}
-        {renderHighlightFilter()}
+        {!isMobile && (
+          <>
+            {renderCategoryFilter()}
+            {renderHighlightFilter()}
+          </>
+        )}
       </div>
+
+      {isMobile && (
+        <div className="flex gap-4">
+          {renderHighlightFilter()}
+        </div>
+      )}
     </div>
   );
 };
