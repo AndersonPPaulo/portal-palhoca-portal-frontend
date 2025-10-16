@@ -6,6 +6,7 @@ import TableTags from "@/components/tables/tags/page";
 import { Card } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface FilterState {
   status: boolean | null;
@@ -17,6 +18,7 @@ const Tags = () => {
   const [activeFilters, setActiveFilters] = useState<FilterState>({
     status: null,
   });
+  const isMobile = useIsMobile();
 
   return (
     <div className="h-screen bg-primary-light flex flex-col overflow-hidden">
@@ -25,6 +27,7 @@ const Tags = () => {
         text_button="Cadastrar Tag"
         onClick={() => push("/postagens/tags/criar")}
         description="Listagem de Tags cadastradas."
+        isMobile={isMobile}
       />
       <div className="flex flex-col gap-4 h-full p-4">
         <Card className="rounded-3xl min-h-[140px] bg-white flex items-center gap-4 p-4">

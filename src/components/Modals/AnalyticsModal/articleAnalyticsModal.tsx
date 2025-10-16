@@ -4,6 +4,7 @@ import React, { useContext } from "react";
 import AnalyticsModal from "../AnalyticsModal/index";
 import { ArticleAnalyticsContext } from "@/providers/analytics/ArticleAnalyticsProvider";
 import {articleEventConfigs, articleMetricConfigs} from "../configs/index";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 
 interface ArticleAnalyticsModalProps {
@@ -35,6 +36,7 @@ export default function ArticleAnalyticsModal({
     loading,
     error,
   };
+  const isMobile = useIsMobile();
 
   const analyticsActions = {
     loadEvents: async (id: string) => {
@@ -65,6 +67,7 @@ export default function ArticleAnalyticsModal({
       enableDebug={process.env.NODE_ENV === "development"}
       customTitle="Analytics do Artigo"
       customDescription="Este artigo ainda não possui eventos registrados."
+      isMobile={isMobile}
     />
   );
 }

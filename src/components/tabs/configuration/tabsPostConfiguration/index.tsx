@@ -16,6 +16,7 @@ export function PostTabs({ tabs }: PostTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { profile } = useContext(UserContext);
+  const isMobile = useIsMobile();
 
   const filteredTabs = useMemo(() => {
     return filterTabsByRole(tabs, profile?.role?.name);
@@ -55,9 +56,6 @@ export function PostTabs({ tabs }: PostTabsProps) {
       router.replace(`?tab=${value}`);
     }
   };
-
-  const isMobile = useIsMobile();
-
 
   if (!profile) {
     return (
