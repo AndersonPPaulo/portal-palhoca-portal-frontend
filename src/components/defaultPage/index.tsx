@@ -7,7 +7,7 @@ const DefaultPage = ({ children }: { children: React.ReactNode }) => {
     <div>
       <div className="flex">
         <Sidebar />
-        <div className="flex flex-col w-full">{children}</div>
+        <div className="flex flex-col w-full h-full">{children}</div>
       </div>
     </div>
   );
