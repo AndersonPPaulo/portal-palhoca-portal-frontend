@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserContext } from "@/providers/user";
 import { filterTabsByRole, TabConfig } from "./tabPostConfiguration";
 import Header from "@/components/header";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface PostTabsProps {
   tabs: TabConfig[];
@@ -54,6 +55,9 @@ export function PostTabs({ tabs }: PostTabsProps) {
       router.replace(`?tab=${value}`);
     }
   };
+
+  const isMobile = useIsMobile();
+
 
   if (!profile) {
     return (
@@ -119,6 +123,7 @@ export function PostTabs({ tabs }: PostTabsProps) {
         description={activeTab.description}
         text_button={`Adicionar ${activeTab.name}`}
         onClick={() => router.push(activeTab.path)}
+        isMobile={isMobile}
       />
 
       <TabsList className="flex bg-white justify-start">
@@ -143,7 +148,8 @@ export function PostTabs({ tabs }: PostTabsProps) {
           value={tab.value}
           className="flex-1 gap-4 py-2 px-6"
         >
-          {React.isValidElement(tab.component) && typeof tab.component.type !== "string"
+          {React.isValidElement(tab.component) &&
+          typeof tab.component.type !== "string"
             ? React.cloneElement(tab.component as React.ReactElement<any>, {
                 ...(tab.component.props || {}),
                 userId: userPermissions.userId,

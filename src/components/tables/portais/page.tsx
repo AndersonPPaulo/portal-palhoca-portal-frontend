@@ -33,6 +33,7 @@ export default function TablePortals({
 
     fetchPortals();
   }, []);
+  
 
   useEffect(() => {
     let filtered = listPortals || [];

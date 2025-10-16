@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/header";
 import { TabConfig } from "./tabsPortalsConfiguration";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface PortalTabsProps {
   tabs: TabConfig[];
@@ -13,6 +14,7 @@ interface PortalTabsProps {
 export function PortalTabs({ tabs }: PortalTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const IsMobile = useIsMobile();
 
   const tabQuery = searchParams.get("tab") || tabs[0]?.value;
   const [activeTab, setActiveTab] = useState(
@@ -58,6 +60,7 @@ export function PortalTabs({ tabs }: PortalTabsProps) {
         description={activeTab.description}
         text_button={`Adicionar ${activeTab.name}`}
         onClick={() => router.push(activeTab.path)}
+        isMobile={IsMobile}
       />
 
       <TabsList className="flex bg-white justify-start ">

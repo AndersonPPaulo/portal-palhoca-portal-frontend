@@ -7,12 +7,14 @@ type Props = {
   text_button?: string;
   onClick?: () => void;
   buttonHidden?: boolean;
+  isMobile?: boolean;
 };
 
 export function Header({
   title,
   description,
   text_button,
+  isMobile = false,
   buttonHidden = false,
   onClick,
 }: Props) {
@@ -24,9 +26,18 @@ export function Header({
       </div>
 
       {!buttonHidden && (
-        <Button className="rounded-[24px]" onClick={onClick}>
-          <Plus className="text-white" /> {text_button}
-        </Button>
+        <>
+          {!isMobile ? (
+            <Button className="rounded-[24px]" onClick={onClick}>
+              <Plus />
+              {text_button}
+            </Button>
+          ) : (
+            <Button className="rounded-[24px]" onClick={onClick} size="sm">
+              <Plus />
+            </Button>
+          )}
+        </>
       )}
     </div>
   );

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "../header";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface TabConfig {
   value: string;
@@ -23,6 +24,7 @@ export function DynamicTabs({ tabs }: DynamicTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabQuery = searchParams.get("tab") || tabs[0].value;
+  const isMobile = useIsMobile();
 
   const [activeTab, setActiveTab] = useState(
     tabs.find((tab) => tab.value === tabQuery) || tabs[0]
@@ -41,6 +43,7 @@ export function DynamicTabs({ tabs }: DynamicTabsProps) {
     }
   };
 
+
   return (
     <Tabs
       defaultValue={activeTab.value}
@@ -53,6 +56,7 @@ export function DynamicTabs({ tabs }: DynamicTabsProps) {
         description={activeTab.description}
         text_button={`Adicionar ${activeTab.name}`}
         onClick={() => router.push(activeTab.path)}
+        isMobile={isMobile}
       />
 
       <TabsList className="flex bg-white justify-start">
