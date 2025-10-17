@@ -229,7 +229,7 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
         portal: {
           id: portalId,
           name: listPortals?.find((p) => p.id === portalId)?.name || "",
-          link_referer: "",
+          portalReferer: "",
           status: true,
           created_at: "",
           updated_at: "",
