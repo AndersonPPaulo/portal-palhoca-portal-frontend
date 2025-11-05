@@ -14,7 +14,7 @@ export const navigationMain = [
     path: "/portais",
   },
   {
-    name: "Noticias",
+    name: "Notícias",
     icon: NotebookPen ,
     path: "/postagens",
     children: [
