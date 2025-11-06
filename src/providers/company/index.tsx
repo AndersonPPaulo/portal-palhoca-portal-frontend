@@ -157,7 +157,6 @@ interface ICompanyData {
   currentLimit: number; // ✅ Adicionar
 }
 
-
 interface IChildrenReact {
   children: ReactNode;
 }
@@ -171,63 +170,68 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [currentLimit, setCurrentLimit] = useState(9);
 
- const ListCompany = async (
-    page: number = 1,
-    limit: number = 9,
-    options: ListCompanyOptions = {}
-  ): Promise<CompanyProps> => {
-    // Armazenar os filtros, página e limite usados
-    setCurrentFilters(options);
-    setCurrentPage(page);
-    setCurrentLimit(limit);
+const ListCompany = async (
+  page: number = 1,
+  limit: number = 9,
+  options: ListCompanyOptions = {}
+): Promise<CompanyProps> => {
+  setCurrentFilters(options);
+  setCurrentPage(page);
+  setCurrentLimit(limit);
 
-    const params: any = {
-      limit,
-      page,
-    };
-
-    if (options.name) {
-      params.name = options.name;
-    }
-
-    if (options.categories && options.categories.length > 0) {
-      params.categories = options.categories.join(',');
-    }
-
-    if (options.highlight !== undefined && options.highlight !== null) {
-      params.highlight = String(options.highlight);
-    }
-
-    if (options.isActive !== undefined && options.isActive !== null) {
-      params.isActive =
-        typeof options.isActive === "boolean"
-          ? String(options.isActive)
-          : options.isActive;
-    }
-
-    const config = { params };
-
-    const response = await api
-      .get("/company", config)
-      .then((res) => {
-        setListCompany(res.data);
-        return res.data;
-      })
-      .catch((err) => {
-        console.error("Erro ao listar empresas:", err);
-        toast.error(err.response?.data?.message || "Erro ao listar empresas");
-        return {
-          total: 0,
-          page: 0,
-          limit: 0,
-          totalPages: 0,
-          data: [],
-        };
-      });
-
-    return response;
+  const params: any = {
+    limit: String(limit), 
+    page: String(page), 
+    excludeStatus: 'new_lead,in_process', 
   };
 
+  if (options.name) {
+    params.name = options.name;
+  }
+
+  if (options.categories && options.categories.length > 0) {
+    params.categories = options.categories.join(',');
+  }
+
+  if (options.highlight !== undefined && options.highlight !== null) {
+    params.highlight = String(options.highlight);
+  }
+
+  if (options.isActive !== undefined && options.isActive !== null) {
+    params.isActive =
+      typeof options.isActive === "boolean"
+        ? String(options.isActive)
+        : options.isActive;
+  }
+
+  console.log('🔍 Params sendo enviados:', params);
+  
+  const queryString = new URLSearchParams(params).toString();
+
+  const config = { params };
+
+  const response = await api
+    .get("/company", config)
+    .then((res) => {
+      console.log('📦 Total de empresas retornadas:', res.data.data?.length);
+      console.log('📦 Status das empresas:', res.data.data?.map((c: any) => c.status));
+      setListCompany(res.data);
+      return res.data;
+    })
+    .catch((err) => {
+      console.error("Erro ao listar empresas:", err);
+      toast.error(err.response?.data?.message || "Erro ao listar empresas");
+      return {
+        total: 0,
+        page: 0,
+        limit: 0,
+        totalPages: 0,
+        data: [],
+      };
+    });
+
+  return response;
+};
   const CreateCompany = async (
     data: UpdateCompanyProps
   ): Promise<ICompanyProps | void> => {
@@ -356,9 +360,9 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
       value={{
         CreateImageCompany,
         ListCompany,
-         currentFilters, 
-        currentPage, 
-        currentLimit, 
+        currentFilters,
+        currentPage,
+        currentLimit,
         CreateCompany,
         UpdateCompany,
         listCompany,

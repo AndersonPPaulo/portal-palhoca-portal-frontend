@@ -5,7 +5,6 @@ import TableCompany from "@/components/tables/company/page";
 import { Card } from "@/components/ui/card";
 import { useState } from "react";
 
-// ✅ Interface completa com todos os filtros
 interface FilterState {
   name: string;
   categories: string[];
@@ -16,8 +15,8 @@ export default function Comercio() {
   const [filter, setFilter] = useState("");
   const [activeFilters, setActiveFilters] = useState<{
     name?: string;
-    categories?: string[]; // ✅ Adicionar categories
-    highlight?: boolean | null; // ✅ Adicionar highlight
+    categories?: string[]; 
+    highlight?: boolean | null; 
     isActive?: boolean | null;
   }>({
     name: "",
@@ -26,15 +25,13 @@ export default function Comercio() {
     isActive: null,
   });
 
-  // ✅ Adapter corrigido para receber todos os filtros
   const handleFilterChange = (filters: FilterState) => {
-    console.log("🔍 Filtros recebidos:", filters);
     
     setActiveFilters({
       name: filters.name || "",
       categories: filters.categories || [],
       highlight: filters.highlight,
-      isActive: null, // Manter se você tiver esse filtro em outro lugar
+      isActive: null, 
     });
   };
 

@@ -71,7 +71,7 @@ export const HighlightCell = ({ article, portalId }: HighlightCellProps) => {
           }`}
           fill="currentColor"
         />
-        {isHighlight ? "Sim" : "Não"}
+        {isHighlight ? "Destaque" : "Não"}
         {highlightPosition && (
           <span className="ml-1 text-[10px] text-green-700">
             ({highlightPosition})
