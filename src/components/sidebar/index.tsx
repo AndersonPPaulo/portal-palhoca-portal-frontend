@@ -120,6 +120,7 @@ export function Sidebar() {
           className="mx-auto max-w-[197px] min-w-[197px]"
           height={100}
           width={200}
+          unoptimized
         />
 
         {/* Perfil */}

@@ -69,6 +69,7 @@ export default function ModernLoginPage() {
               height={80}
               className="brightness-0 invert"
               priority
+              unoptimized
             />
           </div>
           <div className="text-center max-w-md">
@@ -97,6 +98,7 @@ export default function ModernLoginPage() {
               height={64}
               className="mx-auto"
               priority
+              unoptimized
             />
           </div>
 
