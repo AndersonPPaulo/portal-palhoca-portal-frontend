@@ -115,7 +115,7 @@ export function Sidebar() {
       >
         {/* Logo */}
         <Image
-          src={LogoSi3.src}
+          src={LogoSi3}
           alt="Logo Si3 Sistemas"
           className="mx-auto max-w-[197px] min-w-[197px]"
         />

@@ -63,7 +63,7 @@ export default function ModernLoginPage() {
         <div className="relative z-10 flex flex-col justify-center items-center p-12 text-white">
           <div className="mb-8">
             <Image
-              src={LogoSi3.src}
+              src={LogoSi3}
               alt="SI3 Sistemas"
               width={300}
               height={80}
@@ -91,7 +91,7 @@ export default function ModernLoginPage() {
           {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-8">
             <Image
-              src={LogoSi3.src}
+              src={LogoSi3}
               alt="SI3 Sistemas"
               width={240}
               height={64}
