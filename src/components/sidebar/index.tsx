@@ -7,7 +7,7 @@ import { useContext, useEffect, useState } from "react";
 import { UserContext } from "@/providers/user";
 import ProfileImageViewer from "../profileImage";
 import { Menu, X } from "lucide-react";
-import LogoSi3 from "@/assets/logo-si3.png";
+import LogoSi3 from "logo-si3.png";
 
 export function Sidebar() {
   const { Profile, profile } = useContext(UserContext);
@@ -115,7 +115,7 @@ export function Sidebar() {
       >
         {/* Logo */}
         <Image
-          src={LogoSi3.src}
+          src={LogoSi3}
           alt="Logo Si3 Sistemas"
           className="mx-auto max-w-[197px] min-w-[197px]"
         />
