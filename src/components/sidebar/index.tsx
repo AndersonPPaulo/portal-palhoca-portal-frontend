@@ -118,6 +118,8 @@ export function Sidebar() {
           src={LogoSi3}
           alt="Logo Si3 Sistemas"
           className="mx-auto max-w-[197px] min-w-[197px]"
+          height={100}
+          width={200}
         />
 
         {/* Perfil */}
