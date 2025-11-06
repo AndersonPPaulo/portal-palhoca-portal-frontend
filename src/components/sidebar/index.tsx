@@ -27,7 +27,7 @@ export function Sidebar() {
     const handleClickOutside = (e: MouseEvent) => {
       const sidebar = document.getElementById("mobile-sidebar");
       const hamburger = document.getElementById("hamburger-button");
-      
+
       if (
         isMobileMenuOpen &&
         sidebar &&
@@ -115,7 +115,7 @@ export function Sidebar() {
       >
         {/* Logo */}
         <Image
-          src={LogoSi3}
+          src={LogoSi3.src}
           alt="Logo Si3 Sistemas"
           className="mx-auto max-w-[197px] min-w-[197px]"
         />
