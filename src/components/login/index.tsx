@@ -9,7 +9,7 @@ import { AuthContext } from "@/providers/auth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Lock, Mail } from "lucide-react";
-import LogoSi3 from "logo-si3.png";
+import LogoSi3 from "@/assets/logo-si3.png";
 
 export default function ModernLoginPage() {
   const { Login } = useContext(AuthContext);
