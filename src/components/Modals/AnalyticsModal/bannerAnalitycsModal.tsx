@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useContext } from "react";
-import ReusableAnalyticsModal from "./index"; 
+import React, { useContext, useEffect } from "react";
+import ReusableAnalyticsModal from "./index";
 import { BannerAnalyticsContext } from "@/providers/analytics/BannerAnalyticsProvider";
 import { bannerEventConfigs, bannerMetricConfigs } from "../configs";
+import { EventType } from "@/providers/analytics/BannerAnalyticsProvider";
 
 interface BannerAnalyticsModalProps {
   isOpen: boolean;
@@ -28,13 +29,38 @@ export default function BannerAnalyticsModal({
     ClearError,
   } = useContext(BannerAnalyticsContext);
 
+  // Carregar eventos quando o modal abrir
+  useEffect(() => {
+    if (isOpen && bannerId) {
+      ClearError();
+      const timeoutId = setTimeout(() => {
+        GetEventsByBanner(bannerId);
+      }, 500);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isOpen, bannerId, ClearError, GetEventsByBanner]);
+
   // Verificações de segurança
   const safeBannerEvents = bannerEvents || {};
   const bannerEventsList = safeBannerEvents[bannerId] || [];
 
+  // Se não há eventos e não há erro, criar eventos vazios para mostrar a interface
+  const fallbackEvents = bannerEventConfigs.map((config) => ({
+    event_type: config.type as EventType,
+    virtual_count: 0,
+  }));
+
+  const finalEventsList =
+    bannerEventsList.length > 0
+      ? bannerEventsList
+      : error
+      ? []
+      : fallbackEvents;
+
   // Adaptando para a interface do modal reutilizável
   const analyticsData = {
-    events: bannerEventsList,
+    events: finalEventsList,
     loading: loading || false,
     error: error || null,
   };
@@ -51,7 +77,7 @@ export default function BannerAnalyticsModal({
       try {
         await UpdateVirtualEvent({
           banner_id: id,
-          eventType: eventType as any, // Seu EventType enum
+          eventType: eventType as EventType,
           newVirtualCount: newValue,
         });
       } catch (error) {
@@ -76,6 +102,7 @@ export default function BannerAnalyticsModal({
       enableDebug={process.env.NODE_ENV === "development"}
       customTitle="Analytics do Banner"
       customDescription="Este banner ainda não possui eventos registrados."
+      disableAutoLoad={true}
     />
   );
 }

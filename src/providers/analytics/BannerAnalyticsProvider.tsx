@@ -2,7 +2,7 @@
 
 import { api } from "@/service/api";
 import { parseCookies } from "nookies";
-import { createContext, ReactNode, useState } from "react";
+import { createContext, ReactNode, useState, useCallback } from "react";
 import { ExtraData } from "./ArticleAnalyticsProvider";
 
 // Enums
@@ -104,35 +104,60 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
   };
 
   // Função para buscar eventos por banner (privada - com auth)
-  const GetEventsByBanner = async (bannerId: string): Promise<void> => {
-    setLoading(true);
-    setError(null);
+  const GetEventsByBanner = useCallback(
+    async (bannerId: string): Promise<void> => {
+      setLoading(true);
+      setError(null);
 
-    const { "user:token": token } = parseCookies();
-    const config = {
-      headers: { Authorization: `bearer ${token}` },
-    };
+      const { "user:token": token } = parseCookies();
 
-    const response = await api
-      .get(`/analytics/event-banner/${bannerId}/banner`, config)
-      .then((res) => {
-        const responseData: IEventsByBannerResponse = res.data.response;
-        setBannerEvents((prev) => ({
-          ...prev,
-          [bannerId]: responseData.events || [],
-        }));
+      if (!token) {
+        setError("Token de autenticação não encontrado");
         setLoading(false);
-      })
-      .catch((err) => {
-        setError(
-          err.response?.data?.message || "Erro ao buscar eventos do banner"
-        );
-        setLoading(false);
-        return err;
-      });
+        return;
+      }
 
-    return response;
-  };
+      const config = {
+        headers: { Authorization: `bearer ${token}` },
+      };
+
+      const endpoint = `/analytics/event-banner/${bannerId}/banner`;
+
+      const response = await api
+        .get(endpoint, config)
+        .then((res) => {
+          const responseData: IEventsByBannerResponse = res.data.response;
+          setBannerEvents((prev) => {
+            const newState = {
+              ...prev,
+              [bannerId]: responseData.events || [],
+            };
+            return newState;
+          });
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error("❌ Erro na API de eventos do banner:", {
+            status: err.response?.status,
+            statusText: err.response?.statusText,
+            data: err.response?.data,
+            message: err.message,
+            endpoint,
+            bannerId,
+            config,
+          });
+          setError(
+            err.response?.data?.message ||
+              `Erro ao buscar eventos do banner: ${err.message}`
+          );
+          setLoading(false);
+          return err;
+        });
+
+      return response;
+    },
+    []
+  );
 
   // Função para buscar totais de eventos (privada - com auth)
   const GetTotalEvents = async (): Promise<void> => {
@@ -185,7 +210,7 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
 
     const response = await api
       .patch(`/analytics/event-banner/${banner_id}/banner`, requestData, config)
-      .then((res) => {
+      .then(() => {
         GetEventsByBanner(banner_id);
         setLoading(false);
       })
@@ -201,9 +226,9 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
   };
 
   // Função para limpar erros
-  const ClearError = (): void => {
+  const ClearError = useCallback((): void => {
     setError(null);
-  };
+  }, []);
 
   return (
     <BannerAnalyticsContext.Provider

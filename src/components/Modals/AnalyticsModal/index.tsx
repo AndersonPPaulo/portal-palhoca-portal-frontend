@@ -90,6 +90,7 @@ interface ReusableAnalyticsModalProps {
   enableDebug?: boolean;
   customTitle?: string;
   customDescription?: string;
+  disableAutoLoad?: boolean;
 
   // Callbacks opcionais
   onDataLoaded?: (data: GenericEvent[]) => void;
@@ -110,6 +111,7 @@ export default function ReusableAnalyticsModal({
   enableDebug = false,
   customTitle,
   customDescription,
+  disableAutoLoad = false,
   isMobile: propIsMobile,
   onDataLoaded,
   onEventUpdated,
@@ -147,11 +149,11 @@ export default function ReusableAnalyticsModal({
 
   // Carregar dados quando modal abrir
   useEffect(() => {
-    if (isOpen && entityId) {
+    if (isOpen && entityId && !disableAutoLoad) {
       analyticsActions.loadEvents(entityId);
       analyticsActions.clearError();
     }
-  }, [isOpen]);
+  }, [isOpen, entityId, disableAutoLoad, analyticsActions]);
 
   // Processar dados quando chegarem
   useEffect(() => {
@@ -165,7 +167,7 @@ export default function ReusableAnalyticsModal({
         onDataLoaded(analyticsData.events);
       }
     }
-  }, [analyticsData.events, processEventData, entityType, onDataLoaded]);
+  }, [analyticsData.events, processEventData, onDataLoaded, eventTypeConfigs]);
 
   const handleSave = async () => {
     if (!analyticsActions.updateEvent) {

@@ -7,7 +7,10 @@ import dynamic from "next/dynamic";
 
 // Importa dinamicamente o componente com ssr: false
 const PostTabs = dynamic(
-  () => import("@/components/tabs/configuration/tabsPostConfiguration").then(mod => mod.PostTabs),
+  () =>
+    import("@/components/tabs/configuration/tabsPostConfiguration").then(
+      (mod) => mod.PostTabs
+    ),
   { ssr: false }
 );
 
