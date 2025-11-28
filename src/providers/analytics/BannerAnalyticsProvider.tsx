@@ -59,7 +59,11 @@ export interface IVirtualEventResponse {
 
 // Interface principal do contexto
 interface IBannerAnalyticsData {
-  GetEventsByBanner(bannerId: string): Promise<void>;
+  GetEventsByBanner(
+    bannerId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<void>;
   GetTotalEvents(): Promise<void>;
   UpdateVirtualEvent(data: IUpdateVirtualEventProps): Promise<void>;
   Get100EventsBanner(): Promise<IVirtualEventResponse>;
@@ -105,7 +109,11 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
 
   // Função para buscar eventos por banner (privada - com auth)
   const GetEventsByBanner = useCallback(
-    async (bannerId: string): Promise<void> => {
+    async (
+      bannerId: string,
+      startDate?: string,
+      endDate?: string
+    ): Promise<void> => {
       setLoading(true);
       setError(null);
 
@@ -121,7 +129,15 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
         headers: { Authorization: `bearer ${token}` },
       };
 
-      const endpoint = `/analytics/event-banner/${bannerId}/banner`;
+      // Construir query params
+      const queryParams = new URLSearchParams();
+      if (startDate) queryParams.append("startDate", startDate);
+      if (endDate) queryParams.append("endDate", endDate);
+      const queryString = queryParams.toString();
+
+      const endpoint = `/analytics/event-banner/${bannerId}/banner${
+        queryString ? `?${queryString}` : ""
+      }`;
 
       const response = await api
         .get(endpoint, config)

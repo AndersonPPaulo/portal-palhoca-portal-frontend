@@ -2,7 +2,7 @@
 
 import { api } from "@/service/api";
 import { parseCookies } from "nookies";
-import { createContext, ReactNode, useState } from "react";
+import { createContext, ReactNode, useState, useCallback } from "react";
 
 // Enums
 export enum EventType {
@@ -84,7 +84,11 @@ interface IUpdateVirtualEventProps {
 
 // Interface principal do contexto
 interface IArticleAnalyticsData {
-  GetEventsByArticle(articleId: string): Promise<void>;
+  GetEventsByArticle(
+    articleId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<void>;
   GetTotalEvents(): Promise<void>;
   UpdateVirtualEvent(data: IUpdateVirtualEventProps): Promise<void>;
   Get100EventsArticle(): Promise<IVirtualEventResponse>;
@@ -131,35 +135,52 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
   };
 
   // Função para buscar eventos por artigo (privada - com auth)
-  const GetEventsByArticle = async (articleId: string): Promise<void> => {
-    setLoading(true);
-    setError(null);
+  const GetEventsByArticle = useCallback(
+    async (
+      articleId: string,
+      startDate?: string,
+      endDate?: string
+    ): Promise<void> => {
+      setLoading(true);
+      setError(null);
 
-    const { "user:token": token } = parseCookies();
-    const config = {
-      headers: { Authorization: `bearer ${token}` },
-    };
+      const { "user:token": token } = parseCookies();
+      const config = {
+        headers: { Authorization: `bearer ${token}` },
+      };
 
-    const response = await api
-      .get(`/analytics/event-article/${articleId}/article`, config)
-      .then((res) => {
-        const responseData: IEventsByArticleResponse = res.data.response;
-        setArticleEvents((prev) => ({
-          ...prev,
-          [articleId]: responseData.events || [],
-        }));
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(
-          err.response?.data?.message || "Erro ao buscar eventos do artigo"
-        );
-        setLoading(false);
-        return err;
-      });
+      // Construir query params
+      const queryParams = new URLSearchParams();
+      if (startDate) queryParams.append("startDate", startDate);
+      if (endDate) queryParams.append("endDate", endDate);
+      const queryString = queryParams.toString();
 
-    return response;
-  };
+      const endpoint = `/analytics/event-article/${articleId}/article${
+        queryString ? `?${queryString}` : ""
+      }`;
+
+      const response = await api
+        .get(endpoint, config)
+        .then((res) => {
+          const responseData: IEventsByArticleResponse = res.data.response;
+          setArticleEvents((prev) => ({
+            ...prev,
+            [articleId]: responseData.events || [],
+          }));
+          setLoading(false);
+        })
+        .catch((err) => {
+          setError(
+            err.response?.data?.message || "Erro ao buscar eventos do artigo"
+          );
+          setLoading(false);
+          return err;
+        });
+
+      return response;
+    },
+    []
+  );
 
   // Função para buscar totais de eventos (privada - com auth)
   const GetTotalEvents = async (): Promise<void> => {
@@ -232,9 +253,9 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
   };
 
   // Função para limpar erros
-  const ClearError = (): void => {
+  const ClearError = useCallback((): void => {
     setError(null);
-  };
+  }, []);
 
   return (
     <ArticleAnalyticsContext.Provider

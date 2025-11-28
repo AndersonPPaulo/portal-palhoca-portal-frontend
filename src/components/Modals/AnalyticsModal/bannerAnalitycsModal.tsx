@@ -66,9 +66,9 @@ export default function BannerAnalyticsModal({
   };
 
   const analyticsActions = {
-    loadEvents: async (id: string) => {
+    loadEvents: async (id: string, startDate?: string, endDate?: string) => {
       try {
-        await GetEventsByBanner(id);
+        await GetEventsByBanner(id, startDate, endDate);
       } catch (error) {
         console.error("Erro ao carregar eventos do banner:", error);
       }

@@ -1,0 +1,339 @@
+import React from "react";
+import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import type {
+  EventTypeConfig,
+  MetricConfig,
+} from "../Modals/AnalyticsModal/index";
+
+// Estilos do PDF
+const styles = StyleSheet.create({
+  page: {
+    padding: 30,
+    fontSize: 10,
+    fontFamily: "Helvetica",
+    backgroundColor: "#ffffff",
+  },
+  header: {
+    marginBottom: 20,
+    borderBottom: "2 solid #2563eb",
+    paddingBottom: 10,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#1e40af",
+    marginBottom: 5,
+  },
+  subtitle: {
+    fontSize: 12,
+    color: "#64748b",
+    marginBottom: 3,
+  },
+  entityId: {
+    fontSize: 10,
+    color: "#475569",
+    fontWeight: "bold",
+    marginBottom: 3,
+  },
+  entityTitle: {
+    fontSize: 14,
+    color: "#334155",
+    fontWeight: "bold",
+    marginBottom: 3,
+  },
+  periodText: {
+    fontSize: 10,
+    color: "#475569",
+    fontWeight: "bold",
+  },
+  metricsContainer: {
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  metricsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  metricCard: {
+    width: "48%",
+    padding: 12,
+    backgroundColor: "#f8fafc",
+    borderRadius: 4,
+    border: "1 solid #e2e8f0",
+  },
+  metricLabel: {
+    fontSize: 9,
+    color: "#64748b",
+    marginBottom: 4,
+  },
+  metricValue: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1e40af",
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#1e40af",
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  eventContainer: {
+    marginBottom: 10,
+    padding: 10,
+    backgroundColor: "#ffffff",
+    border: "1 solid #e2e8f0",
+    borderRadius: 4,
+  },
+  eventHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  eventLabel: {
+    fontSize: 11,
+    fontWeight: "bold",
+    color: "#334155",
+  },
+  eventValue: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#2563eb",
+  },
+  eventDescription: {
+    fontSize: 8,
+    color: "#64748b",
+    marginTop: 2,
+  },
+  footer: {
+    position: "absolute",
+    bottom: 30,
+    left: 30,
+    right: 30,
+    textAlign: "center",
+    fontSize: 8,
+    color: "#94a3b8",
+    borderTop: "1 solid #e2e8f0",
+    paddingTop: 10,
+  },
+  emptyState: {
+    marginTop: 40,
+    textAlign: "center",
+    fontSize: 12,
+    color: "#94a3b8",
+  },
+  infoBox: {
+    marginTop: 20,
+    padding: 12,
+    backgroundColor: "#eff6ff",
+    borderRadius: 4,
+    border: "1 solid #bfdbfe",
+  },
+  infoTitle: {
+    fontSize: 10,
+    fontWeight: "bold",
+    color: "#1e40af",
+    marginBottom: 6,
+  },
+  infoText: {
+    fontSize: 8,
+    color: "#475569",
+    marginBottom: 3,
+  },
+});
+
+interface AnalyticsReportPDFProps {
+  entityId: string;
+  entityType: string;
+  entityTitle: string;
+  events: Record<string, number>;
+  eventTypeConfigs: EventTypeConfig[];
+  metricConfigs?: MetricConfig[];
+  startDate?: string;
+  endDate?: string;
+}
+
+const AnalyticsReportPDF: React.FC<AnalyticsReportPDFProps> = ({
+  entityId,
+  entityType,
+  entityTitle,
+  events,
+  eventTypeConfigs,
+  metricConfigs,
+  startDate,
+  endDate,
+}) => {
+  const getReportTitle = () => {
+    switch (entityType) {
+      case "article":
+        return "Relatório de Analytics - Notícia";
+      case "banner":
+        return "Relatório de Analytics - Banner";
+      case "company":
+        return "Relatório de Analytics - Comércio";
+      default:
+        return "Relatório de Analytics";
+    }
+  };
+
+  const formatPeriod = () => {
+    if (!startDate && !endDate) {
+      return "Todos os períodos";
+    }
+
+    try {
+      const start = startDate
+        ? format(new Date(startDate), "dd/MM/yyyy HH:mm", { locale: ptBR })
+        : "Início";
+      const end = endDate
+        ? format(new Date(endDate), "dd/MM/yyyy HH:mm", { locale: ptBR })
+        : "Fim";
+      return `${start} até ${end}`;
+    } catch {
+      return startDate && endDate
+        ? `${startDate} até ${endDate}`
+        : "Todos os períodos";
+    }
+  };
+
+  const calculateMetrics = () => {
+    if (metricConfigs) {
+      return metricConfigs.map((metric) => ({
+        label: metric.label,
+        value: metric.calculation(events),
+      }));
+    }
+
+    // Métricas padrão
+    const views = events.view || 0;
+    const clicks = events.click || 0;
+    const viewEnds = events.view_end || 0;
+
+    return [
+      { label: "Total Views", value: views.toLocaleString() },
+      { label: "Total Clicks", value: clicks.toLocaleString() },
+      {
+        label: "Taxa Conclusão",
+        value: views > 0 ? `${((viewEnds / views) * 100).toFixed(1)}%` : "0%",
+      },
+      {
+        label: "CTR",
+        value: views > 0 ? `${((clicks / views) * 100).toFixed(1)}%` : "0%",
+      },
+    ];
+  };
+
+  const metrics = calculateMetrics();
+  const hasData = Object.values(events).some((value) => value > 0);
+
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        {/* Cabeçalho */}
+        <View style={styles.header}>
+          <Text style={styles.title}>{getReportTitle()}</Text>
+          <Text style={styles.subtitle}>
+            Portal Palhoça - Painel Administrativo
+          </Text>
+          <Text style={styles.entityTitle}>{entityTitle}</Text>
+          <Text style={styles.periodText}>Período: {formatPeriod()}</Text>
+          <Text style={styles.entityId}>ID: {entityId}</Text>
+        </View>
+
+        {hasData ? (
+          <>
+            {/* Métricas Principais */}
+            <View style={styles.metricsContainer}>
+              <Text style={styles.sectionTitle}>Métricas Principais</Text>
+              <View style={styles.metricsGrid}>
+                {metrics.map((metric, index) => (
+                  <View key={index} style={styles.metricCard}>
+                    <Text style={styles.metricLabel}>{metric.label}</Text>
+                    <Text style={styles.metricValue}>
+                      {typeof metric.value === "number"
+                        ? metric.value.toLocaleString()
+                        : metric.value}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* Detalhamento por Evento */}
+            <View>
+              <Text style={styles.sectionTitle}>Detalhamento por Evento</Text>
+              {eventTypeConfigs.map((config) => {
+                const value = events[config.type] || 0;
+                const totalViews = events.view || 0;
+                const percentage =
+                  config.type !== "view" && totalViews > 0
+                    ? ((value / totalViews) * 100).toFixed(1)
+                    : null;
+
+                return (
+                  <View key={config.type} style={styles.eventContainer}>
+                    <View style={styles.eventHeader}>
+                      <Text style={styles.eventLabel}>{config.label}</Text>
+                      <Text style={styles.eventValue}>
+                        {value.toLocaleString()}
+                      </Text>
+                    </View>
+                    <Text style={styles.eventDescription}>
+                      {config.description}
+                    </Text>
+                    {percentage && (
+                      <Text style={styles.eventDescription}>
+                        {percentage}% do total de visualizações
+                      </Text>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+
+            {/* Informações Contextuais */}
+            <View style={styles.infoBox}>
+              <Text style={styles.infoTitle}>Como interpretar as métricas</Text>
+              <Text style={styles.infoText}>
+                • Taxa de Conclusão: (Leituras Completas ÷ Visualizações) × 100.
+                Mede o engajamento até o fim do conteúdo.
+              </Text>
+              <Text style={styles.infoText}>
+                • CTR: (Cliques ÷ Visualizações) × 100. Indica a proporção de
+                usuários que clicaram.
+              </Text>
+              <Text style={styles.infoText}>
+                • Os dados refletem o período selecionado ou todo o histórico.
+              </Text>
+            </View>
+          </>
+        ) : (
+          <View style={styles.emptyState}>
+            <Text>Nenhum dado encontrado para o período selecionado.</Text>
+          </View>
+        )}
+
+        {/* Rodapé */}
+        <View style={styles.footer}>
+          <Text>
+            Relatório gerado em{" "}
+            {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+          </Text>
+          <Text>
+            {hasData
+              ? `Total de eventos registrados: ${Object.values(events).reduce(
+                  (a, b) => a + b,
+                  0
+                )}`
+              : "Nenhum evento registrado"}
+          </Text>
+        </View>
+      </Page>
+    </Document>
+  );
+};
+
+export default AnalyticsReportPDF;
