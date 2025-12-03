@@ -2,7 +2,7 @@
 
 import { api } from "@/service/api";
 import { parseCookies } from "nookies";
-import { createContext, ReactNode, useState } from "react";
+import { createContext, ReactNode, useState, useCallback } from "react";
 import { ExtraData } from "./ArticleAnalyticsProvider";
 
 // Enums
@@ -16,6 +16,11 @@ export enum EventType {
 }
 
 // Interfaces dos dados
+export interface CompanyEventRaw {
+  event_type: EventType;
+  timestamp: string;
+}
+
 export interface CompanyEvent {
   event_type: EventType;
   virtual_count: number;
@@ -28,17 +33,12 @@ export interface TotalCompanyEvent {
 
 interface IEventsByCompanyResponse {
   message: string;
-  events: CompanyEvent[];
+  events: CompanyEventRaw[];
 }
 
 interface ITotalEventsResponse {
   message: string;
   events: TotalCompanyEvent[];
-}
-
-interface IUpdateVirtualEventResponse {
-  message: string;
-  updated: any;
 }
 
 interface IUpdateVirtualEventProps {
@@ -64,7 +64,11 @@ export interface IVirtualEventResponse {
 
 // Interface principal do contexto
 interface ICompanyAnalyticsData {
-  GetEventsByCompany(companyId: string): Promise<void>;
+  GetEventsByCompany(
+    companyId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<void>;
   GetTotalEvents(): Promise<void>;
   UpdateVirtualEvent(data: IUpdateVirtualEventProps): Promise<void>;
   Get100EventsCompany(): Promise<IVirtualEventResponse>;
@@ -109,35 +113,70 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
     }
   };
   // Função para buscar eventos por comércio (privada - com auth)
-  const GetEventsByCompany = async (companyId: string): Promise<void> => {
-    setLoading(true);
-    setError(null);
+  const GetEventsByCompany = useCallback(
+    async (
+      companyId: string,
+      startDate?: string,
+      endDate?: string
+    ): Promise<void> => {
+      setLoading(true);
+      setError(null);
 
-    const { "user:token": token } = parseCookies();
-    const config = {
-      headers: { Authorization: `bearer ${token}` },
-    };
+      const { "user:token": token } = parseCookies();
+      const config = {
+        headers: { Authorization: `bearer ${token}` },
+      };
 
-    const response = await api
-      .get(`/analytics/event-company/${companyId}/company`, config)
-      .then((res) => {
-        const responseData: IEventsByCompanyResponse = res.data.response;
-        setCompanyEvents((prev) => ({
-          ...prev,
-          [companyId]: responseData.events || [],
-        }));
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(
-          err.response?.data?.message || "Erro ao buscar eventos do comércio"
-        );
-        setLoading(false);
-        return err;
-      });
+      // Construir query params
+      const queryParams = new URLSearchParams();
+      if (startDate) queryParams.append("startDate", startDate);
+      if (endDate) queryParams.append("endDate", endDate);
+      const queryString = queryParams.toString();
 
-    return response;
-  };
+      const endpoint = `/analytics/event-company/${companyId}/company${
+        queryString ? `?${queryString}` : ""
+      }`;
+
+      const response = await api
+        .get(endpoint, config)
+        .then((res) => {
+          const responseData: IEventsByCompanyResponse = res.data.response;
+
+          // Agregar eventos individuais por tipo
+          const rawEvents = responseData.events || [];
+          const aggregated: Record<string, number> = {};
+
+          rawEvents.forEach((event) => {
+            const type = event.event_type;
+            aggregated[type] = (aggregated[type] || 0) + 1;
+          });
+
+          // Converter para formato esperado
+          const processedEvents: CompanyEvent[] = Object.entries(
+            aggregated
+          ).map(([event_type, count]) => ({
+            event_type: event_type as EventType,
+            virtual_count: count,
+          }));
+
+          setCompanyEvents((prev) => ({
+            ...prev,
+            [companyId]: processedEvents,
+          }));
+          setLoading(false);
+        })
+        .catch((err) => {
+          setError(
+            err.response?.data?.message || "Erro ao buscar eventos do comércio"
+          );
+          setLoading(false);
+          return err;
+        });
+
+      return response;
+    },
+    []
+  );
 
   // Função para buscar totais de eventos (privada - com auth)
   const GetTotalEvents = async (): Promise<void> => {
@@ -210,9 +249,9 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
   };
 
   // Função para limpar erros
-  const ClearError = (): void => {
+  const ClearError = useCallback((): void => {
     setError(null);
-  };
+  }, []);
 
   return (
     <CompanyAnalyticsContext.Provider

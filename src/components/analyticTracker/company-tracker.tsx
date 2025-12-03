@@ -48,7 +48,7 @@ const eventTypeConfig = {
     bgColor: "bg-orange-50",
     borderColor: "border-orange-200",
   },
-   whatsapp_click: {
+  whatsapp_click: {
     label: "Clicou no Whatsapp",
     icon: MousePointer,
     color: "text-fuchsia-600",

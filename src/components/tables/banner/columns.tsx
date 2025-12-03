@@ -1,6 +1,5 @@
 "use client";
 
-import { DialogDelete } from "@/components/dialog/delete";
 import BannerAnalyticsModal from "@/components/Modals/AnalyticsModal/bannerAnalitycsModal";
 import {
   TooltipContent,

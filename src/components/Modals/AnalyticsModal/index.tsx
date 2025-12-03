@@ -14,15 +14,14 @@ import {
   TrendingUp,
   Save,
   RefreshCw,
-  MessageCircle,
-  MapPin,
-  User,
   BarChart3,
   AlertCircle,
 } from "lucide-react";
-import { useEffect, useState, useCallback, useMemo, useContext } from "react";
+import { useEffect, useState, useCallback, useContext } from "react";
 import type { LucideIcon } from "lucide-react";
-import { is } from "date-fns/locale";
+import { format } from "date-fns";
+import { pdf } from "@react-pdf/renderer";
+import { Download } from "lucide-react";
 
 export interface GenericEvent {
   event_type: string;
@@ -46,7 +45,11 @@ export interface AnalyticsData {
 }
 
 export interface AnalyticsActions {
-  loadEvents: (entityId: string) => Promise<void>;
+  loadEvents: (
+    entityId: string,
+    startDate?: string,
+    endDate?: string
+  ) => Promise<void>;
   updateEvent?: (
     entityId: string,
     eventType: string,
@@ -90,6 +93,7 @@ interface ReusableAnalyticsModalProps {
   enableDebug?: boolean;
   customTitle?: string;
   customDescription?: string;
+  disableAutoLoad?: boolean;
 
   // Callbacks opcionais
   onDataLoaded?: (data: GenericEvent[]) => void;
@@ -107,10 +111,9 @@ export default function ReusableAnalyticsModal({
   eventTypeConfigs,
   metricConfigs,
   enableEditing = true,
-  enableDebug = false,
   customTitle,
   customDescription,
-  isMobile: propIsMobile,
+  disableAutoLoad = false,
   onDataLoaded,
   onEventUpdated,
 }: ReusableAnalyticsModalProps) {
@@ -122,6 +125,11 @@ export default function ReusableAnalyticsModal({
   const [originalEvents, setOriginalEvents] = useState<Record<string, number>>(
     {}
   );
+
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+
+  const [isExporting, setIsExporting] = useState(false);
   const isMobile = useIsMobile();
 
   const processEventData = useCallback(
@@ -147,11 +155,15 @@ export default function ReusableAnalyticsModal({
 
   // Carregar dados quando modal abrir
   useEffect(() => {
-    if (isOpen && entityId) {
-      analyticsActions.loadEvents(entityId);
+    if (isOpen && entityId && !disableAutoLoad) {
+      analyticsActions.loadEvents(
+        entityId,
+        startDate || undefined,
+        endDate || undefined
+      );
       analyticsActions.clearError();
     }
-  }, [isOpen]);
+  }, [isOpen, entityId, disableAutoLoad, analyticsActions, startDate, endDate]);
 
   // Processar dados quando chegarem
   useEffect(() => {
@@ -165,7 +177,7 @@ export default function ReusableAnalyticsModal({
         onDataLoaded(analyticsData.events);
       }
     }
-  }, [analyticsData.events, processEventData, entityType, onDataLoaded]);
+  }, [analyticsData.events, processEventData, onDataLoaded, eventTypeConfigs]);
 
   const handleSave = async () => {
     if (!analyticsActions.updateEvent) {
@@ -215,7 +227,63 @@ export default function ReusableAnalyticsModal({
   };
 
   const handleRefresh = () => {
+    analyticsActions.loadEvents(
+      entityId,
+      startDate || undefined,
+      endDate || undefined
+    );
+  };
+
+  const handleApplyFilter = () => {
+    analyticsActions.loadEvents(
+      entityId,
+      startDate || undefined,
+      endDate || undefined
+    );
+  };
+
+  const handleClearFilter = () => {
+    setStartDate("");
+    setEndDate("");
     analyticsActions.loadEvents(entityId);
+  };
+
+  const handleExportPDF = async () => {
+    setIsExporting(true);
+    try {
+      // Importação dinâmica do componente PDF
+      const { default: AnalyticsReportPDF } = await import(
+        "@/components/pdf/AnalyticsReportPDF"
+      );
+
+      const doc = (
+        <AnalyticsReportPDF
+          entityId={entityId}
+          entityType={entityType}
+          entityTitle={entityTitle}
+          events={editableEvents}
+          eventTypeConfigs={eventTypeConfigs}
+          metricConfigs={metricConfigs}
+          startDate={startDate}
+          endDate={endDate}
+        />
+      );
+
+      const blob = await pdf(doc).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `analytics-${entityType}-${entityTitle
+        .replace(/[^a-z0-9]/gi, "-")
+        .toLowerCase()}-${format(new Date(), "yyyy-MM-dd")}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Erro ao exportar PDF:", error);
+      alert("Erro ao gerar PDF. Tente novamente.");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const calculateDefaultMetrics = () => {
@@ -232,18 +300,6 @@ export default function ReusableAnalyticsModal({
   };
 
   const { profile } = useContext(UserContext);
-
-  const userPermissions = useMemo(() => {
-    return {
-      isChiefEditor:
-        profile?.role?.name?.toLowerCase() === "chefe de redação" ||
-        profile?.chiefEditor !== null,
-      isAdmin: profile?.role?.name?.toLowerCase() === "administrador",
-      userId: profile?.id,
-      userRole: profile?.role?.name,
-      profile,
-    };
-  }, [profile]);
 
   const defaultMetrics = calculateDefaultMetrics();
 
@@ -388,6 +444,74 @@ export default function ReusableAnalyticsModal({
                     )}
                   </>
                 )}
+            </div>
+          </div>
+
+          {/* Filtros de Data */}
+          <div className="mt-4 flex flex-wrap items-end gap-3">
+            <div className="flex-1 min-w-[200px]">
+              <Label htmlFor="startDate" className="text-xs text-gray-600 mb-1">
+                Data Início
+              </Label>
+              <Input
+                id="startDate"
+                type="datetime-local"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="text-sm"
+                disabled={analyticsData.loading || isEditing}
+              />
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <Label htmlFor="endDate" className="text-xs text-gray-600 mb-1">
+                Data Fim
+              </Label>
+              <Input
+                id="endDate"
+                type="datetime-local"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="text-sm"
+                disabled={analyticsData.loading || isEditing}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleApplyFilter}
+                disabled={
+                  analyticsData.loading || isEditing || (!startDate && !endDate)
+                }
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Aplicar Filtro
+              </Button>
+              {(startDate || endDate) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearFilter}
+                  disabled={analyticsData.loading || isEditing}
+                  className="text-gray-700"
+                >
+                  Limpar
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportPDF}
+                disabled={analyticsData.loading || isExporting || !hasData}
+                className="text-gray-700 hover:bg-gray-100"
+              >
+                {isExporting ? (
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                Exportar PDF
+              </Button>
             </div>
           </div>
         </div>
