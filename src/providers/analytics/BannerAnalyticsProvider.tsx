@@ -16,6 +16,11 @@ export enum EventType {
 }
 
 // Interfaces dos dados
+export interface BannerEventRaw {
+  event_type: EventType;
+  timestamp: string;
+}
+
 export interface BannerEvent {
   event_type: EventType;
   virtual_count: number;
@@ -28,7 +33,7 @@ export interface TotalBannerEvent {
 
 interface IEventsByBannerResponse {
   message: string;
-  events: BannerEvent[];
+  events: BannerEventRaw[];
 }
 
 interface ITotalEventsResponse {
@@ -143,10 +148,28 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
         .get(endpoint, config)
         .then((res) => {
           const responseData: IEventsByBannerResponse = res.data.response;
+
+          // Agregar eventos individuais por tipo
+          const rawEvents = responseData.events || [];
+          const aggregated: Record<string, number> = {};
+
+          rawEvents.forEach((event) => {
+            const type = event.event_type;
+            aggregated[type] = (aggregated[type] || 0) + 1;
+          });
+
+          // Converter para formato esperado
+          const processedEvents: BannerEvent[] = Object.entries(aggregated).map(
+            ([event_type, count]) => ({
+              event_type: event_type as EventType,
+              virtual_count: count,
+            })
+          );
+
           setBannerEvents((prev) => {
             const newState = {
               ...prev,
-              [bannerId]: responseData.events || [],
+              [bannerId]: processedEvents,
             };
             return newState;
           });

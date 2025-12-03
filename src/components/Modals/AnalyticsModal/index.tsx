@@ -14,13 +14,10 @@ import {
   TrendingUp,
   Save,
   RefreshCw,
-  MessageCircle,
-  MapPin,
-  User,
   BarChart3,
   AlertCircle,
 } from "lucide-react";
-import { useEffect, useState, useCallback, useMemo, useContext } from "react";
+import { useEffect, useState, useCallback, useContext } from "react";
 import type { LucideIcon } from "lucide-react";
 import { format } from "date-fns";
 import { pdf } from "@react-pdf/renderer";
@@ -114,11 +111,9 @@ export default function ReusableAnalyticsModal({
   eventTypeConfigs,
   metricConfigs,
   enableEditing = true,
-  enableDebug = false,
   customTitle,
   customDescription,
   disableAutoLoad = false,
-  isMobile: propIsMobile,
   onDataLoaded,
   onEventUpdated,
 }: ReusableAnalyticsModalProps) {
@@ -130,8 +125,10 @@ export default function ReusableAnalyticsModal({
   const [originalEvents, setOriginalEvents] = useState<Record<string, number>>(
     {}
   );
+
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+
   const [isExporting, setIsExporting] = useState(false);
   const isMobile = useIsMobile();
 
@@ -303,18 +300,6 @@ export default function ReusableAnalyticsModal({
   };
 
   const { profile } = useContext(UserContext);
-
-  const userPermissions = useMemo(() => {
-    return {
-      isChiefEditor:
-        profile?.role?.name?.toLowerCase() === "chefe de redação" ||
-        profile?.chiefEditor !== null,
-      isAdmin: profile?.role?.name?.toLowerCase() === "administrador",
-      userId: profile?.id,
-      userRole: profile?.role?.name,
-      profile,
-    };
-  }, [profile]);
 
   const defaultMetrics = calculateDefaultMetrics();
 

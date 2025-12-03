@@ -41,28 +41,11 @@ export default function BannerAnalyticsModal({
     }
   }, [isOpen, bannerId, ClearError, GetEventsByBanner]);
 
-  // Verificações de segurança
-  const safeBannerEvents = bannerEvents || {};
-  const bannerEventsList = safeBannerEvents[bannerId] || [];
-
-  // Se não há eventos e não há erro, criar eventos vazios para mostrar a interface
-  const fallbackEvents = bannerEventConfigs.map((config) => ({
-    event_type: config.type as EventType,
-    virtual_count: 0,
-  }));
-
-  const finalEventsList =
-    bannerEventsList.length > 0
-      ? bannerEventsList
-      : error
-      ? []
-      : fallbackEvents;
-
   // Adaptando para a interface do modal reutilizável
   const analyticsData = {
-    events: finalEventsList,
-    loading: loading || false,
-    error: error || null,
+    events: bannerEvents[bannerId] || [],
+    loading,
+    error,
   };
 
   const analyticsActions = {

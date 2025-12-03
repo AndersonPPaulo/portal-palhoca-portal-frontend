@@ -15,6 +15,11 @@ export enum EventType {
 }
 
 // Interfaces dos dados
+export interface ArticleEventRaw {
+  event_type: EventType;
+  timestamp: string;
+}
+
 export interface ArticleEvent {
   event_type: EventType;
   virtual_count: number;
@@ -27,7 +32,7 @@ export interface TotalArticleEvent {
 
 interface IEventsByArticleResponse {
   message: string;
-  events: ArticleEvent[];
+  events: ArticleEventRaw[];
 }
 
 interface ITotalEventsResponse {
@@ -163,9 +168,27 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
         .get(endpoint, config)
         .then((res) => {
           const responseData: IEventsByArticleResponse = res.data.response;
+
+          // Agregar eventos individuais por tipo
+          const rawEvents = responseData.events || [];
+          const aggregated: Record<string, number> = {};
+
+          rawEvents.forEach((event) => {
+            const type = event.event_type;
+            aggregated[type] = (aggregated[type] || 0) + 1;
+          });
+
+          // Converter para formato esperado
+          const processedEvents: ArticleEvent[] = Object.entries(
+            aggregated
+          ).map(([event_type, count]) => ({
+            event_type: event_type as EventType,
+            virtual_count: count,
+          }));
+
           setArticleEvents((prev) => ({
             ...prev,
-            [articleId]: responseData.events || [],
+            [articleId]: processedEvents,
           }));
           setLoading(false);
         })
