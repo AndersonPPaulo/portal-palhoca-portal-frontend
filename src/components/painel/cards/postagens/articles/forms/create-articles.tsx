@@ -275,7 +275,6 @@ export default function FormCreateArticle() {
     status: boolean;
   }) => {
     try {
-
       // 1. Atualizar a lista de tags no contexto (SEM redirecionamento)
       await ListTags();
 

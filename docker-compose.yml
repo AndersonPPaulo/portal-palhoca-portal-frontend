@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  # Aplicação Next.js
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: portal-palhoca-painel
+    ports:
+      - "3000:3000"
+    volumes:
+      # Montar o código fonte para hot-reload
+      - .:/app
+      # Usar volume para node_modules (melhor performance)
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://api.portalpalhoca.com.br}
+      # Adicione outras variáveis de ambiente necessárias
+      # - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      # - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      # - AWS_REGION=${AWS_REGION}
+      # - AWS_BUCKET=${AWS_BUCKET}
+    networks:
+      - portal-network
+    restart: unless-stopped
+    # Comando para garantir hot-reload
+    command: npm run dev
+
+networks:
+  portal-network:
+    driver: bridge
