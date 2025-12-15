@@ -9,6 +9,7 @@
       "resume_content": "A Prefeitura de Palhoça inaugurou nesta segunda-feira um novo centro de saúde no bairro Pedra Branca, ampliando o atendimento à população local.",
       "content": "<p>A Prefeitura de Palhoça inaugurou nesta segunda-feira (10) um novo centro de saúde no bairro Pedra Branca. A unidade conta com consultórios médicos, odontológicos e farmácia.</p><p>O centro vai atender cerca de 5 mil pessoas por mês e funciona de segunda a sexta-feira, das 7h às 19h.</p>",
       "status": "PUBLISHED",
+      "clicks_view": 1524,
       "highlight": true,
       "highlight_position": 1,
       "category": {
@@ -59,6 +60,7 @@
       "resume_content": "Motoristas enfrentam lentidão na BR-101, na altura de Palhoça, devido a acidente envolvendo dois veículos.",
       "content": "<p>O trânsito na BR-101, na altura do km 215 em Palhoça, apresenta lentidão nesta manhã devido a um acidente envolvendo dois veículos.</p><p>A PRF está no local realizando o atendimento. Não há registro de feridos graves.</p>",
       "status": "PUBLISHED",
+      "clicks_view": 892,
       "highlight": false,
       "highlight_position": null,
       "category": {
@@ -109,6 +111,7 @@
       "resume_content": "Festas natalinas e de ano novo prometem animar a população de Palhoça com shows e atrações gratuitas.",
       "content": "<p>A Prefeitura de Palhoça divulgou o calendário oficial de eventos para as festas de fim de ano. Serão realizados shows, apresentações culturais e queima de fogos.</p><p>As atividades começam dia 20 de dezembro e vão até o dia 1º de janeiro.</p>",
       "status": "DRAFT",
+      "clicks_view": 0,
       "highlight": false,
       "highlight_position": null,
       "category": {

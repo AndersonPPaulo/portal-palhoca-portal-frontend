@@ -178,6 +178,184 @@ server.get("/api/profile", (req, res) => {
   });
 });
 
+// Endpoint para listar artigos do autor
+server.get("/article-author", (req, res) => {
+  const db = router.db;
+  const articles = db.get("articles").value();
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
+  const startIndex = (page - 1) * limit;
+  const endIndex = startIndex + limit;
+  const paginatedArticles = articles.slice(startIndex, endIndex);
+
+  console.log(
+    `📝 Requisição de artigos do autor - Página ${page}, Limite ${limit}`
+  );
+
+  return res.status(200).json({
+    message: "Artigos listados com sucesso",
+    data: paginatedArticles,
+    meta: {
+      page,
+      limit,
+      total: articles.length,
+      totalPages: Math.ceil(articles.length / limit),
+    },
+  });
+});
+
+server.get("/api/article-author", (req, res) => {
+  const db = router.db;
+  const articles = db.get("articles").value();
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
+  const startIndex = (page - 1) * limit;
+  const endIndex = startIndex + limit;
+  const paginatedArticles = articles.slice(startIndex, endIndex);
+
+  console.log(
+    `📝 Requisição de artigos do autor (API) - Página ${page}, Limite ${limit}`
+  );
+
+  return res.status(200).json({
+    message: "Artigos listados com sucesso",
+    data: paginatedArticles,
+    meta: {
+      page,
+      limit,
+      total: articles.length,
+      totalPages: Math.ceil(articles.length / limit),
+    },
+  });
+});
+
+// Endpoint para listar empresas com paginação
+server.get("/company", (req, res) => {
+  const db = router.db;
+  const companies = db.get("companies").value();
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
+  const startIndex = (page - 1) * limit;
+  const endIndex = startIndex + limit;
+  const paginatedCompanies = companies.slice(startIndex, endIndex);
+
+  console.log(`🏢 Requisição de empresas - Página ${page}, Limite ${limit}`);
+
+  return res.status(200).json({
+    data: paginatedCompanies,
+    total: companies.length,
+    page,
+    limit,
+    totalPages: Math.ceil(companies.length / limit),
+  });
+});
+
+server.get("/api/company", (req, res) => {
+  const db = router.db;
+  const companies = db.get("companies").value();
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
+  const startIndex = (page - 1) * limit;
+  const endIndex = startIndex + limit;
+  const paginatedCompanies = companies.slice(startIndex, endIndex);
+
+  console.log(
+    `🏢 Requisição de empresas (API) - Página ${page}, Limite ${limit}`
+  );
+
+  return res.status(200).json({
+    data: paginatedCompanies,
+    total: companies.length,
+    page,
+    limit,
+    totalPages: Math.ceil(companies.length / limit),
+  });
+});
+
+// Endpoint para listar usuários com paginação
+server.get("/user", (req, res) => {
+  const db = router.db;
+  const users = db.get("users").value();
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
+  const startIndex = (page - 1) * limit;
+  const endIndex = startIndex + limit;
+  const paginatedUsers = users.slice(startIndex, endIndex);
+
+  console.log(`👥 Requisição de usuários - Página ${page}, Limite ${limit}`);
+
+  return res.status(200).json({
+    response: {
+      data: paginatedUsers,
+      total: users.length,
+      page,
+      limit,
+      totalPages: Math.ceil(users.length / limit),
+    },
+  });
+});
+
+server.get("/api/user", (req, res) => {
+  const db = router.db;
+  const users = db.get("users").value();
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
+  const startIndex = (page - 1) * limit;
+  const endIndex = startIndex + limit;
+  const paginatedUsers = users.slice(startIndex, endIndex);
+
+  console.log(
+    `👥 Requisição de usuários (API) - Página ${page}, Limite ${limit}`
+  );
+
+  return res.status(200).json({
+    response: {
+      data: paginatedUsers,
+      total: users.length,
+      page,
+      limit,
+      totalPages: Math.ceil(users.length / limit),
+    },
+  });
+});
+
+// Endpoint para artigos em destaque por portal
+server.get("/highlights-by-portal", (req, res) => {
+  const db = router.db;
+  const articles = db.get("articles").value();
+  const role = req.query.role;
+
+  console.log(`⭐ Requisição de destaques por portal - Role: ${role}`);
+
+  // Filtrar artigos em destaque
+  const highlights = articles.filter((a) => a.highlight === true);
+
+  return res.status(200).json({
+    response: highlights,
+  });
+});
+
+server.get("/api/highlights-by-portal", (req, res) => {
+  const db = router.db;
+  const articles = db.get("articles").value();
+  const role = req.query.role;
+
+  console.log(`⭐ Requisição de destaques por portal (API) - Role: ${role}`);
+
+  // Filtrar artigos em destaque
+  const highlights = articles.filter((a) => a.highlight === true);
+
+  return res.status(200).json({
+    response: highlights,
+  });
+});
+
 // Middleware para verificar token (opcional, para outras rotas)
 server.use("/api/*", (req, res, next) => {
   // Pular verificação para rotas públicas
