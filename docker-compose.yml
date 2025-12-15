@@ -1,6 +1,34 @@
-version: "3.8"
-
 services:
+  # API Mock com JSON Server
+  mock-api:
+    build:
+      context: ./mock-data
+      dockerfile: Dockerfile
+    container_name: portal-palhoca-mock-api
+    ports:
+      - "5555:5555"
+    volumes:
+      # Montar dados mockados para permitir edição em tempo real
+      - ./mock-data/db.json:/data/db.json
+      - ./mock-data/routes.json:/data/routes.json
+    networks:
+      - portal-network
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:5555/api/articles",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
   # Aplicação Next.js
   app:
     build:
@@ -17,7 +45,8 @@ services:
       - /app/.next
     environment:
       - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://api.portalpalhoca.com.br}
+      - NEXT_PUBLIC_USE_MOCK=${NEXT_PUBLIC_USE_MOCK:-true}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:5555}
       # Adicione outras variáveis de ambiente necessárias
       # - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       # - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
@@ -25,6 +54,9 @@ services:
       # - AWS_BUCKET=${AWS_BUCKET}
     networks:
       - portal-network
+    depends_on:
+      mock-api:
+        condition: service_healthy
     restart: unless-stopped
     # Comando para garantir hot-reload
     command: npm run dev

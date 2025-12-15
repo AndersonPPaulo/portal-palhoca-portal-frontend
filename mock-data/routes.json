@@ -1,0 +1,20 @@
+{
+  "/api/articles": "/articles",
+  "/api/articles/:id": "/articles/:id",
+  "/api/users": "/users",
+  "/api/users/:id": "/users/:id",
+  "/api/companies": "/companies",
+  "/api/companies/:id": "/companies/:id",
+  "/api/banners": "/banners",
+  "/api/banners/:id": "/banners/:id",
+  "/api/categories": "/categories",
+  "/api/categories/:id": "/categories/:id",
+  "/api/tags": "/tags",
+  "/api/tags/:id": "/tags/:id",
+  "/api/portals": "/portals",
+  "/api/portals/:id": "/portals/:id",
+  "/api/roles": "/roles",
+  "/api/roles/:id": "/roles/:id",
+  "/api/analytics": "/analytics",
+  "/api/analytics/:id": "/analytics/:id"
+}

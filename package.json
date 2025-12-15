@@ -4,11 +4,21 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:mock": "set NEXT_PUBLIC_USE_MOCK=true && set NEXT_PUBLIC_API_URL=http://localhost:5555 && next dev",
+    "dev:real": "set NEXT_PUBLIC_USE_MOCK=false && set NEXT_PUBLIC_API_URL=https://api.portalpalhoca.com.br && next dev",
     "build": "next build",
     "export": "next export",
     "postbuild": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "mock:server": "cd mock-data && json-server --watch db.json --port 5555 --routes routes.json --delay 500",
+    "docker:up": "docker-compose up",
+    "docker:up:d": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:rebuild": "docker-compose up --build",
+    "docker:logs": "docker-compose logs -f",
+    "docker:mock": "docker-compose up mock-api",
+    "docker:app": "docker-compose up app"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

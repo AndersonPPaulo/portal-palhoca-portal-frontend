@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teste API - Mock vs Produção</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 50px auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .status {
+        padding: 10px;
+        border-radius: 4px;
+        margin: 10px 0;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      pre {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 4px;
+        overflow-x: auto;
+      }
+      .mock {
+        color: #28a745;
+        font-weight: bold;
+      }
+      .prod {
+        color: #dc3545;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🧪 Teste de Ambiente - API Mock vs Produção</h1>
+
+    <div class="card">
+      <h2>Status Atual</h2>
+      <div id="status" class="status info">Aguardando teste...</div>
+    </div>
+
+    <div class="card">
+      <h2>Testes</h2>
+      <button onclick="testMockAPI()">Testar Mock API (localhost:5555)</button>
+      <button onclick="testProdAPI()">Testar API Produção</button>
+      <button onclick="testBoth()">Testar Ambas</button>
+    </div>
+
+    <div class="card">
+      <h2>Resultados</h2>
+      <div id="results"></div>
+    </div>
+
+    <script>
+      async function testMockAPI() {
+        const results = document.getElementById("results");
+        const status = document.getElementById("status");
+
+        results.innerHTML = "<p>Testando Mock API...</p>";
+
+        try {
+          const response = await fetch("http://localhost:5555/api/articles");
+          const data = await response.json();
+
+          results.innerHTML = `
+                    <div class="success">
+                        <strong>✅ Mock API Funcionando!</strong>
+                        <p>URL: http://localhost:5555/api/articles</p>
+                        <p>Artigos encontrados: ${data.length}</p>
+                        <p>Primeiro artigo: ${data[0]?.title || "N/A"}</p>
+                    </div>
+                    <pre>${JSON.stringify(data[0], null, 2)}</pre>
+                `;
+
+          status.className = "status success";
+          status.innerHTML = '<span class="mock">✅ Usando Mock API</span>';
+        } catch (error) {
+          results.innerHTML = `
+                    <div class="error">
+                        <strong>❌ Erro ao conectar Mock API</strong>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+
+          status.className = "status error";
+          status.innerHTML = "❌ Mock API não disponível";
+        }
+      }
+
+      async function testProdAPI() {
+        const results = document.getElementById("results");
+        const status = document.getElementById("status");
+
+        results.innerHTML = "<p>Testando API Produção...</p>";
+
+        try {
+          const response = await fetch(
+            "https://api.portalpalhoca.com.br/api/articles"
+          );
+          const data = await response.json();
+
+          results.innerHTML = `
+                    <div class="success">
+                        <strong>✅ API Produção Funcionando!</strong>
+                        <p>URL: https://api.portalpalhoca.com.br/api/articles</p>
+                        <p>Dados recebidos com sucesso</p>
+                    </div>
+                    <pre>${JSON.stringify(data, null, 2).substring(
+                      0,
+                      500
+                    )}...</pre>
+                `;
+
+          status.className = "status error";
+          status.innerHTML =
+            '<span class="prod">⚠️ Usando API de Produção</span>';
+        } catch (error) {
+          results.innerHTML = `
+                    <div class="error">
+                        <strong>❌ Erro ao conectar API Produção</strong>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+        }
+      }
+
+      async function testBoth() {
+        const results = document.getElementById("results");
+        results.innerHTML = "<p>Testando ambas APIs...</p>";
+
+        let mockWorks = false;
+        let prodWorks = false;
+
+        // Testar Mock
+        try {
+          const mockResponse = await fetch(
+            "http://localhost:5555/api/articles"
+          );
+          const mockData = await mockResponse.json();
+          mockWorks = true;
+        } catch (e) {}
+
+        // Testar Prod
+        try {
+          const prodResponse = await fetch(
+            "https://api.portalpalhoca.com.br/api/articles"
+          );
+          const prodData = await prodResponse.json();
+          prodWorks = true;
+        } catch (e) {}
+
+        results.innerHTML = `
+                <div class="${mockWorks ? "success" : "error"}">
+                    ${
+                      mockWorks ? "✅" : "❌"
+                    } <strong>Mock API (localhost:5555)</strong>: ${
+          mockWorks ? "Disponível" : "Não disponível"
+        }
+                </div>
+                <div class="${prodWorks ? "success" : "error"}">
+                    ${prodWorks ? "✅" : "❌"} <strong>API Produção</strong>: ${
+          prodWorks ? "Disponível" : "Não disponível"
+        }
+                </div>
+                <div class="info">
+                    <strong>Recomendação:</strong> ${
+                      mockWorks
+                        ? "Use Mock API para desenvolvimento"
+                        : "Mock API não disponível. Inicie com docker-compose up"
+                    }
+                </div>
+            `;
+      }
+
+      // Testar automaticamente ao carregar
+      window.onload = () => {
+        testBoth();
+      };
+    </script>
+  </body>
+</html>

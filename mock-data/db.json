@@ -1,0 +1,603 @@
+{
+  "articles": [
+    {
+      "id": "article-1",
+      "title": "Palhoça inaugura novo centro de saúde no bairro Pedra Branca",
+      "slug": "palhoca-inaugura-novo-centro-de-saude-bairro-pedra-branca",
+      "creator": "João Silva",
+      "reading_time": 5,
+      "resume_content": "A Prefeitura de Palhoça inaugurou nesta segunda-feira um novo centro de saúde no bairro Pedra Branca, ampliando o atendimento à população local.",
+      "content": "<p>A Prefeitura de Palhoça inaugurou nesta segunda-feira (10) um novo centro de saúde no bairro Pedra Branca. A unidade conta com consultórios médicos, odontológicos e farmácia.</p><p>O centro vai atender cerca de 5 mil pessoas por mês e funciona de segunda a sexta-feira, das 7h às 19h.</p>",
+      "status": "PUBLISHED",
+      "highlight": true,
+      "highlight_position": 1,
+      "category": {
+        "id": "cat-1",
+        "name": "Saúde"
+      },
+      "tags": [
+        {
+          "id": "tag-1",
+          "name": "Saúde Pública"
+        },
+        {
+          "id": "tag-2",
+          "name": "Pedra Branca"
+        }
+      ],
+      "chiefEditor": {
+        "id": "user-1",
+        "name": "Maria Santos"
+      },
+      "articlePortals": [
+        {
+          "id": "ap-1",
+          "highlight": true,
+          "highlight_position": 1,
+          "created_at": "2024-12-01T10:00:00Z",
+          "updated_at": "2024-12-01T10:00:00Z",
+          "portal": {
+            "id": "portal-1",
+            "name": "Portal Palhoça",
+            "link_referer": "https://portalpalhoca.com.br",
+            "status": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "id_portal_old_table": null
+          }
+        }
+      ],
+      "created_at": "2024-12-01T10:00:00Z",
+      "updated_at": "2024-12-01T10:00:00Z"
+    },
+    {
+      "id": "article-2",
+      "title": "Trânsito na BR-101 apresenta lentidão nesta manhã",
+      "slug": "transito-br-101-apresenta-lentidao-nesta-manha",
+      "creator": "Carlos Mendes",
+      "reading_time": 3,
+      "resume_content": "Motoristas enfrentam lentidão na BR-101, na altura de Palhoça, devido a acidente envolvendo dois veículos.",
+      "content": "<p>O trânsito na BR-101, na altura do km 215 em Palhoça, apresenta lentidão nesta manhã devido a um acidente envolvendo dois veículos.</p><p>A PRF está no local realizando o atendimento. Não há registro de feridos graves.</p>",
+      "status": "PUBLISHED",
+      "highlight": false,
+      "highlight_position": null,
+      "category": {
+        "id": "cat-2",
+        "name": "Trânsito"
+      },
+      "tags": [
+        {
+          "id": "tag-3",
+          "name": "BR-101"
+        },
+        {
+          "id": "tag-4",
+          "name": "Acidente"
+        }
+      ],
+      "chiefEditor": {
+        "id": "user-1",
+        "name": "Maria Santos"
+      },
+      "articlePortals": [
+        {
+          "id": "ap-2",
+          "highlight": false,
+          "highlight_position": null,
+          "created_at": "2024-12-02T08:00:00Z",
+          "updated_at": "2024-12-02T08:00:00Z",
+          "portal": {
+            "id": "portal-1",
+            "name": "Portal Palhoça",
+            "link_referer": "https://portalpalhoca.com.br",
+            "status": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "id_portal_old_table": null
+          }
+        }
+      ],
+      "created_at": "2024-12-02T08:00:00Z",
+      "updated_at": "2024-12-02T08:00:00Z"
+    },
+    {
+      "id": "article-3",
+      "title": "Prefeitura anuncia calendário de eventos de fim de ano",
+      "slug": "prefeitura-anuncia-calendario-eventos-fim-ano",
+      "creator": "Ana Paula",
+      "reading_time": 4,
+      "resume_content": "Festas natalinas e de ano novo prometem animar a população de Palhoça com shows e atrações gratuitas.",
+      "content": "<p>A Prefeitura de Palhoça divulgou o calendário oficial de eventos para as festas de fim de ano. Serão realizados shows, apresentações culturais e queima de fogos.</p><p>As atividades começam dia 20 de dezembro e vão até o dia 1º de janeiro.</p>",
+      "status": "DRAFT",
+      "highlight": false,
+      "highlight_position": null,
+      "category": {
+        "id": "cat-3",
+        "name": "Cultura"
+      },
+      "tags": [
+        {
+          "id": "tag-5",
+          "name": "Eventos"
+        },
+        {
+          "id": "tag-6",
+          "name": "Fim de Ano"
+        }
+      ],
+      "chiefEditor": {
+        "id": "user-2",
+        "name": "Pedro Oliveira"
+      },
+      "articlePortals": [],
+      "created_at": "2024-12-03T14:00:00Z",
+      "updated_at": "2024-12-03T14:00:00Z"
+    }
+  ],
+  "users": [
+    {
+      "id": "user-1",
+      "name": "Maria Santos",
+      "email": "maria.santos@portalpalhoca.com.br",
+      "phone": "(48) 99999-1111",
+      "topic": "Redatora Chefe",
+      "isActive": true,
+      "role": {
+        "id": "role-1",
+        "name": "Editor Chefe",
+        "isDefault": false
+      },
+      "user_image": {
+        "id": "img-1",
+        "key": "users/maria-santos.jpg",
+        "url": "https://i.pravatar.cc/150?img=1",
+        "original_name": "maria-santos.jpg",
+        "mime_type": "image/jpeg",
+        "size": 45000,
+        "uploaded_at": "2024-01-15T10:00:00Z"
+      },
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "user-2",
+      "name": "Pedro Oliveira",
+      "email": "pedro.oliveira@portalpalhoca.com.br",
+      "phone": "(48) 99999-2222",
+      "topic": "Jornalista",
+      "isActive": true,
+      "role": {
+        "id": "role-2",
+        "name": "Redator",
+        "isDefault": false
+      },
+      "chiefEditor": {
+        "id": "user-1",
+        "name": "Maria Santos"
+      },
+      "user_image": {
+        "id": "img-2",
+        "key": "users/pedro-oliveira.jpg",
+        "url": "https://i.pravatar.cc/150?img=12",
+        "original_name": "pedro-oliveira.jpg",
+        "mime_type": "image/jpeg",
+        "size": 42000,
+        "uploaded_at": "2024-01-20T10:00:00Z"
+      },
+      "created_at": "2024-01-15T00:00:00Z",
+      "updated_at": "2024-01-15T00:00:00Z"
+    },
+    {
+      "id": "user-3",
+      "name": "João Silva",
+      "email": "joao.silva@portalpalhoca.com.br",
+      "phone": "(48) 99999-3333",
+      "topic": "Reporter",
+      "isActive": true,
+      "role": {
+        "id": "role-2",
+        "name": "Redator",
+        "isDefault": false
+      },
+      "chiefEditor": {
+        "id": "user-1",
+        "name": "Maria Santos"
+      },
+      "user_image": {
+        "id": "img-3",
+        "key": "users/joao-silva.jpg",
+        "url": "https://i.pravatar.cc/150?img=33",
+        "original_name": "joao-silva.jpg",
+        "mime_type": "image/jpeg",
+        "size": 38000,
+        "uploaded_at": "2024-02-01T10:00:00Z"
+      },
+      "created_at": "2024-02-01T00:00:00Z",
+      "updated_at": "2024-02-01T00:00:00Z"
+    },
+    {
+      "id": "user-4",
+      "name": "Ana Paula",
+      "email": "ana.paula@portalpalhoca.com.br",
+      "phone": "(48) 99999-4444",
+      "topic": "Designer",
+      "isActive": false,
+      "role": {
+        "id": "role-3",
+        "name": "Designer",
+        "isDefault": false
+      },
+      "user_image": {
+        "id": "img-4",
+        "key": "users/ana-paula.jpg",
+        "url": "https://i.pravatar.cc/150?img=5",
+        "original_name": "ana-paula.jpg",
+        "mime_type": "image/jpeg",
+        "size": 40000,
+        "uploaded_at": "2024-03-01T10:00:00Z"
+      },
+      "created_at": "2024-03-01T00:00:00Z",
+      "updated_at": "2024-11-01T00:00:00Z"
+    }
+  ],
+  "companies": [
+    {
+      "id": "company-1",
+      "name": "Farmácia Central",
+      "fantasy_name": "Farmácia Central Palhoça",
+      "cnpj": "12.345.678/0001-99",
+      "email": "contato@farmaciacentral.com.br",
+      "phone": "(48) 3333-1111",
+      "whatsapp": "(48) 99999-5555",
+      "website": "https://farmaciacentral.com.br",
+      "description": "Farmácia com mais de 20 anos de tradição em Palhoça",
+      "address": {
+        "street": "Rua das Flores",
+        "number": "123",
+        "complement": "Loja 1",
+        "neighborhood": "Centro",
+        "city": "Palhoça",
+        "state": "SC",
+        "zipCode": "88130-000",
+        "latitude": -27.6445,
+        "longitude": -48.6704
+      },
+      "category": {
+        "id": "cat-comp-1",
+        "name": "Saúde e Bem-estar"
+      },
+      "logo": {
+        "id": "logo-1",
+        "key": "companies/farmacia-central-logo.png",
+        "url": "https://via.placeholder.com/200x200?text=Farmacia+Central",
+        "original_name": "logo.png",
+        "mime_type": "image/png",
+        "size": 25000,
+        "uploaded_at": "2024-01-10T10:00:00Z"
+      },
+      "isActive": true,
+      "created_at": "2024-01-10T00:00:00Z",
+      "updated_at": "2024-01-10T00:00:00Z"
+    },
+    {
+      "id": "company-2",
+      "name": "Restaurante Sabor & Arte",
+      "fantasy_name": "Sabor & Arte",
+      "cnpj": "98.765.432/0001-11",
+      "email": "contato@saborarte.com.br",
+      "phone": "(48) 3333-2222",
+      "whatsapp": "(48) 99999-6666",
+      "website": "https://saborarte.com.br",
+      "description": "Restaurante com culinária regional e ambiente aconchegante",
+      "address": {
+        "street": "Avenida Atlântica",
+        "number": "456",
+        "complement": "",
+        "neighborhood": "Praia de Fora",
+        "city": "Palhoça",
+        "state": "SC",
+        "zipCode": "88132-000",
+        "latitude": -27.641,
+        "longitude": -48.665
+      },
+      "category": {
+        "id": "cat-comp-2",
+        "name": "Gastronomia"
+      },
+      "logo": {
+        "id": "logo-2",
+        "key": "companies/sabor-arte-logo.png",
+        "url": "https://via.placeholder.com/200x200?text=Sabor+Arte",
+        "original_name": "logo.png",
+        "mime_type": "image/png",
+        "size": 30000,
+        "uploaded_at": "2024-02-15T10:00:00Z"
+      },
+      "isActive": true,
+      "created_at": "2024-02-15T00:00:00Z",
+      "updated_at": "2024-02-15T00:00:00Z"
+    },
+    {
+      "id": "company-3",
+      "name": "Academia FitLife",
+      "fantasy_name": "FitLife Academia",
+      "cnpj": "11.222.333/0001-44",
+      "email": "contato@fitlife.com.br",
+      "phone": "(48) 3333-3333",
+      "whatsapp": "(48) 99999-7777",
+      "website": "https://fitlife.com.br",
+      "description": "Academia completa com equipamentos modernos e profissionais qualificados",
+      "address": {
+        "street": "Rua do Fitness",
+        "number": "789",
+        "complement": "2º andar",
+        "neighborhood": "Pedra Branca",
+        "city": "Palhoça",
+        "state": "SC",
+        "zipCode": "88137-000",
+        "latitude": -27.638,
+        "longitude": -48.659
+      },
+      "category": {
+        "id": "cat-comp-1",
+        "name": "Saúde e Bem-estar"
+      },
+      "logo": {
+        "id": "logo-3",
+        "key": "companies/fitlife-logo.png",
+        "url": "https://via.placeholder.com/200x200?text=FitLife",
+        "original_name": "logo.png",
+        "mime_type": "image/png",
+        "size": 28000,
+        "uploaded_at": "2024-03-20T10:00:00Z"
+      },
+      "isActive": true,
+      "created_at": "2024-03-20T00:00:00Z",
+      "updated_at": "2024-03-20T00:00:00Z"
+    }
+  ],
+  "banners": [
+    {
+      "id": "banner-1",
+      "name": "Banner Farmácia Central - Promoção Verão",
+      "url": "https://via.placeholder.com/1200x400?text=Farmacia+Central+Promocao+Verao",
+      "key": "banners/farmacia-central-verao.jpg",
+      "link_direction": "https://farmaciacentral.com.br/promocoes",
+      "banner_style": "horizontal",
+      "date_active": "2024-12-01T00:00:00Z",
+      "date_expiration": "2025-03-01T00:00:00Z",
+      "status": true,
+      "company": {
+        "id": "company-1",
+        "name": "Farmácia Central"
+      },
+      "portal": {
+        "id": "portal-1",
+        "name": "Portal Palhoça",
+        "portalReferer": "portalpalhoca.com.br",
+        "status": true,
+        "created_at": "2024-01-01T00:00:00Z",
+        "updated_at": "2024-01-01T00:00:00Z",
+        "id_portal_old_table": "1"
+      },
+      "created_at": "2024-12-01T10:00:00Z",
+      "updated_at": "2024-12-01T10:00:00Z"
+    },
+    {
+      "id": "banner-2",
+      "name": "Banner Sabor & Arte - Feijoada aos Sábados",
+      "url": "https://via.placeholder.com/1200x400?text=Sabor+Arte+Feijoada",
+      "key": "banners/sabor-arte-feijoada.jpg",
+      "link_direction": "https://saborarte.com.br/cardapio",
+      "banner_style": "horizontal",
+      "date_active": "2024-12-05T00:00:00Z",
+      "date_expiration": "2025-02-28T00:00:00Z",
+      "status": true,
+      "company": {
+        "id": "company-2",
+        "name": "Restaurante Sabor & Arte"
+      },
+      "portal": {
+        "id": "portal-1",
+        "name": "Portal Palhoça",
+        "portalReferer": "portalpalhoca.com.br",
+        "status": true,
+        "created_at": "2024-01-01T00:00:00Z",
+        "updated_at": "2024-01-01T00:00:00Z",
+        "id_portal_old_table": "1"
+      },
+      "created_at": "2024-12-05T10:00:00Z",
+      "updated_at": "2024-12-05T10:00:00Z"
+    },
+    {
+      "id": "banner-3",
+      "name": "Banner FitLife - Matrículas Abertas",
+      "url": "https://via.placeholder.com/1200x400?text=FitLife+Matriculas",
+      "key": "banners/fitlife-matriculas.jpg",
+      "link_direction": "https://fitlife.com.br/matriculas",
+      "banner_style": "vertical",
+      "date_active": "2024-11-01T00:00:00Z",
+      "date_expiration": "2025-01-31T00:00:00Z",
+      "status": true,
+      "company": {
+        "id": "company-3",
+        "name": "Academia FitLife"
+      },
+      "portal": {
+        "id": "portal-1",
+        "name": "Portal Palhoça",
+        "portalReferer": "portalpalhoca.com.br",
+        "status": true,
+        "created_at": "2024-01-01T00:00:00Z",
+        "updated_at": "2024-01-01T00:00:00Z",
+        "id_portal_old_table": "1"
+      },
+      "created_at": "2024-11-01T10:00:00Z",
+      "updated_at": "2024-11-01T10:00:00Z"
+    },
+    {
+      "id": "banner-4",
+      "name": "Banner Inativo - Teste",
+      "url": "https://via.placeholder.com/1200x400?text=Banner+Inativo",
+      "key": "banners/teste-inativo.jpg",
+      "link_direction": "https://example.com",
+      "banner_style": "horizontal",
+      "date_active": "2024-01-01T00:00:00Z",
+      "date_expiration": "2024-06-30T00:00:00Z",
+      "status": false,
+      "company": {
+        "id": "company-1",
+        "name": "Farmácia Central"
+      },
+      "portal": {
+        "id": "portal-1",
+        "name": "Portal Palhoça",
+        "portalReferer": "portalpalhoca.com.br",
+        "status": true,
+        "created_at": "2024-01-01T00:00:00Z",
+        "updated_at": "2024-01-01T00:00:00Z",
+        "id_portal_old_table": "1"
+      },
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-12-01T10:00:00Z"
+    }
+  ],
+  "categories": [
+    {
+      "id": "cat-1",
+      "name": "Saúde",
+      "slug": "saude",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "cat-2",
+      "name": "Trânsito",
+      "slug": "transito",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "cat-3",
+      "name": "Cultura",
+      "slug": "cultura",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "tags": [
+    {
+      "id": "tag-1",
+      "name": "Saúde Pública",
+      "slug": "saude-publica",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "tag-2",
+      "name": "Pedra Branca",
+      "slug": "pedra-branca",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "tag-3",
+      "name": "BR-101",
+      "slug": "br-101",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "tag-4",
+      "name": "Acidente",
+      "slug": "acidente",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "tag-5",
+      "name": "Eventos",
+      "slug": "eventos",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "tag-6",
+      "name": "Fim de Ano",
+      "slug": "fim-de-ano",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "portals": [
+    {
+      "id": "portal-1",
+      "name": "Portal Palhoça",
+      "link_referer": "https://portalpalhoca.com.br",
+      "status": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z",
+      "id_portal_old_table": null
+    }
+  ],
+  "roles": [
+    {
+      "id": "role-1",
+      "name": "Editor Chefe",
+      "isDefault": false
+    },
+    {
+      "id": "role-2",
+      "name": "Redator",
+      "isDefault": false
+    },
+    {
+      "id": "role-3",
+      "name": "Designer",
+      "isDefault": false
+    },
+    {
+      "id": "role-4",
+      "name": "Administrador",
+      "isDefault": true
+    }
+  ],
+  "analytics": [
+    {
+      "id": "analytics-1",
+      "type": "article",
+      "entityId": "article-1",
+      "views": 1524,
+      "clicks": 342,
+      "date": "2024-12-01",
+      "created_at": "2024-12-01T23:59:00Z"
+    },
+    {
+      "id": "analytics-2",
+      "type": "article",
+      "entityId": "article-2",
+      "views": 892,
+      "clicks": 156,
+      "date": "2024-12-02",
+      "created_at": "2024-12-02T23:59:00Z"
+    },
+    {
+      "id": "analytics-3",
+      "type": "banner",
+      "entityId": "banner-1",
+      "views": 5432,
+      "clicks": 234,
+      "date": "2024-12-01",
+      "created_at": "2024-12-01T23:59:00Z"
+    },
+    {
+      "id": "analytics-4",
+      "type": "company",
+      "entityId": "company-1",
+      "views": 2341,
+      "clicks": 421,
+      "date": "2024-12-01",
+      "created_at": "2024-12-01T23:59:00Z"
+    }
+  ]
+}
