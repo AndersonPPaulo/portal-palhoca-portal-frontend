@@ -7,7 +7,59 @@
 
 ---
 
-## 📝 Articles (Artigos)
+## � Autenticação
+
+### Login
+
+Realiza autenticação e retorna token JWT.
+
+```http
+POST /api/login
+Content-Type: application/json
+
+{
+  "email": "mr.andersonpaulo@gmail.com",
+  "password": "123456"
+}
+```
+
+**Resposta de Sucesso (200 OK):**
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "user-1",
+    "name": "Maria Santos",
+    "email": "mr.andersonpaulo@gmail.com",
+    "role": {
+      "id": "role-1",
+      "name": "Editor Chefe"
+    },
+    "user_image": {
+      "id": "img-1",
+      "url": "https://i.pravatar.cc/150?img=1"
+    }
+  }
+}
+```
+
+**Resposta de Erro (401 Unauthorized):**
+
+```json
+{
+  "error": "Credenciais inválidas"
+}
+```
+
+**Credenciais de Teste:**
+
+- Email: `mr.andersonpaulo@gmail.com` | Senha: `123456`
+- Email: `admin@portalpalhoca.com.br` | Senha: `admin123`
+
+---
+
+## �📝 Articles (Artigos)
 
 ### Listar artigos
 

@@ -137,15 +137,15 @@
   "users": [
     {
       "id": "user-1",
-      "name": "Maria Santos",
-      "email": "maria.santos@portalpalhoca.com.br",
+      "name": "Paulo Anderson",
+      "email": "mr.andersonpaulo@gmail.com",
       "phone": "(48) 99999-1111",
-      "topic": "Redatora Chefe",
+      "topic": "Administrador do Sistema",
       "isActive": true,
       "role": {
-        "id": "role-1",
-        "name": "Editor Chefe",
-        "isDefault": false
+        "id": "role-4",
+        "name": "Administrador",
+        "isDefault": true
       },
       "user_image": {
         "id": "img-1",
