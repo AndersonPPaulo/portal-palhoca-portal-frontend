@@ -1,6 +1,5 @@
 "use client";
 
-import LogoSi3Web from "@/assets/logo-si3.png";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import CustomInput from "@/components/input/custom-input";
@@ -10,6 +9,7 @@ import { AuthContext } from "@/providers/auth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Lock, Mail } from "lucide-react";
+import LogoSi3 from "@/assets/logo-si3-portais.png";
 
 export default function ModernLoginPage() {
   const { Login } = useContext(AuthContext);
@@ -63,12 +63,13 @@ export default function ModernLoginPage() {
         <div className="relative z-10 flex flex-col justify-center items-center p-12 text-white">
           <div className="mb-8">
             <Image
-              src={LogoSi3Web.src}
+              src={LogoSi3}
               alt="SI3 Sistemas"
               width={300}
               height={80}
               className="brightness-0 invert"
               priority
+              unoptimized
             />
           </div>
           <div className="text-center max-w-md">
@@ -91,12 +92,13 @@ export default function ModernLoginPage() {
           {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-8">
             <Image
-              src={LogoSi3Web.src}
+              src={LogoSi3}
               alt="SI3 Sistemas"
               width={240}
               height={64}
               className="mx-auto"
               priority
+              unoptimized
             />
           </div>
 

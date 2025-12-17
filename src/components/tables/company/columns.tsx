@@ -183,13 +183,12 @@ const AnalyticsCell = ({ company }: { company: ICompanyProps }) => {
   );
 };
 
-// ✅ Hook para detectar se está em mobile
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 768); // 768px = breakpoint md do Tailwind
+      setIsMobile(window.innerWidth < 768); 
     };
 
     checkIsMobile();
@@ -201,7 +200,6 @@ const useIsMobile = () => {
   return isMobile;
 };
 
-// ✅ Colunas completas (Desktop)
 const desktopColumns: ColumnDef<ICompanyProps>[] = [
   {
     accessorKey: "name",
@@ -282,7 +280,6 @@ const desktopColumns: ColumnDef<ICompanyProps>[] = [
   },
 ];
 
-// ✅ Colunas simplificadas (Mobile) - Apenas Nome, Analíticos e Ações
 const mobileColumns: ColumnDef<ICompanyProps>[] = [
   {
     accessorKey: "name",

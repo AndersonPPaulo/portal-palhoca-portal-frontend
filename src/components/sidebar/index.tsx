@@ -1,13 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import LogoSi3 from "../../assets/logo-si3.png";
 import { NavigationMain } from "./navigation-main";
 import { NavigationSecond } from "./navigation-second";
 import { useContext, useEffect, useState } from "react";
 import { UserContext } from "@/providers/user";
 import ProfileImageViewer from "../profileImage";
 import { Menu, X } from "lucide-react";
+import LogoSi3 from "@/assets/logo-si3-portais.png";
 
 export function Sidebar() {
   const { Profile, profile } = useContext(UserContext);
@@ -27,7 +27,7 @@ export function Sidebar() {
     const handleClickOutside = (e: MouseEvent) => {
       const sidebar = document.getElementById("mobile-sidebar");
       const hamburger = document.getElementById("hamburger-button");
-      
+
       if (
         isMobileMenuOpen &&
         sidebar &&
@@ -118,6 +118,9 @@ export function Sidebar() {
           src={LogoSi3}
           alt="Logo Si3 Sistemas"
           className="mx-auto max-w-[197px] min-w-[197px]"
+          height={100}
+          width={200}
+          unoptimized
         />
 
         {/* Perfil */}

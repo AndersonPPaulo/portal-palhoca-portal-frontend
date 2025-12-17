@@ -86,7 +86,6 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
     ListPortals();
   }, []);
 
-  // useEffect específico para atualizar o portalId quando bannerData mudar
   useEffect(() => {
     if (bannerData?.portal?.id) {
       setPortalId(bannerData.portal.id);
@@ -141,7 +140,6 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
     []
   );
 
-  // useEffect para validação das dimensões quando nova imagem é selecionada
   useEffect(() => {
     if (bannerFile) {
       const reader = new FileReader();
@@ -161,7 +159,6 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
     }
   }, [bannerFile]);
 
-  // useEffect para revalidar quando o tipo do banner muda
   useEffect(() => {
     if (imageDimensions && bannerStyle) {
       validateImageDimensions(
@@ -192,7 +189,6 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
       // Fix this line:
       setPortalId(bannerData.portal?.id ?? defaultValues.portalId);
       setPreviewBanner(bannerData.url ?? defaultValues.previewBanner);
-
     }
 
     // Always reset these states
