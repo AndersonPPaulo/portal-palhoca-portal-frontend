@@ -5,6 +5,11 @@ import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: "Login - Si3 Sistemas",
+   icons: {
+    icon: '/favicon-32x32.png',
+    shortcut: '/favicon-16x16.png',
+    apple: '/apple-touch-icon.png',
+  },
   description:
     "O Painel de Gestão de Artigos do Si3 Sistemas oferece uma interface intuitiva e poderosa para gerenciar, editar e monitorar os artigos postados no blog do seu site. Com recursos avançados de categorização, tags e melhor ranqueamento no google, você pode otimizar o conteúdo, acompanhar visualizações e garantir uma experiência de leitura de qualidade para seus usuários. Ideal para gerenciar múltiplos artigos de forma eficiente, com foco em performance e usabilidade.",
 };

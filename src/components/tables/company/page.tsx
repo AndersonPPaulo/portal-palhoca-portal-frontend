@@ -6,11 +6,18 @@ import { CompanyContext } from "@/providers/company";
 interface TableCompanyProps {
   filter: {
     name?: string;
-    categories?: string[]; // ✅ Adicionar categories
-    highlight?: boolean | null; // ✅ Adicionar highlight
+    categories?: string[];
+    highlight?: boolean | null;
     isActive?: boolean | null;
   };
 }
+
+const normalizeText = (text: string): string => {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+};
 
 export default function TableCompany({ filter }: TableCompanyProps) {
   const { ListCompany, listCompany } = useContext(CompanyContext);
@@ -25,22 +32,18 @@ export default function TableCompany({ filter }: TableCompanyProps) {
       try {
         const options: any = {};
 
-        // Filtro por nome
         if (filter.name) {
-          options.name = filter.name;
+          options.name = normalizeText(filter.name);
         }
 
-        // Filtro por categorias (array)
         if (filter.categories && filter.categories.length > 0) {
           options.categories = filter.categories;
         }
 
-        // Filtro por highlight
         if (filter.highlight !== undefined && filter.highlight !== null) {
           options.highlight = filter.highlight;
         }
 
-        // Filtro por status ativo
         if (filter.isActive !== undefined && filter.isActive !== null) {
           options.isActive = filter.isActive;
         }
@@ -56,15 +59,12 @@ export default function TableCompany({ filter }: TableCompanyProps) {
     fetchCompanies();
   }, [pageIndex, pageSize, filter]);
 
-  // Filtrar dados localmente para remover new_lead e in_process
-  const filteredData = listCompany?.data?.filter(company => 
-    company.status !== "new_lead" && company.status !== "in_process"
-  ) || [];
+  const data = listCompany?.data || [];
 
   return (
     <DataTable
       columns={columns}
-      data={filteredData}
+      data={data}
       totalPages={Number(listCompany?.totalPages) || 1}
       pageIndex={pageIndex}
       setPageIndex={setPageIndex}

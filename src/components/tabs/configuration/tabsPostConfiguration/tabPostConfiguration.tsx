@@ -15,10 +15,10 @@ export interface TabConfig {
 export const tabPostConfigurations: TabConfig[] = [
   {
     value: "PUBLISHED",
-    name: "Noticias",
+    name: "Notícias",
     label: "Publicadas",
-    title: "Noticias",
-    description: "As noticias publicadas em seu site.",
+    title: "Notícias",
+    description: "As Notícias publicadas em seu site.",
     component: <Articles status="PUBLISHED" />,
     path: "/postagens/artigos/criar",
     allowedRoles: [
@@ -30,10 +30,10 @@ export const tabPostConfigurations: TabConfig[] = [
   },
   {
     value: "UNPUBLISHED",
-    name: "Noticias",
+    name: "Notícias",
     label: "Despublicadas",
-    title: "Noticias",
-    description: "As noticias despublicadas em seu site.",
+    title: "Notícias",
+    description: "As Notícias despublicadas em seu site.",
     component: <Articles status="UNPUBLISHED" />,
     path: "/postagens/artigos/criar",
     allowedRoles: [
@@ -46,8 +46,8 @@ export const tabPostConfigurations: TabConfig[] = [
   {
     value: "DRAFT",
     label: "Rascunho",
-    title: "Noticias",
-    name: "Noticias",
+    title: "Notícias",
+    name: "Notícias",
     description: "Continue a editar sua noticia.",
     component: <Articles status="DRAFT" />,
     path: "/postagens/artigos/criar",
@@ -61,8 +61,8 @@ export const tabPostConfigurations: TabConfig[] = [
   {
     value: "PENDING_REVIEW",
     label: "Revisão",
-    title: "Noticias",
-    name: "Noticias",
+    title: "Notícias",
+    name: "Notícias",
     description: "Revisão para publicação da noticia",
     component: <Articles status="PENDING_REVIEW" />,
     path: "/postagens/artigos/criar",
@@ -71,9 +71,9 @@ export const tabPostConfigurations: TabConfig[] = [
   {
     value: "REJECTED",
     label: "Rejeitadas",
-    title: "Noticias",
-    name: "Noticias",
-    description: "Noticias rejeitadas e não publicadas.",
+    title: "Notícias",
+    name: "Notícias",
+    description: "Notícias rejeitadas e não publicadas.",
     component: <Articles status="REJECTED" />,
     path: "/postagens/artigos/criar",
     allowedRoles: [
@@ -86,9 +86,9 @@ export const tabPostConfigurations: TabConfig[] = [
   {
     value: "CHANGES_REQUESTED",
     label: "Mudanças necessárias",
-    title: "Noticias",
-    name: "Noticias",
-    description: "Noticias que precisam de alterações.",
+    title: "Notícias",
+    name: "Notícias",
+    description: "Notícias que precisam de alterações.",
     component: <Articles status="CHANGES_REQUESTED" />,
     path: "/postagens/artigos/criar",
     allowedRoles: [
