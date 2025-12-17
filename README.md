@@ -1,6 +1,6 @@
 # 📰 Portal Palhoça - Painel Administrativo
 
-Painel administrativo para gerenciamento de conteúdo do Portal de Notícias de Palhoça/SC.
+Painel administrativo para gerenciamento de conteúdo do Portal de Notícias de Palhoça/SC!
 
 Sistema completo para gestão de artigos, usuários, comércios, banners e relatórios.
 
