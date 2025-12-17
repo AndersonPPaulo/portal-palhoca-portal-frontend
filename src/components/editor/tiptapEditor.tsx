@@ -1,7 +1,7 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CustomImage } from "@/lib/customImagem";
 import Underline from "@tiptap/extension-underline";
 import BulletList from "@tiptap/extension-bullet-list";
@@ -21,6 +21,7 @@ import {
   Link2,
   List,
   UnderlineIcon,
+  Image as ImageIcon,
 } from "lucide-react";
 import CodeBlock from "@tiptap/extension-code-block";
 
@@ -43,7 +44,7 @@ const TiptapEditor = ({
   const editor = useEditor({
     extensions: [
       StarterKit,
-      // CustomImage,
+      CustomImage,
       BulletList,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Underline,
@@ -56,48 +57,62 @@ const TiptapEditor = ({
       onChange(editor.getHTML());
     },
   });
+  // upload service
+  // importa `api` e `parseCookies` dinamicamente aqui para não quebrar SSR
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // const handleImageUpload = async (
-  //   event: React.ChangeEvent<HTMLInputElement>
-  // ) => {
-  //   const file = event.target.files?.[0];
-  //   if (!file) return;
+  const handleImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-  //   const formData = new FormData();
-  //   formData.append("thumbnail", file);
+    try {
+      const { parseCookies } = await import("nookies");
+      const { api } = await import("@/service/api");
+      const { "user:token": token } = parseCookies();
 
-  //   try {
-  //     const response = await fetch("http://localhost:5555/upload", {
-  //       method: "POST",
-  //       body: formData,
-  //     });
+      const formData = new FormData();
+      formData.append("image", file);
 
-  //     if (!response.ok) {
-  //       throw new Error("Falha ao fazer upload da imagem");
-  //     }
+      const config = {
+        headers: {
+          Authorization: `bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      };
 
-  //     const data = await response.json();
-  //     const imageUrl = `http://localhost:5555/${data.url}`;
+      const response = await api.post(
+        "/upload/article-image",
+        formData,
+        config
+      );
 
-  //     editor?.chain().focus().setImage({ src: imageUrl }).run();
+      const imageUrl =
+        response?.data?.imageUrl ||
+        response?.data?.url ||
+        response?.data?.thumbnailUrl ||
+        "";
 
-  //     setTimeout(() => {
-  //       const lastImage = editor?.view.dom.querySelector("img:last-of-type");
-  //       if (lastImage) {
-  //         editor
-  //           ?.chain()
-  //           .focus()
-  //           .updateAttributes("image", {
-  //             width: imageSize.width.toString(),
-  //             height: imageSize.height.toString(),
-  //           })
-  //           .run();
-  //       }
-  //     }, 10);
-  //   } catch (error) {
-  //     alert(error);
-  //   }
-  // };
+      if (!imageUrl) throw new Error("URL da imagem não retornada pela API");
+
+      editor
+        ?.chain()
+        .focus()
+        .setImage({
+          src: imageUrl,
+          width: `${imageSize.width}px`,
+          height: `${imageSize.height}px`,
+        })
+        .run();
+    } catch (err) {
+      console.error("Erro upload imagem no editor:", err);
+      alert("Erro ao enviar imagem. Tente novamente.");
+    } finally {
+      // limpar valor para permitir re-upload do mesmo arquivo se necessário
+      if (event.target) event.target.value = "";
+    }
+  };
 
   useEffect(() => {
     if (!editor) return;
@@ -221,6 +236,21 @@ const TiptapEditor = ({
         >
           <AlignJustify />
         </span>
+
+        <span
+          onClick={() => fileInputRef.current?.click()}
+          className={`px-2 py-1 border rounded`}
+        >
+          <ImageIcon />
+        </span>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleImageUpload}
+        />
 
         {/* <label className="px-2 py-1 border rounded cursor-pointer bg-gray-100">
           Upload de Imagem
