@@ -105,7 +105,26 @@ li {
 
 .ProseMirror img {
   max-width: 100%;
+  width: 100%;
   height: auto;
+  display: block;
+  margin: 1rem auto;
+  border-radius: 8px;
+}
+
+/* Imagens em telas grandes (desktop) */
+@media (min-width: 768px) {
+  .ProseMirror img {
+    max-width: 800px;
+  }
+}
+
+/* Imagens em telas pequenas (mobile) */
+@media (max-width: 767px) {
+  .ProseMirror img {
+    width: 100%;
+    max-width: 100%;
+  }
 }
 
 .ProseMirror code {

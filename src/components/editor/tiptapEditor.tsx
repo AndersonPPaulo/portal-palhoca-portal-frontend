@@ -34,7 +34,6 @@ const TiptapEditor = ({
   onChange,
 }: TiptapEditorProps) => {
   const [isClient, setIsClient] = useState(false);
-  const [imageSize] = useState({ width: 300, height: 200 });
 
   useEffect(() => {
     setIsClient(true);
@@ -224,8 +223,8 @@ const TiptapEditor = ({
         .focus()
         .setImage({
           src: imageUrl,
-          width: `${imageSize.width}px`,
-          height: `${imageSize.height}px`,
+          width: "100%",
+          height: "auto",
         } as any)
         .run();
 
@@ -267,18 +266,7 @@ const TiptapEditor = ({
     }
   };
 
-  useEffect(() => {
-    if (!editor) return;
-
-    editor.commands.setContent(
-      editor
-        .getHTML()
-        .replace(
-          /<img/g,
-          `<img style="width: ${imageSize.width}px; height: ${imageSize.height}px;"`
-        )
-    );
-  }, [imageSize, editor]);
+  // Removido useEffect que forçava tamanhos fixos - agora as imagens são responsivas
 
   if (!isClient) return null;
   if (!editor) return null;

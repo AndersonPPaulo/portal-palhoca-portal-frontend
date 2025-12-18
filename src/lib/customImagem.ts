@@ -6,12 +6,18 @@ export const CustomImage = Image.extend({
     return {
       ...this.parent?.(),
       width: {
-        default: "150px",
-        parseHTML: (element) => element.getAttribute("width") || "150px",
+        default: "100%",
+        parseHTML: (element) =>
+          element.getAttribute("width") || element.style.width || "100%",
       },
       height: {
-        default: "150px",
-        parseHTML: (element) => element.getAttribute("height") || "150px",
+        default: "auto",
+        parseHTML: (element) =>
+          element.getAttribute("height") || element.style.height || "auto",
+      },
+      style: {
+        default: "max-width: 100%; height: auto; display: block;",
+        parseHTML: (element) => element.getAttribute("style"),
       },
     };
   },
@@ -21,13 +27,21 @@ export const CustomImage = Image.extend({
         tag: "img",
         getAttrs: (dom: HTMLElement) => ({
           src: dom.getAttribute("src"),
-          width: dom.getAttribute("width") || "150px",
-          height: dom.getAttribute("height") || "150px",
+          width: dom.getAttribute("width") || dom.style.width || "100%",
+          height: dom.getAttribute("height") || dom.style.height || "auto",
+          style:
+            dom.getAttribute("style") ||
+            "max-width: 100%; height: auto; display: block;",
         }),
       },
     ];
   },
   renderHTML({ HTMLAttributes }) {
-    return ["img", mergeAttributes(HTMLAttributes)];
+    const attrs = mergeAttributes(HTMLAttributes, {
+      style: `max-width: 100%; height: auto; display: block; ${
+        HTMLAttributes.style || ""
+      }`,
+    });
+    return ["img", attrs];
   },
 });
