@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
@@ -13,7 +14,6 @@ import {
   AlignLeft,
   AlignRight,
   Bold,
-  CodeSquare,
   Heading1,
   Heading2,
   Heading3,
@@ -23,7 +23,6 @@ import {
   UnderlineIcon,
   Image as ImageIcon,
 } from "lucide-react";
-import CodeBlock from "@tiptap/extension-code-block";
 
 interface TiptapEditorProps {
   value: string;
@@ -35,7 +34,7 @@ const TiptapEditor = ({
   onChange,
 }: TiptapEditorProps) => {
   const [isClient, setIsClient] = useState(false);
-  const [imageSize, setImageSize] = useState({ width: 300, height: 200 });
+  const [imageSize] = useState({ width: 300, height: 200 });
 
   useEffect(() => {
     setIsClient(true);
@@ -103,7 +102,7 @@ const TiptapEditor = ({
           src: imageUrl,
           width: `${imageSize.width}px`,
           height: `${imageSize.height}px`,
-        })
+        } as any)
         .run();
     } catch (err) {
       console.error("Erro upload imagem no editor:", err);
