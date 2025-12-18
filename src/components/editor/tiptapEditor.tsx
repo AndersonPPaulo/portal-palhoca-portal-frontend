@@ -60,6 +60,68 @@ const TiptapEditor = ({
   // importa `api` e `parseCookies` dinamicamente aqui para não quebrar SSR
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Função para comprimir imagem
+  const compressImage = (file: File, maxSizeMB: number): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+
+          // Redimensionar se for muito grande (max 1920px de largura)
+          const maxWidth = 1920;
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          // Tentar comprimir com qualidade decrescente até atingir o tamanho desejado
+          let quality = 0.9;
+          const tryCompress = () => {
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) {
+                  reject(new Error("Erro ao comprimir imagem"));
+                  return;
+                }
+
+                const compressedSize = blob.size / 1024 / 1024; // em MB
+
+                if (compressedSize <= maxSizeMB || quality <= 0.1) {
+                  const compressedFile = new File([blob], file.name, {
+                    type: "image/jpeg",
+                    lastModified: Date.now(),
+                  });
+                  resolve(compressedFile);
+                } else {
+                  quality -= 0.1;
+                  tryCompress();
+                }
+              },
+              "image/jpeg",
+              quality
+            );
+          };
+
+          tryCompress();
+        };
+        img.onerror = () => reject(new Error("Erro ao carregar imagem"));
+      };
+      reader.onerror = () => reject(new Error("Erro ao ler arquivo"));
+    });
+  };
+
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -67,6 +129,12 @@ const TiptapEditor = ({
     if (!file) return;
 
     try {
+      // Validar tipo de arquivo
+      if (!file.type.startsWith("image/")) {
+        alert("Por favor, selecione apenas arquivos de imagem.");
+        return;
+      }
+
       const { parseCookies } = await import("nookies");
       const { api } = await import("@/service/api");
       const { "user:token": token } = parseCookies();
@@ -77,20 +145,50 @@ const TiptapEditor = ({
         );
       }
 
+      const fileSizeMB = file.size / 1024 / 1024;
+      const MAX_SIZE_MB = 2; // Limite de 2MB
+
+      console.log("📤 Preparando upload de imagem...", {
+        fileName: file.name,
+        fileSize: `${fileSizeMB.toFixed(2)}MB`,
+        maxSize: `${MAX_SIZE_MB}MB`,
+      });
+
+      let fileToUpload = file;
+
+      // Comprimir se for maior que o limite
+      if (fileSizeMB > MAX_SIZE_MB) {
+        console.log("🔄 Imagem muito grande, comprimindo...");
+        alert(
+          `A imagem tem ${fileSizeMB.toFixed(
+            2
+          )}MB e será comprimida para ${MAX_SIZE_MB}MB...`
+        );
+        try {
+          fileToUpload = await compressImage(file, MAX_SIZE_MB);
+          const compressedSizeMB = fileToUpload.size / 1024 / 1024;
+          console.log(`✅ Imagem comprimida: ${compressedSizeMB.toFixed(2)}MB`);
+        } catch (compressError) {
+          console.error("❌ Erro ao comprimir:", compressError);
+          throw new Error(
+            "Não foi possível comprimir a imagem. Tente uma imagem menor."
+          );
+        }
+      }
+
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append("image", fileToUpload);
 
       const config = {
         headers: {
           Authorization: `bearer ${token}`,
-          "Content-Type": "multipart/form-data",
         },
       };
 
       console.log("📤 Enviando imagem para a API...", {
         endpoint: "/upload/article-image",
-        fileName: file.name,
-        fileSize: file.size,
+        fileName: fileToUpload.name,
+        fileSize: `${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB`,
       });
 
       const response = await api.post(
@@ -138,16 +236,31 @@ const TiptapEditor = ({
         message: err.message,
         response: err.response?.data,
         status: err.response?.status,
+        code: err.code,
       });
 
-      const errorMessage =
-        err.response?.data?.message ||
-        err.message ||
-        "Erro desconhecido ao enviar imagem";
+      let errorMessage = "Erro desconhecido ao enviar imagem";
 
-      alert(
-        `Erro ao enviar imagem: ${errorMessage}\n\nVerifique o console para mais detalhes.`
-      );
+      // Tratamento específico para erro 413 (Content Too Large)
+      if (err.response?.status === 413 || err.code === "ERR_NETWORK") {
+        errorMessage =
+          "A imagem é muito grande para o servidor. Tente uma imagem menor ou de menor resolução.";
+        console.error("💡 Sugestão: Reduza a qualidade ou tamanho da imagem.");
+      } else if (err.response?.status === 401) {
+        errorMessage = "Sessão expirada. Faça login novamente.";
+      } else if (err.response?.status === 403) {
+        errorMessage = "Você não tem permissão para enviar imagens.";
+      } else if (err.response?.status === 404) {
+        errorMessage = "Endpoint de upload não encontrado. Contate o suporte.";
+      } else if (err.response?.status === 500) {
+        errorMessage = "Erro no servidor. Tente novamente mais tarde.";
+      } else if (err.message) {
+        errorMessage = err.message;
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+
+      alert(`Erro ao enviar imagem: ${errorMessage}`);
     } finally {
       // limpar valor para permitir re-upload do mesmo arquivo se necessário
       if (event.target) event.target.value = "";
@@ -279,7 +392,8 @@ const TiptapEditor = ({
 
         <span
           onClick={() => fileInputRef.current?.click()}
-          className={`px-2 py-1 border rounded`}
+          className={`px-2 py-1 border rounded cursor-pointer hover:bg-gray-100`}
+          title="Adicionar imagem (máx. 2MB - compressão automática se necessário)"
         >
           <ImageIcon />
         </span>
