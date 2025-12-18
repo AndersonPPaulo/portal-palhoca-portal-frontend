@@ -26,11 +26,17 @@ if (useMockApi) {
     apiBaseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5555";
   }
 } else {
-  apiBaseURL = "https://api.portalpalhoca.com.br/";
+  // Usar a URL do .env ou fallback para produção
+  apiBaseURL =
+    process.env.NEXT_PUBLIC_API_URL || "https://api.portalpalhoca.com.br";
 }
+
+// Remover barra final se existir (para evitar URLs como /api//endpoint)
+apiBaseURL = apiBaseURL.replace(/\/$/, "");
 
 export const api = axios.create({
   baseURL: apiBaseURL,
+  timeout: 30000, // 30 segundos de timeout
 });
 
 // Log para facilitar debug (sempre mostrar para ajudar desenvolvimento)
@@ -40,6 +46,65 @@ console.log("🔧 API Configuration:", {
   isClient: typeof window !== "undefined",
   env: process.env.NODE_ENV,
 });
+
+// Interceptor de resposta para tratamento global de erros
+api.interceptors.response.use(
+  (response) => {
+    // Log de sucesso em desenvolvimento
+    if (process.env.NODE_ENV === "development") {
+      console.log("✅ API Success:", {
+        url: response.config.url,
+        status: response.status,
+        data: response.data,
+      });
+    }
+    return response;
+  },
+  (error) => {
+    // Log de erro detalhado
+    console.error("❌ API Error:", {
+      url: error.config?.url,
+      fullURL: error.config?.baseURL + error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      code: error.code,
+    });
+
+    // Tratamento especial para Network Error
+    if (error.message === "Network Error" && !error.response) {
+      console.error("🌐 Network Error - Possíveis causas:", {
+        "1": "Servidor não está rodando ou não está acessível",
+        "2": "URL da API está incorreta",
+        "3": "Problema de CORS (servidor precisa permitir origem)",
+        "4": "Firewall ou proxy bloqueando a requisição",
+        "5": "Sem conexão com a internet",
+        apiURL: apiBaseURL,
+        endpoint: error.config?.url,
+      });
+
+      // Criar uma resposta de erro amigável
+      error.response = {
+        data: {
+          message: `Não foi possível conectar ao servidor (${apiBaseURL}). Verifique se o servidor está rodando e acessível.`,
+        },
+        status: 0,
+        statusText: "Network Error",
+      } as any;
+    }
+
+    // Adicionar mensagem de erro amigável se não existir
+    if (error.response && !error.response.data) {
+      error.response.data = {
+        message: `Erro ${error.response.status}: ${error.response.statusText}`,
+      };
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export const api_cep = axios.create({
   baseURL: "https://viacep.com.br/ws/",

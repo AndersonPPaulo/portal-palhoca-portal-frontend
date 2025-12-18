@@ -71,6 +71,12 @@ const TiptapEditor = ({
       const { api } = await import("@/service/api");
       const { "user:token": token } = parseCookies();
 
+      if (!token) {
+        throw new Error(
+          "Token de autenticação não encontrado. Faça login novamente."
+        );
+      }
+
       const formData = new FormData();
       formData.append("image", file);
 
@@ -81,19 +87,39 @@ const TiptapEditor = ({
         },
       };
 
+      console.log("📤 Enviando imagem para a API...", {
+        endpoint: "/upload/article-image",
+        fileName: file.name,
+        fileSize: file.size,
+      });
+
       const response = await api.post(
         "/upload/article-image",
         formData,
         config
       );
 
+      console.log("✅ Resposta da API:", response);
+
+      if (!response || !response.data) {
+        throw new Error("Resposta inválida da API (response.data é undefined)");
+      }
+
       const imageUrl =
-        response?.data?.imageUrl ||
-        response?.data?.url ||
-        response?.data?.thumbnailUrl ||
+        response.data.imageUrl ||
+        response.data.url ||
+        response.data.thumbnailUrl ||
+        response.data.link ||
         "";
 
-      if (!imageUrl) throw new Error("URL da imagem não retornada pela API");
+      console.log("🖼️ URL da imagem retornada:", imageUrl);
+
+      if (!imageUrl) {
+        console.error("❌ Estrutura da resposta:", response.data);
+        throw new Error(
+          "URL da imagem não retornada pela API. Verifique o console."
+        );
+      }
 
       editor
         ?.chain()
@@ -104,9 +130,24 @@ const TiptapEditor = ({
           height: `${imageSize.height}px`,
         } as any)
         .run();
-    } catch (err) {
-      console.error("Erro upload imagem no editor:", err);
-      alert("Erro ao enviar imagem. Tente novamente.");
+
+      console.log("✅ Imagem inserida no editor com sucesso!");
+    } catch (err: any) {
+      console.error("❌ Erro upload imagem no editor:", err);
+      console.error("Detalhes do erro:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+      });
+
+      const errorMessage =
+        err.response?.data?.message ||
+        err.message ||
+        "Erro desconhecido ao enviar imagem";
+
+      alert(
+        `Erro ao enviar imagem: ${errorMessage}\n\nVerifique o console para mais detalhes.`
+      );
     } finally {
       // limpar valor para permitir re-upload do mesmo arquivo se necessário
       if (event.target) event.target.value = "";
