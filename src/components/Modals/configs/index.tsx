@@ -110,7 +110,6 @@ export const articleMetricConfigs: MetricConfig[] = [
   },
 ];
 
-
 // Configuração específica para banners baseada no seu EventType
 export const bannerEventConfigs: EventTypeConfig[] = [
   {
@@ -185,7 +184,10 @@ export const bannerMetricConfigs: MetricConfig[] = [
     icon: MousePointer,
     color: "text-purple-600",
     bgColor: "border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100",
-    calculation: (events) => (events.click || 0) + (events.whatsapp_click || 0) + (events.map_click || 0),
+    calculation: (events) =>
+      (events.click || 0) +
+      (events.whatsapp_click || 0) +
+      (events.map_click || 0),
   },
   {
     key: "view_completion_rate",
@@ -200,16 +202,12 @@ export const bannerMetricConfigs: MetricConfig[] = [
     },
   },
   {
-    key: "engagement_rate",
-    label: "Taxa Engajamento",
-    icon: BarChart3,
-    color: "text-orange-600",
-    bgColor: "border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100",
-    calculation: (events) => {
-      const views = events.view || 0;
-      const totalEngagement = (events.click || 0) + (events.whatsapp_click || 0) + (events.profile_view || 0);
-      return views > 0 ? `${((totalEngagement / views) * 100).toFixed(1)}%` : "0%";
-    },
+    key: "whatsapp_clicks",
+    label: "Cliques no Whatsapp",
+    icon: MessageCircle,
+    color: "text-green-600",
+    bgColor: "border-green-200 bg-gradient-to-br from-green-50 to-green-100",
+    calculation: (events) => events.whatsapp_click || 0,
   },
 ];
 
@@ -290,16 +288,12 @@ export const companyMetricConfigs: MetricConfig[] = [
     calculation: (events) => events.click || 0,
   },
   {
-    key: "engagement_rate",
-    label: "Taxa Engajamento",
-    icon: TrendingUp,
+    key: "whatsapp_clicks",
+    label: "Cliques no Whatsapp",
+    icon: MessageCircle,
     color: "text-green-600",
     bgColor: "border-green-200 bg-gradient-to-br from-green-50 to-green-100",
-    calculation: (events) => {
-      const views = events.view || 0;
-      const profile_views = events.profile_view || 0;
-      return views > 0 ? `${((profile_views / views) * 100).toFixed(1)}%` : "0%";
-    },
+    calculation: (events) => events.whatsapp_click || 0,
   },
   {
     key: "conversion_rate",

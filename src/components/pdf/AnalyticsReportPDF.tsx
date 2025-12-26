@@ -147,7 +147,6 @@ const styles = StyleSheet.create({
 
 interface AnalyticsReportPDFProps {
   entityId: string;
-  entityType: string;
   entityTitle: string;
   events: Record<string, number>;
   eventTypeConfigs: EventTypeConfig[];
@@ -158,7 +157,6 @@ interface AnalyticsReportPDFProps {
 
 const AnalyticsReportPDF: React.FC<AnalyticsReportPDFProps> = ({
   entityId,
-  entityType,
   entityTitle,
   events,
   eventTypeConfigs,
@@ -166,19 +164,6 @@ const AnalyticsReportPDF: React.FC<AnalyticsReportPDFProps> = ({
   startDate,
   endDate,
 }) => {
-  const getReportTitle = () => {
-    switch (entityType) {
-      case "article":
-        return "Relatório de Analytics - Notícia";
-      case "banner":
-        return "Relatório de Analytics - Banner";
-      case "company":
-        return "Relatório de Analytics - Comércio";
-      default:
-        return "Relatório de Analytics";
-    }
-  };
-
   const formatPeriod = () => {
     if (!startDate && !endDate) {
       return "Todos os períodos";
@@ -234,10 +219,7 @@ const AnalyticsReportPDF: React.FC<AnalyticsReportPDFProps> = ({
       <Page size="A4" style={styles.page}>
         {/* Cabeçalho */}
         <View style={styles.header}>
-          <Text style={styles.title}>{getReportTitle()}</Text>
-          <Text style={styles.subtitle}>
-            Portal Palhoça - Painel Administrativo
-          </Text>
+          <Text style={styles.title}>Si3 Portais - Relatório Analítico</Text>
           <Text style={styles.entityTitle}>{entityTitle}</Text>
           <Text style={styles.periodText}>Período: {formatPeriod()}</Text>
           <Text style={styles.entityId}>ID: {entityId}</Text>

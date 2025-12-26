@@ -259,7 +259,6 @@ export default function ReusableAnalyticsModal({
       const doc = (
         <AnalyticsReportPDF
           entityId={entityId}
-          entityType={entityType}
           entityTitle={entityTitle}
           events={editableEvents}
           eventTypeConfigs={eventTypeConfigs}
