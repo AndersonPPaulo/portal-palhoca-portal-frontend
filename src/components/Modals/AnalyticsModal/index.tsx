@@ -46,7 +46,7 @@ export interface AnalyticsData {
   error: string | null;
   rawEvents?: Array<{
     event_type: string;
-    timestamp: string;
+    timestamp?: string;
     extra_data?: Record<string, unknown>;
   }>;
 }

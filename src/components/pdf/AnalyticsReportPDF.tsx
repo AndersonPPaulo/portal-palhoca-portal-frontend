@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
 
 export interface DetailedEvent {
   event_type: string;
-  timestamp: string;
+  timestamp?: string;
   extra_data?: Record<string, unknown>;
 }
 
@@ -262,8 +262,11 @@ const AnalyticsReportPDF: React.FC<AnalyticsReportPDFProps> = ({
   const metrics = calculateMetrics();
   const hasData = Object.values(events).some((value) => value > 0);
 
+  // Filtrar apenas eventos que têm timestamp (eventos individuais reais)
+  const eventsWithTimestamp = detailedEvents.filter((event) => event.timestamp);
+
   // Agrupar eventos detalhados por tipo
-  const groupedDetailedEvents = detailedEvents.reduce((acc, event) => {
+  const groupedDetailedEvents = eventsWithTimestamp.reduce((acc, event) => {
     if (!acc[event.event_type]) {
       acc[event.event_type] = [];
     }
@@ -275,12 +278,13 @@ const AnalyticsReportPDF: React.FC<AnalyticsReportPDFProps> = ({
   Object.keys(groupedDetailedEvents).forEach((eventType) => {
     groupedDetailedEvents[eventType].sort(
       (a, b) =>
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        new Date(b.timestamp!).getTime() - new Date(a.timestamp!).getTime()
     );
   });
 
   // Formatar timestamp para exibição
-  const formatTimestamp = (timestamp: string) => {
+  const formatTimestamp = (timestamp?: string) => {
+    if (!timestamp) return "Data indisponível";
     try {
       return format(new Date(timestamp), "dd/MM/yyyy 'às' HH:mm:ss", {
         locale: ptBR,
@@ -369,11 +373,11 @@ const AnalyticsReportPDF: React.FC<AnalyticsReportPDFProps> = ({
             </View>
 
             {/* Listagem Detalhada de Eventos */}
-            {detailedEvents.length > 0 && (
+            {eventsWithTimestamp.length > 0 && (
               <View style={styles.detailedEventsSection} break>
                 <Text style={styles.sectionTitle}>
                   Listagem Detalhada de Todos os Eventos (
-                  {detailedEvents.length} eventos)
+                  {eventsWithTimestamp.length} eventos)
                 </Text>
                 {eventTypeConfigs.map((config) => {
                   const eventsOfType = groupedDetailedEvents[config.type] || [];

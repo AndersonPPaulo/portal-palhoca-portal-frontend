@@ -32,6 +32,9 @@ export default function CompanyAnalyticsModal({
     ClearError,
   } = useContext(CompanyAnalyticsContext);
 
+  console.log("Raw Company Events:", rawCompanyEvents);
+  console.log("Company Events:", companyEvents);
+
   // Carregar eventos quando o modal abrir
   useEffect(() => {
     if (isOpen && companyId) {

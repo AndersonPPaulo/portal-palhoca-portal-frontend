@@ -15,8 +15,8 @@ export default function Comercio() {
   const [filter, setFilter] = useState("");
   const [activeFilters, setActiveFilters] = useState<{
     name?: string;
-    categories?: string[]; 
-    highlight?: boolean | null; 
+    categories?: string[];
+    highlight?: boolean | null;
     isActive?: boolean | null;
   }>({
     name: "",
@@ -26,12 +26,11 @@ export default function Comercio() {
   });
 
   const handleFilterChange = (filters: FilterState) => {
-    
     setActiveFilters({
       name: filters.name || "",
       categories: filters.categories || [],
       highlight: filters.highlight,
-      isActive: null, 
+      isActive: null,
     });
   };
 
