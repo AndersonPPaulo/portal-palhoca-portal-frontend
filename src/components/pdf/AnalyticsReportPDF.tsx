@@ -143,7 +143,53 @@ const styles = StyleSheet.create({
     color: "#475569",
     marginBottom: 3,
   },
+  detailedEventsSection: {
+    marginTop: 20,
+  },
+  detailedEventCard: {
+    marginBottom: 6,
+    padding: 8,
+    backgroundColor: "#ffffff",
+    border: "1 solid #e2e8f0",
+    borderRadius: 3,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  detailedEventInfo: {
+    flex: 1,
+  },
+  detailedEventType: {
+    fontSize: 9,
+    fontWeight: "bold",
+    color: "#334155",
+    marginBottom: 2,
+  },
+  detailedEventTime: {
+    fontSize: 7,
+    color: "#64748b",
+  },
+  eventTypeHeader: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#1e40af",
+    marginTop: 15,
+    marginBottom: 8,
+    paddingBottom: 4,
+    borderBottom: "1 solid #e2e8f0",
+  },
+  eventTypeCount: {
+    fontSize: 9,
+    color: "#64748b",
+    marginBottom: 6,
+  },
 });
+
+export interface DetailedEvent {
+  event_type: string;
+  timestamp: string;
+  extra_data?: Record<string, unknown>;
+}
 
 interface AnalyticsReportPDFProps {
   entityId: string;
@@ -153,6 +199,7 @@ interface AnalyticsReportPDFProps {
   metricConfigs?: MetricConfig[];
   startDate?: string;
   endDate?: string;
+  detailedEvents?: DetailedEvent[];
 }
 
 const AnalyticsReportPDF: React.FC<AnalyticsReportPDFProps> = ({
@@ -163,6 +210,7 @@ const AnalyticsReportPDF: React.FC<AnalyticsReportPDFProps> = ({
   metricConfigs,
   startDate,
   endDate,
+  detailedEvents = [],
 }) => {
   const formatPeriod = () => {
     if (!startDate && !endDate) {
@@ -213,6 +261,34 @@ const AnalyticsReportPDF: React.FC<AnalyticsReportPDFProps> = ({
 
   const metrics = calculateMetrics();
   const hasData = Object.values(events).some((value) => value > 0);
+
+  // Agrupar eventos detalhados por tipo
+  const groupedDetailedEvents = detailedEvents.reduce((acc, event) => {
+    if (!acc[event.event_type]) {
+      acc[event.event_type] = [];
+    }
+    acc[event.event_type].push(event);
+    return acc;
+  }, {} as Record<string, DetailedEvent[]>);
+
+  // Ordenar eventos dentro de cada grupo por timestamp (mais recente primeiro)
+  Object.keys(groupedDetailedEvents).forEach((eventType) => {
+    groupedDetailedEvents[eventType].sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+  });
+
+  // Formatar timestamp para exibição
+  const formatTimestamp = (timestamp: string) => {
+    try {
+      return format(new Date(timestamp), "dd/MM/yyyy 'às' HH:mm:ss", {
+        locale: ptBR,
+      });
+    } catch {
+      return timestamp;
+    }
+  };
 
   return (
     <Document>
@@ -291,6 +367,40 @@ const AnalyticsReportPDF: React.FC<AnalyticsReportPDFProps> = ({
                 • Os dados refletem o período selecionado ou todo o histórico.
               </Text>
             </View>
+
+            {/* Listagem Detalhada de Eventos */}
+            {detailedEvents.length > 0 && (
+              <View style={styles.detailedEventsSection} break>
+                <Text style={styles.sectionTitle}>
+                  Listagem Detalhada de Todos os Eventos (
+                  {detailedEvents.length} eventos)
+                </Text>
+                {eventTypeConfigs.map((config) => {
+                  const eventsOfType = groupedDetailedEvents[config.type] || [];
+                  if (eventsOfType.length === 0) return null;
+
+                  return (
+                    <View key={config.type}>
+                      <Text style={styles.eventTypeHeader}>
+                        {config.label} ({eventsOfType.length})
+                      </Text>
+                      {eventsOfType.map((event, index) => (
+                        <View key={index} style={styles.detailedEventCard}>
+                          <View style={styles.detailedEventInfo}>
+                            <Text style={styles.detailedEventType}>
+                              {config.label} #{index + 1}
+                            </Text>
+                            <Text style={styles.detailedEventTime}>
+                              {formatTimestamp(event.timestamp)}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
           </>
         ) : (
           <View style={styles.emptyState}>

@@ -22,6 +22,7 @@ export default function BannerAnalyticsModal({
   // Usando seu provider de banner
   const {
     bannerEvents,
+    rawBannerEvents,
     loading,
     error,
     GetEventsByBanner,
@@ -46,6 +47,7 @@ export default function BannerAnalyticsModal({
     events: bannerEvents[bannerId] || [],
     loading,
     error,
+    rawEvents: rawBannerEvents[bannerId] || [],
   };
 
   const analyticsActions = {

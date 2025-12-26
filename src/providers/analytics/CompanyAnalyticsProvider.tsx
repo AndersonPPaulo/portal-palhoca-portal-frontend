@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { api } from "@/service/api";
@@ -18,7 +19,8 @@ export enum EventType {
 // Interfaces dos dados
 export interface CompanyEventRaw {
   event_type: EventType;
-  timestamp: string;
+  timestamp?: string;
+  virtual_count?: number;
 }
 
 export interface CompanyEvent {
@@ -78,6 +80,7 @@ interface ICompanyAnalyticsData {
   totalEvents: TotalCompanyEvent[];
   loading: boolean;
   error: string | null;
+  rawCompanyEvents: Record<string, CompanyEventRaw[]>;
 
   ClearError(): void;
 }
@@ -93,6 +96,9 @@ export const CompanyAnalyticsContext = createContext<ICompanyAnalyticsData>(
 export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
   const [companyEvents, setCompanyEvents] = useState<
     Record<string, CompanyEvent[]>
+  >({});
+  const [rawCompanyEvents, setRawCompanyEvents] = useState<
+    Record<string, CompanyEventRaw[]>
   >({});
   const [totalEvents, setTotalEvents] = useState<TotalCompanyEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -142,21 +148,24 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
         .then((res) => {
           const responseData: IEventsByCompanyResponse = res.data.response;
 
-          // Agregar eventos individuais por tipo
+          console.log("Response Data:", responseData);
+
+          // Usar os eventos que já vêm agregados da API
           const rawEvents = responseData.events || [];
-          const aggregated: Record<string, number> = {};
 
-          rawEvents.forEach((event) => {
-            const type = event.event_type;
-            aggregated[type] = (aggregated[type] || 0) + 1;
-          });
+          // Armazenar eventos brutos (se tiverem timestamp para listagem detalhada)
+          const eventsWithTimestamp = rawEvents.filter((e) => e.timestamp);
+          if (eventsWithTimestamp.length > 0) {
+            setRawCompanyEvents((prev) => ({
+              ...prev,
+              [companyId]: eventsWithTimestamp,
+            }));
+          }
 
-          // Converter para formato esperado
-          const processedEvents: CompanyEvent[] = Object.entries(
-            aggregated
-          ).map(([event_type, count]) => ({
-            event_type: event_type as EventType,
-            virtual_count: count,
+          // Converter para formato esperado (já vem com virtual_count da API)
+          const processedEvents: CompanyEvent[] = rawEvents.map((event) => ({
+            event_type: event.event_type,
+            virtual_count: event.virtual_count || 0,
           }));
 
           setCompanyEvents((prev) => ({
@@ -260,6 +269,7 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
         GetTotalEvents,
         UpdateVirtualEvent,
         companyEvents,
+        rawCompanyEvents,
         totalEvents,
         loading,
         error,

@@ -25,6 +25,7 @@ export default function ArticleAnalyticsModal({
   // Usando seu provider atual
   const {
     articleEvents,
+    rawArticleEvents,
     loading,
     error,
     GetEventsByArticle,
@@ -50,6 +51,7 @@ export default function ArticleAnalyticsModal({
     events: articleEvents[articleId] || [],
     loading,
     error,
+    rawEvents: rawArticleEvents[articleId] || [],
   };
   const isMobile = useIsMobile();
 

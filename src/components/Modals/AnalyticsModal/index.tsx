@@ -26,6 +26,8 @@ import { Download } from "lucide-react";
 export interface GenericEvent {
   event_type: string;
   virtual_count: number;
+  timestamp?: string;
+  extra_data?: Record<string, unknown>;
 }
 
 export interface EventTypeConfig {
@@ -42,6 +44,11 @@ export interface AnalyticsData {
   events: GenericEvent[];
   loading: boolean;
   error: string | null;
+  rawEvents?: Array<{
+    event_type: string;
+    timestamp: string;
+    extra_data?: Record<string, unknown>;
+  }>;
 }
 
 export interface AnalyticsActions {
@@ -265,6 +272,7 @@ export default function ReusableAnalyticsModal({
           metricConfigs={metricConfigs}
           startDate={startDate}
           endDate={endDate}
+          detailedEvents={analyticsData.rawEvents || []}
         />
       );
 

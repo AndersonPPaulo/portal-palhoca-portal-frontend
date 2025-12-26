@@ -17,7 +17,8 @@ export enum EventType {
 // Interfaces dos dados
 export interface ArticleEventRaw {
   event_type: EventType;
-  timestamp: string;
+  timestamp?: string;
+  virtual_count?: number;
 }
 
 export interface ArticleEvent {
@@ -103,6 +104,7 @@ interface IArticleAnalyticsData {
   totalEvents: TotalArticleEvent[];
   loading: boolean;
   error: string | null;
+  rawArticleEvents: Record<string, ArticleEventRaw[]>;
 
   ClearError(): void;
 }
@@ -118,6 +120,9 @@ export const ArticleAnalyticsContext = createContext<IArticleAnalyticsData>(
 export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
   const [articleEvents, setArticleEvents] = useState<
     Record<string, ArticleEvent[]>
+  >({});
+  const [rawArticleEvents, setRawArticleEvents] = useState<
+    Record<string, ArticleEventRaw[]>
   >({});
   const [totalEvents, setTotalEvents] = useState<TotalArticleEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -169,21 +174,22 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
         .then((res) => {
           const responseData: IEventsByArticleResponse = res.data.response;
 
-          // Agregar eventos individuais por tipo
+          // Usar os eventos que já vêm agregados da API
           const rawEvents = responseData.events || [];
-          const aggregated: Record<string, number> = {};
 
-          rawEvents.forEach((event) => {
-            const type = event.event_type;
-            aggregated[type] = (aggregated[type] || 0) + 1;
-          });
+          // Armazenar eventos brutos (se tiverem timestamp para listagem detalhada)
+          const eventsWithTimestamp = rawEvents.filter((e) => e.timestamp);
+          if (eventsWithTimestamp.length > 0) {
+            setRawArticleEvents((prev) => ({
+              ...prev,
+              [articleId]: eventsWithTimestamp,
+            }));
+          }
 
-          // Converter para formato esperado
-          const processedEvents: ArticleEvent[] = Object.entries(
-            aggregated
-          ).map(([event_type, count]) => ({
-            event_type: event_type as EventType,
-            virtual_count: count,
+          // Converter para formato esperado (já vem com virtual_count da API)
+          const processedEvents: ArticleEvent[] = rawEvents.map((event) => ({
+            event_type: event.event_type,
+            virtual_count: event.virtual_count || 0,
           }));
 
           setArticleEvents((prev) => ({
@@ -287,6 +293,7 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
         GetTotalEvents,
         UpdateVirtualEvent,
         articleEvents,
+        rawArticleEvents,
         totalEvents,
         loading,
         error,

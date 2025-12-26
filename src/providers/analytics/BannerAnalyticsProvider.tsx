@@ -18,7 +18,8 @@ export enum EventType {
 // Interfaces dos dados
 export interface BannerEventRaw {
   event_type: EventType;
-  timestamp: string;
+  timestamp?: string;
+  virtual_count?: number;
 }
 
 export interface BannerEvent {
@@ -78,6 +79,7 @@ interface IBannerAnalyticsData {
   totalEvents: TotalBannerEvent[];
   loading: boolean;
   error: string | null;
+  rawBannerEvents: Record<string, BannerEventRaw[]>;
 
   ClearError(): void;
 }
@@ -93,6 +95,9 @@ export const BannerAnalyticsContext = createContext<IBannerAnalyticsData>(
 export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
   const [bannerEvents, setBannerEvents] = useState<
     Record<string, BannerEvent[]>
+  >({});
+  const [rawBannerEvents, setRawBannerEvents] = useState<
+    Record<string, BannerEventRaw[]>
   >({});
   const [totalEvents, setTotalEvents] = useState<TotalBannerEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -149,22 +154,23 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
         .then((res) => {
           const responseData: IEventsByBannerResponse = res.data.response;
 
-          // Agregar eventos individuais por tipo
+          // Usar os eventos que já vêm agregados da API
           const rawEvents = responseData.events || [];
-          const aggregated: Record<string, number> = {};
 
-          rawEvents.forEach((event) => {
-            const type = event.event_type;
-            aggregated[type] = (aggregated[type] || 0) + 1;
-          });
+          // Armazenar eventos brutos (se tiverem timestamp para listagem detalhada)
+          const eventsWithTimestamp = rawEvents.filter((e) => e.timestamp);
+          if (eventsWithTimestamp.length > 0) {
+            setRawBannerEvents((prev) => ({
+              ...prev,
+              [bannerId]: eventsWithTimestamp,
+            }));
+          }
 
-          // Converter para formato esperado
-          const processedEvents: BannerEvent[] = Object.entries(aggregated).map(
-            ([event_type, count]) => ({
-              event_type: event_type as EventType,
-              virtual_count: count,
-            })
-          );
+          // Converter para formato esperado (já vem com virtual_count da API)
+          const processedEvents: BannerEvent[] = rawEvents.map((event) => ({
+            event_type: event.event_type,
+            virtual_count: event.virtual_count || 0,
+          }));
 
           setBannerEvents((prev) => {
             const newState = {
@@ -276,6 +282,7 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
         GetTotalEvents,
         UpdateVirtualEvent,
         bannerEvents,
+        rawBannerEvents,
         totalEvents,
         loading,
         error,
