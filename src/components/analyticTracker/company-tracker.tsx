@@ -58,10 +58,15 @@ const eventTypeConfig = {
 };
 
 function formatTimeAgo(timestamp: string): string {
+  // Backend envia UTC mas com offset incorreto, subtrair 3h
   const date = new Date(timestamp);
+  date.setHours(date.getHours() - 3);
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
+  // Se a diferença for negativa ou muito pequena
+  if (diffInSeconds < 0) return "agora mesmo";
+  if (diffInSeconds < 5) return "agora mesmo";
   if (diffInSeconds < 60) return `${diffInSeconds}s atrás`;
   if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}min atrás`;
   if (diffInSeconds < 86400)
@@ -81,6 +86,15 @@ function CompanyEventItem({ event }: { event: IEvent }) {
   };
 
   const EventIcon = eventConfig.icon;
+
+  // Converter timestamp UTC para hora local brasileira (backend tem offset de +3h)
+  const eventDate = new Date(event.timestamp);
+  eventDate.setHours(eventDate.getHours() - 3);
+  const localTimeString = eventDate.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 
   return (
     <div
@@ -120,9 +134,7 @@ function CompanyEventItem({ event }: { event: IEvent }) {
           </div>
         </div>
 
-        <div className="text-xs text-gray-400">
-          {new Date(event.timestamp).toLocaleTimeString("pt-BR")}
-        </div>
+        <div className="text-xs text-gray-400">{localTimeString}</div>
       </div>
     </div>
   );
@@ -131,36 +143,38 @@ function CompanyEventItem({ event }: { event: IEvent }) {
 export default function CompanyTracker({
   autoRefresh = true,
 }: CompanyTrackerProps) {
-  const { Get100EventsCompany, last100EventsCompany } = useContext(
+  const { Get100EventsCompany, lastEventsCompany } = useContext(
     CompanyAnalyticsContext
   );
 
   const [isLive, setIsLive] = useState(autoRefresh);
   const [itemsPerPage, setItemsPerPage] = useState(100);
 
+  // Buscar dados iniciais imediatamente
+  useEffect(() => {
+    Get100EventsCompany(itemsPerPage);
+  }, [itemsPerPage, Get100EventsCompany]);
+
   useEffect(() => {
     if (!isLive) return;
 
+    // Intervalo de 45 segundos para atualização automática
     const interval = setInterval(() => {
-      Get100EventsCompany();
-    }, 5000);
+      Get100EventsCompany(itemsPerPage);
+    }, 45000);
 
     return () => clearInterval(interval);
-  }, [isLive, Get100EventsCompany]);
+  }, [isLive, Get100EventsCompany, itemsPerPage]);
 
   const [eventFilter, setEventFilter] = useState<
     "all" | "view" | "view_end" | "click" | "whatsapp_click"
   >("all");
 
   const filteredEvents = useMemo(() => {
-    return last100EventsCompany.filter((event) =>
+    return lastEventsCompany.filter((event) =>
       eventFilter === "all" ? true : event.event_type === eventFilter
     );
-  }, [last100EventsCompany, eventFilter]);
-
-  const visibleEvents = useMemo(() => {
-    return filteredEvents.slice(0, itemsPerPage);
-  }, [filteredEvents, itemsPerPage]);
+  }, [lastEventsCompany, eventFilter]);
 
   return (
     <Card className="w-full h-full flex flex-col">
@@ -228,7 +242,7 @@ export default function CompanyTracker({
             </div>
           ) : (
             <div className="space-y-3">
-              {visibleEvents.map((event) => (
+              {filteredEvents.map((event) => (
                 <CompanyEventItem key={event.id} event={event} />
               ))}
             </div>

@@ -8,6 +8,7 @@ interface ProfileImageViewerProps {
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
   fallbackInitials?: string;
+  isCollapsed?: boolean;
 }
 
 export default function ProfileImageViewer({
@@ -16,6 +17,7 @@ export default function ProfileImageViewer({
   size = "md",
   className = "",
   fallbackInitials = "??",
+  isCollapsed = false,
 }: ProfileImageViewerProps) {
   const [showModal, setShowModal] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -51,19 +53,23 @@ export default function ProfileImageViewer({
     <>
       {/* Imagem de perfil clicável */}
       <div
-        className={`${currentSize.container} ${className} cursor-pointer`}
+        className={`${currentSize.container} ${className} cursor-pointer flex items-center justify-center`}
         onClick={openModal}
       >
         {shouldShowImage ? (
           <img
             src={imageUrl}
             alt={`Foto de perfil de ${userName}`}
-            className="rounded-full min-w-20 w-20 max-w-34 h-20 object-cover hover:opacity-90 transition-opacity"
+            className={`rounded-full object-cover hover:opacity-90 transition-opacity w-full h-full`}
             onError={handleImageError}
           />
         ) : (
           <div
-            className={`rounded-full w-20 h-20 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold ${currentSize.text} shadow-lg hover:from-blue-500 hover:to-blue-700 transition-colors`}
+            className={`${
+              isCollapsed ? "w-12 h-12" : "w-20 h-20"
+            } rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold ${
+              currentSize.text
+            } shadow-lg hover:from-blue-500 hover:to-blue-700 transition-colors`}
           >
             {fallbackInitials}
           </div>

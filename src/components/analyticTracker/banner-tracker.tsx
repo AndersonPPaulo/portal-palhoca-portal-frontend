@@ -50,10 +50,15 @@ const eventTypeConfig = {
 };
 
 function formatTimeAgo(timestamp: string): string {
+  // Backend envia UTC mas com offset incorreto, subtrair 3h
   const date = new Date(timestamp);
+  date.setHours(date.getHours() - 3);
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
+  // Se a diferença for negativa ou muito pequena
+  if (diffInSeconds < 0) return "agora mesmo";
+  if (diffInSeconds < 5) return "agora mesmo";
   if (diffInSeconds < 60) return `${diffInSeconds}s atrás`;
   if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}min atrás`;
   if (diffInSeconds < 86400)
@@ -73,6 +78,15 @@ function BannerEventItem({ event }: { event: IEvent }) {
   };
 
   const EventIcon = eventConfig.icon;
+
+  // Converter timestamp UTC para hora local brasileira (backend tem offset de +3h)
+  const eventDate = new Date(event.timestamp);
+  eventDate.setHours(eventDate.getHours() - 3);
+  const localTimeString = eventDate.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 
   return (
     <div
@@ -119,9 +133,7 @@ function BannerEventItem({ event }: { event: IEvent }) {
           </div>
         </div>
 
-        <div className="text-xs text-gray-400">
-          {new Date(event.timestamp).toLocaleTimeString("pt-BR")}
-        </div>
+        <div className="text-xs text-gray-400">{localTimeString}</div>
       </div>
     </div>
   );
@@ -130,36 +142,51 @@ function BannerEventItem({ event }: { event: IEvent }) {
 export default function BannerTracker({
   autoRefresh = true,
 }: BannerTrackerProps) {
-  const { Get100EventsBanner, last100EventsBanner } = useContext(
+  const { Get100EventsBanner, lastEventsBanner } = useContext(
     BannerAnalyticsContext
   );
   const [isLive, setIsLive] = useState(autoRefresh);
   const [itemsPerPage, setItemsPerPage] = useState(100);
 
+  // Buscar dados iniciais com delay de 15 segundos
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      Get100EventsBanner(itemsPerPage);
+    }, 15000);
+    return () => clearTimeout(timer);
+  }, [itemsPerPage, Get100EventsBanner]);
+
   useEffect(() => {
     if (!isLive) return;
 
-    //faça rodar a cada 5 segundos
-    const interval = setInterval(() => {
-      Get100EventsBanner();
-    }, 5000);
+    let interval: NodeJS.Timeout;
 
-    return () => clearInterval(interval);
-  }, [isLive, Get100EventsBanner]);
+    // Aguardar 15 segundos antes de iniciar o intervalo
+    const initialTimer = setTimeout(() => {
+      // Primeira chamada após o delay
+      Get100EventsBanner(itemsPerPage);
+
+      // Intervalo de 45 segundos para atualização automática
+      interval = setInterval(() => {
+        Get100EventsBanner(itemsPerPage);
+      }, 45000);
+    }, 15000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      if (interval) clearInterval(interval);
+    };
+  }, [isLive, Get100EventsBanner, itemsPerPage]);
 
   const [eventFilter, setEventFilter] = useState<
     "all" | "view" | "view_end" | "click"
   >("all");
 
   const filteredEvents = useMemo(() => {
-    return last100EventsBanner.filter((event) =>
+    return lastEventsBanner.filter((event) =>
       eventFilter === "all" ? true : event.event_type === eventFilter
     );
-  }, [last100EventsBanner, eventFilter]);
-
-  const visibleEvents = useMemo(() => {
-    return filteredEvents.slice(0, itemsPerPage);
-  }, [filteredEvents, itemsPerPage]);
+  }, [lastEventsBanner, eventFilter]);
 
   return (
     <Card className="w-full h-full flex flex-col">
@@ -225,7 +252,7 @@ export default function BannerTracker({
             </div>
           ) : (
             <div className="space-y-3">
-              {visibleEvents.map((event) => (
+              {filteredEvents.map((event) => (
                 <BannerEventItem key={event.id} event={event} />
               ))}
             </div>

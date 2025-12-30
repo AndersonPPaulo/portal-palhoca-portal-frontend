@@ -72,9 +72,9 @@ interface IBannerAnalyticsData {
   ): Promise<void>;
   GetTotalEvents(): Promise<void>;
   UpdateVirtualEvent(data: IUpdateVirtualEventProps): Promise<void>;
-  Get100EventsBanner(): Promise<IVirtualEventResponse>;
+  Get100EventsBanner(limit?: number): Promise<IVirtualEventResponse>;
 
-  last100EventsBanner: IEvent[];
+  lastEventsBanner: IEvent[];
   bannerEvents: Record<string, BannerEvent[]>;
   totalEvents: TotalBannerEvent[];
   loading: boolean;
@@ -103,19 +103,23 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [last100EventsBanner, setLast100EventsBanner] = useState<IEvent[]>([]);
+  const [lastEventsBanner, setLastEventsBanner] = useState<IEvent[]>([]);
 
-  const Get100EventsBanner = async (): Promise<IVirtualEventResponse> => {
-    try {
-      const res = await api.get<IVirtualEventResponse>(
-        "/analytics/last-100-event-banner"
-      );
-      setLast100EventsBanner(res.data.response.bannerEvents);
-      return res.data;
-    } catch (err) {
-      throw err;
-    }
-  };
+  const Get100EventsBanner = useCallback(
+    async (limit: number = 100): Promise<IVirtualEventResponse> => {
+      try {
+        const validLimit = Math.min(Math.max(limit, 1), 300);
+        const res = await api.get<IVirtualEventResponse>(
+          `/analytics/last-banner-events/${validLimit}`
+        );
+        setLastEventsBanner(res.data.response.bannerEvents);
+        return res.data;
+      } catch (err) {
+        throw err;
+      }
+    },
+    []
+  );
 
   // Função para buscar eventos por banner (privada - com auth)
   const GetEventsByBanner = useCallback(
@@ -288,7 +292,7 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
         error,
         ClearError,
         Get100EventsBanner,
-        last100EventsBanner,
+        lastEventsBanner,
       }}
     >
       {children}
