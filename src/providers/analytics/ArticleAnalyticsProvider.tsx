@@ -97,9 +97,9 @@ interface IArticleAnalyticsData {
   ): Promise<void>;
   GetTotalEvents(): Promise<void>;
   UpdateVirtualEvent(data: IUpdateVirtualEventProps): Promise<void>;
-  Get100EventsArticle(): Promise<IVirtualEventResponse>;
+  Get100EventsArticle(limit?: number): Promise<IVirtualEventResponse>;
 
-  last100EventsArticle: IEvent[];
+  lastEventsArticle: IEvent[];
   articleEvents: Record<string, ArticleEvent[]>;
   totalEvents: TotalArticleEvent[];
   loading: boolean;
@@ -128,16 +128,17 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [last100EventsArticle, setLast100EventsArticle] = useState<IEvent[]>(
-    []
-  );
+  const [lastEventsArticle, setLastEventsArticle] = useState<IEvent[]>([]);
 
-  const Get100EventsArticle = async (): Promise<IVirtualEventResponse> => {
+  const Get100EventsArticle = async (
+    limit: number = 100
+  ): Promise<IVirtualEventResponse> => {
     try {
+      const validLimit = Math.min(Math.max(limit, 1), 300);
       const res = await api.get<IVirtualEventResponse>(
-        "/analytics/last-100-event-article"
+        `/analytics/last-article-events/${validLimit}`
       );
-      setLast100EventsArticle(res.data.response.articleEvents);
+      setLastEventsArticle(res.data.response.articleEvents);
       return res.data;
     } catch (err) {
       throw err;
@@ -299,7 +300,7 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
         error,
         ClearError,
         Get100EventsArticle,
-        last100EventsArticle,
+        lastEventsArticle,
       }}
     >
       {children}

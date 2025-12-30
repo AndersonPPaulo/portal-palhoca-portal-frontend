@@ -131,36 +131,37 @@ function CompanyEventItem({ event }: { event: IEvent }) {
 export default function CompanyTracker({
   autoRefresh = true,
 }: CompanyTrackerProps) {
-  const { Get100EventsCompany, last100EventsCompany } = useContext(
+  const { Get100EventsCompany, lastEventsCompany } = useContext(
     CompanyAnalyticsContext
   );
 
   const [isLive, setIsLive] = useState(autoRefresh);
   const [itemsPerPage, setItemsPerPage] = useState(100);
 
+  // Buscar dados iniciais
+  useEffect(() => {
+    Get100EventsCompany(itemsPerPage);
+  }, [itemsPerPage, Get100EventsCompany]);
+
   useEffect(() => {
     if (!isLive) return;
 
     const interval = setInterval(() => {
-      Get100EventsCompany();
-    }, 5000);
+      Get100EventsCompany(itemsPerPage);
+    }, 30000);
 
     return () => clearInterval(interval);
-  }, [isLive, Get100EventsCompany]);
+  }, [isLive, Get100EventsCompany, itemsPerPage]);
 
   const [eventFilter, setEventFilter] = useState<
     "all" | "view" | "view_end" | "click" | "whatsapp_click"
   >("all");
 
   const filteredEvents = useMemo(() => {
-    return last100EventsCompany.filter((event) =>
+    return lastEventsCompany.filter((event) =>
       eventFilter === "all" ? true : event.event_type === eventFilter
     );
-  }, [last100EventsCompany, eventFilter]);
-
-  const visibleEvents = useMemo(() => {
-    return filteredEvents.slice(0, itemsPerPage);
-  }, [filteredEvents, itemsPerPage]);
+  }, [lastEventsCompany, eventFilter]);
 
   return (
     <Card className="w-full h-full flex flex-col">
@@ -228,7 +229,7 @@ export default function CompanyTracker({
             </div>
           ) : (
             <div className="space-y-3">
-              {visibleEvents.map((event) => (
+              {filteredEvents.map((event) => (
                 <CompanyEventItem key={event.id} event={event} />
               ))}
             </div>

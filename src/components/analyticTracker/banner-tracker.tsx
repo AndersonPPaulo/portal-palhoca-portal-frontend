@@ -130,36 +130,37 @@ function BannerEventItem({ event }: { event: IEvent }) {
 export default function BannerTracker({
   autoRefresh = true,
 }: BannerTrackerProps) {
-  const { Get100EventsBanner, last100EventsBanner } = useContext(
+  const { Get100EventsBanner, lastEventsBanner } = useContext(
     BannerAnalyticsContext
   );
   const [isLive, setIsLive] = useState(autoRefresh);
   const [itemsPerPage, setItemsPerPage] = useState(100);
+
+  // Buscar dados iniciais
+  useEffect(() => {
+    Get100EventsBanner(itemsPerPage);
+  }, [itemsPerPage, Get100EventsBanner]);
 
   useEffect(() => {
     if (!isLive) return;
 
     //faça rodar a cada 5 segundos
     const interval = setInterval(() => {
-      Get100EventsBanner();
-    }, 5000);
+      Get100EventsBanner(itemsPerPage);
+    }, 30000);
 
     return () => clearInterval(interval);
-  }, [isLive, Get100EventsBanner]);
+  }, [isLive, Get100EventsBanner, itemsPerPage]);
 
   const [eventFilter, setEventFilter] = useState<
     "all" | "view" | "view_end" | "click"
   >("all");
 
   const filteredEvents = useMemo(() => {
-    return last100EventsBanner.filter((event) =>
+    return lastEventsBanner.filter((event) =>
       eventFilter === "all" ? true : event.event_type === eventFilter
     );
-  }, [last100EventsBanner, eventFilter]);
-
-  const visibleEvents = useMemo(() => {
-    return filteredEvents.slice(0, itemsPerPage);
-  }, [filteredEvents, itemsPerPage]);
+  }, [lastEventsBanner, eventFilter]);
 
   return (
     <Card className="w-full h-full flex flex-col">
@@ -225,7 +226,7 @@ export default function BannerTracker({
             </div>
           ) : (
             <div className="space-y-3">
-              {visibleEvents.map((event) => (
+              {filteredEvents.map((event) => (
                 <BannerEventItem key={event.id} event={event} />
               ))}
             </div>

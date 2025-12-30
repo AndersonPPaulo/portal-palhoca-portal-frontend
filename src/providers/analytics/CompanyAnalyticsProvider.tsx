@@ -73,9 +73,9 @@ interface ICompanyAnalyticsData {
   ): Promise<void>;
   GetTotalEvents(): Promise<void>;
   UpdateVirtualEvent(data: IUpdateVirtualEventProps): Promise<void>;
-  Get100EventsCompany(): Promise<IVirtualEventResponse>;
+  Get100EventsCompany(limit?: number): Promise<IVirtualEventResponse>;
 
-  last100EventsCompany: IEvent[];
+  lastEventsCompany: IEvent[];
   companyEvents: Record<string, CompanyEvent[]>;
   totalEvents: TotalCompanyEvent[];
   loading: boolean;
@@ -103,16 +103,17 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
   const [totalEvents, setTotalEvents] = useState<TotalCompanyEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [last100EventsCompany, setLast100EventsCompany] = useState<IEvent[]>(
-    []
-  );
+  const [lastEventsCompany, setLastEventsCompany] = useState<IEvent[]>([]);
 
-  const Get100EventsCompany = async (): Promise<IVirtualEventResponse> => {
+  const Get100EventsCompany = async (
+    limit: number = 100
+  ): Promise<IVirtualEventResponse> => {
     try {
+      const validLimit = Math.min(Math.max(limit, 1), 300);
       const res = await api.get<IVirtualEventResponse>(
-        "/analytics/last-100-event-company"
+        `/analytics/last-company-events/${validLimit}`
       );
-      setLast100EventsCompany(res.data.response.companyEvents);
+      setLastEventsCompany(res.data.response.companyEvents);
       return res.data;
     } catch (err) {
       throw err;
@@ -275,7 +276,7 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
         error,
         ClearError,
         Get100EventsCompany,
-        last100EventsCompany,
+        lastEventsCompany,
       }}
     >
       {children}

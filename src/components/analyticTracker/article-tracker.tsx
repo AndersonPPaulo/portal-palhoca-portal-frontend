@@ -157,23 +157,28 @@ function ArticleEventItem({ event }: { event: IEvent }) {
 export default function ArticleTracker({
   autoRefresh = true,
 }: ArticleTrackerProps) {
-  const { Get100EventsArticle, last100EventsArticle } = useContext(
+  const { Get100EventsArticle, lastEventsArticle } = useContext(
     ArticleAnalyticsContext
   );
 
   const [isLive, setIsLive] = useState(autoRefresh);
   const [itemsPerPage, setItemsPerPage] = useState(100);
 
+  // Buscar dados iniciais
+  useEffect(() => {
+    Get100EventsArticle(itemsPerPage);
+  }, [itemsPerPage, Get100EventsArticle]);
+
   useEffect(() => {
     if (!isLive) return;
 
     //faça rodar a cada 5 segundos
     const interval = setInterval(() => {
-      Get100EventsArticle();
-    }, 5000);
+      Get100EventsArticle(itemsPerPage);
+    }, 30000);
 
     return () => clearInterval(interval);
-  }, [isLive, Get100EventsArticle]);
+  }, [isLive, Get100EventsArticle, itemsPerPage]);
 
   const [eventFilter, setEventFilter] = useState<
     "all" | "view" | "view_end" | "click_view"
@@ -182,15 +187,11 @@ export default function ArticleTracker({
 
   const categories = Array.from(
     new Set(
-      (Array.isArray(last100EventsArticle) ? last100EventsArticle : [])
+      (Array.isArray(lastEventsArticle) ? lastEventsArticle : [])
         .map((e) => e.article?.category?.name)
         .filter(Boolean)
     )
   );
-
-  const visibleEvents = useMemo(() => {
-    return last100EventsArticle.slice(0, itemsPerPage);
-  }, [last100EventsArticle, itemsPerPage]);
 
   return (
     <Card className="w-full h-full flex flex-col">
@@ -266,7 +267,7 @@ export default function ArticleTracker({
 
       <CardContent className="flex-1 overflow-hidden p-0">
         <ScrollArea className="h-full p-6">
-          {last100EventsArticle.length === 0 ? (
+          {lastEventsArticle.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p>Nenhum evento de notícia encontrado</p>
@@ -274,7 +275,7 @@ export default function ArticleTracker({
             </div>
           ) : (
             <div className="space-y-3">
-              {visibleEvents.map((event) => (
+              {lastEventsArticle.map((event) => (
                 <ArticleEventItem key={event.id} event={event} />
               ))}
             </div>
