@@ -143,7 +143,7 @@ export function Sidebar() {
           }`}
         >
           <div
-            className={`transition-all duration-300 flex-shrink-0 ${
+            className={`flex items-center justify-center transition-all duration-300 ${
               isCollapsed ? "lg:w-12 lg:h-12" : "w-20 h-20"
             }`}
           >
@@ -152,6 +152,7 @@ export function Sidebar() {
               userName={profile?.name}
               size={isCollapsed ? "sm" : "md"}
               fallbackInitials={initials}
+              isCollapsed={isCollapsed}
             />
           </div>
 

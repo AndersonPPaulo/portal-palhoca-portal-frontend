@@ -49,13 +49,17 @@ export function NavigationMain({ isCollapsed = false }: NavigationMainProps) {
 
     switch (roleName) {
       case "jornalista":
+        return ["/dashboard", "/postagens", "/relatorios"];
+
       case "colunista":
-      case "chefe de redação":
         return ["/dashboard", "/postagens"];
+
+      case "chefe de redação":
+        return ["/dashboard", "/postagens", "/relatorios"];
 
       case "gerente comercial":
       case "vendedor":
-        return ["/dashboard", "/banners", "/comercio"];
+        return ["/dashboard", "/banners", "/comercio", "/relatorios"];
 
       case "administrador":
         return ["all"];
