@@ -106,7 +106,7 @@ export function Sidebar() {
         className={`
           fixed top-0 left-0 h-screen p-6 
           bg-white shadow-xl overflow-y-auto z-40
-          transition-all duration-300 ease-in-out
+          transition-all duration-300 ease-in-out overflow-x-hidden
           
           ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
           lg:translate-x-0
