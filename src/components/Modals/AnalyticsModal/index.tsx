@@ -364,6 +364,7 @@ export default function ReusableAnalyticsModal({
                     </span>
                   )}
                 </div>
+                <p className="text-gray-500 mt-1 text-xs">ID: {entityId}</p>
               </div>
             </div>
 
