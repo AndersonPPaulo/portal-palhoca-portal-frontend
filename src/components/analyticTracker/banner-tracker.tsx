@@ -1,7 +1,7 @@
 // banner-tracker.tsx
 "use client";
 
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -134,6 +134,7 @@ export default function BannerTracker({
     BannerAnalyticsContext
   );
   const [isLive, setIsLive] = useState(autoRefresh);
+  const [itemsPerPage, setItemsPerPage] = useState(100);
 
   useEffect(() => {
     if (!isLive) return;
@@ -144,16 +145,21 @@ export default function BannerTracker({
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [isLive]);
+  }, [isLive, Get100EventsBanner]);
 
   const [eventFilter, setEventFilter] = useState<
     "all" | "view" | "view_end" | "click"
   >("all");
 
-  const filteredEvents = last100EventsBanner.filter((event) =>
-    eventFilter === "all" ? true : event.event_type === eventFilter
-  );
-  const totalEvents = last100EventsBanner.length;
+  const filteredEvents = useMemo(() => {
+    return last100EventsBanner.filter((event) =>
+      eventFilter === "all" ? true : event.event_type === eventFilter
+    );
+  }, [last100EventsBanner, eventFilter]);
+
+  const visibleEvents = useMemo(() => {
+    return filteredEvents.slice(0, itemsPerPage);
+  }, [filteredEvents, itemsPerPage]);
 
   return (
     <Card className="w-full h-full flex flex-col">
@@ -170,8 +176,17 @@ export default function BannerTracker({
                 </div>
               )}
             </CardTitle>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-              <span>Total: {totalEvents}</span>
+            <div className="flex items-center text-sm text-muted-foreground mt-1">
+              <span>Total:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                className="text-xs border rounded px-2 py-1 bg-white cursor-pointer"
+              >
+                <option value={100}>100 itens</option>
+                <option value={200}>200 itens</option>
+                <option value={300}>300 itens</option>
+              </select>
             </div>
           </div>
 
@@ -210,7 +225,7 @@ export default function BannerTracker({
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredEvents.map((event) => (
+              {visibleEvents.map((event) => (
                 <BannerEventItem key={event.id} event={event} />
               ))}
             </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -136,6 +136,7 @@ export default function CompanyTracker({
   );
 
   const [isLive, setIsLive] = useState(autoRefresh);
+  const [itemsPerPage, setItemsPerPage] = useState(100);
 
   useEffect(() => {
     if (!isLive) return;
@@ -145,17 +146,21 @@ export default function CompanyTracker({
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [isLive]);
+  }, [isLive, Get100EventsCompany]);
 
   const [eventFilter, setEventFilter] = useState<
     "all" | "view" | "view_end" | "click" | "whatsapp_click"
   >("all");
 
-  const filteredEvents = last100EventsCompany.filter((event) =>
-    eventFilter === "all" ? true : event.event_type === eventFilter
-  );
+  const filteredEvents = useMemo(() => {
+    return last100EventsCompany.filter((event) =>
+      eventFilter === "all" ? true : event.event_type === eventFilter
+    );
+  }, [last100EventsCompany, eventFilter]);
 
-  const totalEvents = last100EventsCompany.length;
+  const visibleEvents = useMemo(() => {
+    return filteredEvents.slice(0, itemsPerPage);
+  }, [filteredEvents, itemsPerPage]);
 
   return (
     <Card className="w-full h-full flex flex-col">
@@ -172,8 +177,17 @@ export default function CompanyTracker({
                 </div>
               )}
             </CardTitle>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-              <span>Total: {totalEvents}</span>
+            <div className="flex items-center text-sm text-muted-foreground mt-1">
+              <span>Total:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                className="text-xs border rounded px-2 py-1 bg-white cursor-pointer"
+              >
+                <option value={100}>100 itens</option>
+                <option value={200}>200 itens</option>
+                <option value={300}>300 itens</option>
+              </select>
             </div>
           </div>
           <Button
@@ -214,7 +228,7 @@ export default function CompanyTracker({
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredEvents.map((event) => (
+              {visibleEvents.map((event) => (
                 <CompanyEventItem key={event.id} event={event} />
               ))}
             </div>
