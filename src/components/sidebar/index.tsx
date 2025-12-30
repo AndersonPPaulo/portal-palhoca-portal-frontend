@@ -178,19 +178,18 @@ export function Sidebar() {
 
           <div className="space-y-3">
             <NavigationSecond isCollapsed={isCollapsed} />
-
-            {/* Botão de colapsar/expandir - apenas desktop */}
-            <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="flex items-center justify-center rounded-full transition-all duration-300 font-[600] w-10 h-10 bg-gray-300 mx-auto"
-            >
-              {isCollapsed ? (
-                <ChevronRight size={20} color="black" />
-              ) : (
-                <ChevronLeft size={20} color="black" />
-              )}
-            </button>
           </div>
+
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className={`flex items-center justify-center rounded-full transition-all duration-300 font-[600] w-10 h-10 bg-gray-300 mx-auto`}
+          >
+            {isCollapsed ? (
+              <ChevronRight size={20} color="black" />
+            ) : (
+              <ChevronLeft size={20} color="black" />
+            )}
+          </button>
         </div>
       </nav>
     </>
