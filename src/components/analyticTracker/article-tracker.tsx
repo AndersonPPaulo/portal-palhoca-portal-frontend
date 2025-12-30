@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useContext, useMemo } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -164,20 +164,34 @@ export default function ArticleTracker({
   const [isLive, setIsLive] = useState(autoRefresh);
   const [itemsPerPage, setItemsPerPage] = useState(100);
 
-  // Buscar dados iniciais
+  // Buscar dados iniciais com delay de 30 segundos
   useEffect(() => {
-    Get100EventsArticle(itemsPerPage);
+    const timer = setTimeout(() => {
+      Get100EventsArticle(itemsPerPage);
+    }, 30000);
+    return () => clearTimeout(timer);
   }, [itemsPerPage, Get100EventsArticle]);
 
   useEffect(() => {
     if (!isLive) return;
 
-    //faça rodar a cada 5 segundos
-    const interval = setInterval(() => {
+    let interval: NodeJS.Timeout;
+
+    // Aguardar 30 segundos antes de iniciar o intervalo
+    const initialTimer = setTimeout(() => {
+      // Primeira chamada após o delay
       Get100EventsArticle(itemsPerPage);
+
+      // Intervalo de 45 segundos para atualização automática
+      interval = setInterval(() => {
+        Get100EventsArticle(itemsPerPage);
+      }, 45000);
     }, 30000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(initialTimer);
+      if (interval) clearInterval(interval);
+    };
   }, [isLive, Get100EventsArticle, itemsPerPage]);
 
   const [eventFilter, setEventFilter] = useState<

@@ -130,20 +130,21 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
 
   const [lastEventsArticle, setLastEventsArticle] = useState<IEvent[]>([]);
 
-  const Get100EventsArticle = async (
-    limit: number = 100
-  ): Promise<IVirtualEventResponse> => {
-    try {
-      const validLimit = Math.min(Math.max(limit, 1), 300);
-      const res = await api.get<IVirtualEventResponse>(
-        `/analytics/last-article-events/${validLimit}`
-      );
-      setLastEventsArticle(res.data.response.articleEvents);
-      return res.data;
-    } catch (err) {
-      throw err;
-    }
-  };
+  const Get100EventsArticle = useCallback(
+    async (limit: number = 100): Promise<IVirtualEventResponse> => {
+      try {
+        const validLimit = Math.min(Math.max(limit, 1), 300);
+        const res = await api.get<IVirtualEventResponse>(
+          `/analytics/last-article-events/${validLimit}`
+        );
+        setLastEventsArticle(res.data.response.articleEvents);
+        return res.data;
+      } catch (err) {
+        throw err;
+      }
+    },
+    []
+  );
 
   // Função para buscar eventos por artigo (privada - com auth)
   const GetEventsByArticle = useCallback(

@@ -138,7 +138,7 @@ export default function CompanyTracker({
   const [isLive, setIsLive] = useState(autoRefresh);
   const [itemsPerPage, setItemsPerPage] = useState(100);
 
-  // Buscar dados iniciais
+  // Buscar dados iniciais imediatamente
   useEffect(() => {
     Get100EventsCompany(itemsPerPage);
   }, [itemsPerPage, Get100EventsCompany]);
@@ -146,9 +146,10 @@ export default function CompanyTracker({
   useEffect(() => {
     if (!isLive) return;
 
+    // Intervalo de 45 segundos para atualização automática
     const interval = setInterval(() => {
       Get100EventsCompany(itemsPerPage);
-    }, 30000);
+    }, 45000);
 
     return () => clearInterval(interval);
   }, [isLive, Get100EventsCompany, itemsPerPage]);

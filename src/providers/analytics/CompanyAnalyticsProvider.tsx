@@ -105,20 +105,21 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
   const [error, setError] = useState<string | null>(null);
   const [lastEventsCompany, setLastEventsCompany] = useState<IEvent[]>([]);
 
-  const Get100EventsCompany = async (
-    limit: number = 100
-  ): Promise<IVirtualEventResponse> => {
-    try {
-      const validLimit = Math.min(Math.max(limit, 1), 300);
-      const res = await api.get<IVirtualEventResponse>(
-        `/analytics/last-company-events/${validLimit}`
-      );
-      setLastEventsCompany(res.data.response.companyEvents);
-      return res.data;
-    } catch (err) {
-      throw err;
-    }
-  };
+  const Get100EventsCompany = useCallback(
+    async (limit: number = 100): Promise<IVirtualEventResponse> => {
+      try {
+        const validLimit = Math.min(Math.max(limit, 1), 300);
+        const res = await api.get<IVirtualEventResponse>(
+          `/analytics/last-company-events/${validLimit}`
+        );
+        setLastEventsCompany(res.data.response.companyEvents);
+        return res.data;
+      } catch (err) {
+        throw err;
+      }
+    },
+    []
+  );
   // Função para buscar eventos por comércio (privada - com auth)
   const GetEventsByCompany = useCallback(
     async (

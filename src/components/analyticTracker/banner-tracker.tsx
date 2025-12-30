@@ -136,20 +136,34 @@ export default function BannerTracker({
   const [isLive, setIsLive] = useState(autoRefresh);
   const [itemsPerPage, setItemsPerPage] = useState(100);
 
-  // Buscar dados iniciais
+  // Buscar dados iniciais com delay de 15 segundos
   useEffect(() => {
-    Get100EventsBanner(itemsPerPage);
+    const timer = setTimeout(() => {
+      Get100EventsBanner(itemsPerPage);
+    }, 15000);
+    return () => clearTimeout(timer);
   }, [itemsPerPage, Get100EventsBanner]);
 
   useEffect(() => {
     if (!isLive) return;
 
-    //faça rodar a cada 5 segundos
-    const interval = setInterval(() => {
-      Get100EventsBanner(itemsPerPage);
-    }, 30000);
+    let interval: NodeJS.Timeout;
 
-    return () => clearInterval(interval);
+    // Aguardar 15 segundos antes de iniciar o intervalo
+    const initialTimer = setTimeout(() => {
+      // Primeira chamada após o delay
+      Get100EventsBanner(itemsPerPage);
+
+      // Intervalo de 45 segundos para atualização automática
+      interval = setInterval(() => {
+        Get100EventsBanner(itemsPerPage);
+      }, 45000);
+    }, 15000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      if (interval) clearInterval(interval);
+    };
   }, [isLive, Get100EventsBanner, itemsPerPage]);
 
   const [eventFilter, setEventFilter] = useState<
