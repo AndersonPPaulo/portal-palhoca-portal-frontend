@@ -58,10 +58,15 @@ const eventTypeConfig = {
 };
 
 function formatTimeAgo(timestamp: string): string {
+  // Backend envia UTC mas com offset incorreto, subtrair 3h
   const date = new Date(timestamp);
+  date.setHours(date.getHours() - 3);
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
+  // Se a diferença for negativa ou muito pequena
+  if (diffInSeconds < 0) return "agora mesmo";
+  if (diffInSeconds < 5) return "agora mesmo";
   if (diffInSeconds < 60) return `${diffInSeconds}s atrás`;
   if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}min atrás`;
   if (diffInSeconds < 86400)
@@ -81,6 +86,15 @@ function CompanyEventItem({ event }: { event: IEvent }) {
   };
 
   const EventIcon = eventConfig.icon;
+
+  // Converter timestamp UTC para hora local brasileira (backend tem offset de +3h)
+  const eventDate = new Date(event.timestamp);
+  eventDate.setHours(eventDate.getHours() - 3);
+  const localTimeString = eventDate.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 
   return (
     <div
@@ -120,9 +134,7 @@ function CompanyEventItem({ event }: { event: IEvent }) {
           </div>
         </div>
 
-        <div className="text-xs text-gray-400">
-          {new Date(event.timestamp).toLocaleTimeString("pt-BR")}
-        </div>
+        <div className="text-xs text-gray-400">{localTimeString}</div>
       </div>
     </div>
   );
