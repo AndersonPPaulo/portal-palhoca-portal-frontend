@@ -29,7 +29,11 @@ const NavigationSkeleton = () => {
   );
 };
 
-export function NavigationMain() {
+interface NavigationMainProps {
+  isCollapsed?: boolean;
+}
+
+export function NavigationMain({ isCollapsed = false }: NavigationMainProps) {
   const { profile } = useContext(UserContext);
   const pathname = usePathname();
   const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({});
@@ -111,6 +115,9 @@ export function NavigationMain() {
       const isActive = pathname.startsWith(item.path || "");
       const isOpen = openMenus[item.path || ""] || isActive;
 
+      // Não mostrar children quando retraído
+      if (isChild && isCollapsed) return null;
+
       return (
         <div key={index} className="w-full">
           <div
@@ -122,15 +129,18 @@ export function NavigationMain() {
               href={item.path ?? "#"}
               className={`${
                 isActive ? "bg-primary-light text-primary" : "hover:bg-zinc-100"
-              } flex items-center w-full font-[600] py-2 px-6 rounded-[48px] transition duration-300 ease-linear ${
+              } flex items-center w-full font-[600] py-2 transition duration-300 ease-linear ${
                 isChild ? "pl-10 text-sm" : ""
-              }`}
+              } ${isCollapsed ? "lg:justify-center lg:px-2" : "px-6"}`}
+              title={isCollapsed ? item.name : undefined}
             >
-              <item.icon size={18} className="mr-2" />
-              <span>{item.name}</span>
+              <item.icon size={18} className={isCollapsed ? "" : "mr-2"} />
+              <span className={isCollapsed ? "lg:hidden" : ""}>
+                {item.name}
+              </span>
             </Link>
 
-            {item.children && (
+            {item.children && !isCollapsed && (
               <button
                 onClick={(event) => toggleMenu(item.path, event)}
                 className="p-2 rounded-md transition duration-300 ease-linear"
@@ -144,7 +154,7 @@ export function NavigationMain() {
             )}
           </div>
 
-          {item.children && isOpen && (
+          {item.children && isOpen && !isCollapsed && (
             <div className="ml-4 mt-1 space-y-1">
               {renderLevels(item.children, true)}
             </div>

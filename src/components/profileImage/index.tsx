@@ -58,12 +58,12 @@ export default function ProfileImageViewer({
           <img
             src={imageUrl}
             alt={`Foto de perfil de ${userName}`}
-            className="rounded-full min-w-20 w-20 max-w-34 h-20 object-cover hover:opacity-90 transition-opacity"
+            className={`rounded-full object-cover hover:opacity-90 transition-opacity w-full h-full`}
             onError={handleImageError}
           />
         ) : (
           <div
-            className={`rounded-full w-20 h-20 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold ${currentSize.text} shadow-lg hover:from-blue-500 hover:to-blue-700 transition-colors`}
+            className={`rounded-full w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold ${currentSize.text} shadow-lg hover:from-blue-500 hover:to-blue-700 transition-colors`}
           >
             {fallbackInitials}
           </div>
