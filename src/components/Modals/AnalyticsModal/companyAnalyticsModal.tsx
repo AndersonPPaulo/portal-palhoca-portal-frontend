@@ -24,6 +24,7 @@ export default function CompanyAnalyticsModal({
   // Usando seu provider de comércio
   const {
     companyEvents,
+    detailedCompanyEvents,
     rawCompanyEvents,
     loading,
     error,
@@ -53,7 +54,7 @@ export default function CompanyAnalyticsModal({
     events: companyEvents[companyId] || [],
     loading,
     error,
-    rawEvents: rawCompanyEvents[companyId] || [],
+    rawEvents: detailedCompanyEvents[companyId] || [],
   };
 
   const analyticsActions = {

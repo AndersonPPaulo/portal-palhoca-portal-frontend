@@ -33,9 +33,23 @@ export interface TotalCompanyEvent {
   total: number;
 }
 
+export interface DetailedCompanyEvent {
+  id: string;
+  event_type: EventType;
+  timestamp?: string;
+  extra_data?: Record<string, unknown>;
+  company?: {
+    id: string;
+    name: string;
+  };
+}
+
 interface IEventsByCompanyResponse {
   message: string;
-  events: CompanyEventRaw[];
+  total: number;
+  showing: number;
+  hasMore: boolean;
+  data: DetailedCompanyEvent[];
 }
 
 interface ITotalEventsResponse {
@@ -77,6 +91,7 @@ interface ICompanyAnalyticsData {
 
   lastEventsCompany: IEvent[];
   companyEvents: Record<string, CompanyEvent[]>;
+  detailedCompanyEvents: Record<string, DetailedCompanyEvent[]>;
   totalEvents: TotalCompanyEvent[];
   loading: boolean;
   error: string | null;
@@ -96,6 +111,9 @@ export const CompanyAnalyticsContext = createContext<ICompanyAnalyticsData>(
 export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
   const [companyEvents, setCompanyEvents] = useState<
     Record<string, CompanyEvent[]>
+  >({});
+  const [detailedCompanyEvents, setDetailedCompanyEvents] = useState<
+    Record<string, DetailedCompanyEvent[]>
   >({});
   const [rawCompanyEvents, setRawCompanyEvents] = useState<
     Record<string, CompanyEventRaw[]>
@@ -141,39 +159,63 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
       if (endDate) queryParams.append("endDate", endDate);
       const queryString = queryParams.toString();
 
-      const endpoint = `/analytics/event-company/${companyId}/company${
+      // Usar a nova URL: /company/{id}/events
+      const endpoint = `/company/${companyId}/events${
         queryString ? `?${queryString}` : ""
       }`;
 
       const response = await api
         .get(endpoint, config)
         .then((res) => {
-          const responseData: IEventsByCompanyResponse = res.data.response;
+          const responseData = res.data;
 
-          console.log("Response Data:", responseData);
+          // Usar os eventos detalhados da API
+          const detailedEvents = responseData.data || [];
 
-          // Usar os eventos que já vêm agregados da API
-          const rawEvents = responseData.events || [];
+          // Armazenar eventos detalhados
+          setDetailedCompanyEvents((prev) => ({
+            ...prev,
+            [companyId]: detailedEvents,
+          }));
 
-          // Armazenar eventos brutos (se tiverem timestamp para listagem detalhada)
-          const eventsWithTimestamp = rawEvents.filter((e) => e.timestamp);
-          if (eventsWithTimestamp.length > 0) {
-            setRawCompanyEvents((prev) => ({
-              ...prev,
-              [companyId]: eventsWithTimestamp,
-            }));
-          }
+          // Agregar eventos por tipo para exibição nas métricas
+          const aggregatedEvents: Record<EventType, number> = {} as Record<
+            EventType,
+            number
+          >;
 
-          // Converter para formato esperado (já vem com virtual_count da API)
-          const processedEvents: CompanyEvent[] = rawEvents.map((event) => ({
-            event_type: event.event_type,
-            virtual_count: event.virtual_count || 0,
+          detailedEvents.forEach((event: DetailedCompanyEvent) => {
+            aggregatedEvents[event.event_type] =
+              (aggregatedEvents[event.event_type] || 0) + 1;
+          });
+
+          // Converter para formato esperado
+          const processedEvents: CompanyEvent[] = Object.entries(
+            aggregatedEvents
+          ).map(([eventType, count]) => ({
+            event_type: eventType as EventType,
+            virtual_count: count,
           }));
 
           setCompanyEvents((prev) => ({
             ...prev,
             [companyId]: processedEvents,
           }));
+
+          // Também armazenar como rawCompanyEvents para manter compatibilidade
+          const rawEvents: CompanyEventRaw[] = detailedEvents.map(
+            (event: DetailedCompanyEvent) => ({
+              event_type: event.event_type,
+              timestamp: event.timestamp,
+              virtual_count: 1,
+            })
+          );
+
+          setRawCompanyEvents((prev) => ({
+            ...prev,
+            [companyId]: rawEvents,
+          }));
+
           setLoading(false);
         })
         .catch((err) => {
@@ -271,6 +313,7 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
         GetTotalEvents,
         UpdateVirtualEvent,
         companyEvents,
+        detailedCompanyEvents,
         rawCompanyEvents,
         totalEvents,
         loading,

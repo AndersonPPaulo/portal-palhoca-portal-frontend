@@ -32,9 +32,23 @@ export interface TotalBannerEvent {
   total: number;
 }
 
+export interface DetailedEvent {
+  id: string;
+  event_type: EventType;
+  timestamp?: string;
+  extra_data?: Record<string, unknown>;
+  banner?: {
+    id: string;
+    name: string;
+  };
+}
+
 interface IEventsByBannerResponse {
   message: string;
-  events: BannerEventRaw[];
+  total: number;
+  showing: number;
+  hasMore: boolean;
+  data: DetailedEvent[];
 }
 
 interface ITotalEventsResponse {
@@ -76,6 +90,7 @@ interface IBannerAnalyticsData {
 
   lastEventsBanner: IEvent[];
   bannerEvents: Record<string, BannerEvent[]>;
+  detailedBannerEvents: Record<string, DetailedEvent[]>;
   totalEvents: TotalBannerEvent[];
   loading: boolean;
   error: string | null;
@@ -95,6 +110,9 @@ export const BannerAnalyticsContext = createContext<IBannerAnalyticsData>(
 export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
   const [bannerEvents, setBannerEvents] = useState<
     Record<string, BannerEvent[]>
+  >({});
+  const [detailedBannerEvents, setDetailedBannerEvents] = useState<
+    Record<string, DetailedEvent[]>
   >({});
   const [rawBannerEvents, setRawBannerEvents] = useState<
     Record<string, BannerEventRaw[]>
@@ -149,31 +167,42 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
       if (endDate) queryParams.append("endDate", endDate);
       const queryString = queryParams.toString();
 
-      const endpoint = `/analytics/event-banner/${bannerId}/banner${
+      // Usar a nova URL: /banner/{id}/events
+      const endpoint = `/banner/${bannerId}/events${
         queryString ? `?${queryString}` : ""
       }`;
 
       const response = await api
         .get(endpoint, config)
         .then((res) => {
-          const responseData: IEventsByBannerResponse = res.data.response;
+          const responseData = res.data;
 
-          // Usar os eventos que já vêm agregados da API
-          const rawEvents = responseData.events || [];
+          // Usar os eventos detalhados da API
+          const detailedEvents = responseData.data || [];
 
-          // Armazenar eventos brutos (se tiverem timestamp para listagem detalhada)
-          const eventsWithTimestamp = rawEvents.filter((e) => e.timestamp);
-          if (eventsWithTimestamp.length > 0) {
-            setRawBannerEvents((prev) => ({
-              ...prev,
-              [bannerId]: eventsWithTimestamp,
-            }));
-          }
+          // Armazenar eventos detalhados
+          setDetailedBannerEvents((prev) => ({
+            ...prev,
+            [bannerId]: detailedEvents,
+          }));
 
-          // Converter para formato esperado (já vem com virtual_count da API)
-          const processedEvents: BannerEvent[] = rawEvents.map((event) => ({
-            event_type: event.event_type,
-            virtual_count: event.virtual_count || 0,
+          // Agregar eventos por tipo para exibição nas métricas
+          const aggregatedEvents: Record<EventType, number> = {} as Record<
+            EventType,
+            number
+          >;
+
+          detailedEvents.forEach((event: DetailedEvent) => {
+            aggregatedEvents[event.event_type] =
+              (aggregatedEvents[event.event_type] || 0) + 1;
+          });
+
+          // Converter para formato esperado
+          const processedEvents: BannerEvent[] = Object.entries(
+            aggregatedEvents
+          ).map(([eventType, count]) => ({
+            event_type: eventType as EventType,
+            virtual_count: count,
           }));
 
           setBannerEvents((prev) => {
@@ -183,6 +212,21 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
             };
             return newState;
           });
+
+          // Também armazenar como rawBannerEvents para manter compatibilidade
+          const rawEvents: BannerEventRaw[] = detailedEvents.map(
+            (event: DetailedEvent) => ({
+              event_type: event.event_type,
+              timestamp: event.timestamp,
+              virtual_count: 1,
+            })
+          );
+
+          setRawBannerEvents((prev) => ({
+            ...prev,
+            [bannerId]: rawEvents,
+          }));
+
           setLoading(false);
         })
         .catch((err) => {
@@ -286,6 +330,7 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
         GetTotalEvents,
         UpdateVirtualEvent,
         bannerEvents,
+        detailedBannerEvents,
         rawBannerEvents,
         totalEvents,
         loading,
