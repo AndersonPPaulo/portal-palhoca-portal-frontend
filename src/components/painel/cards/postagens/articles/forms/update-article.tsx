@@ -91,6 +91,8 @@ interface FormEditArticleProps {
 }
 
 export default function FormEditArticle({ article }: FormEditArticleProps) {
+  console.log(article);
+
   const parameter = useParams();
   const { back, push } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -213,20 +215,32 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     }
 
     // Configurar galeria de imagens existentes
-    if (
-      article.gallery &&
-      Array.isArray(article.gallery) &&
-      article.gallery.length > 0
-    ) {
-      const existingGalleryImages = article.gallery.map(
-        (url: string, index: number) => ({
-          file: null,
-          preview: url,
-          id: `existing-${index}-${Date.now()}`,
-          isExisting: true,
-        })
-      );
-      setGalleryImages(existingGalleryImages);
+    if (article.gallery) {
+      let galleryArray: string[] = [];
+
+      // Se for string JSON, fazer parse
+      if (typeof article.gallery === "string") {
+        try {
+          galleryArray = JSON.parse(article.gallery);
+          console.log("✅ Gallery parseada com sucesso:", galleryArray);
+        } catch (error) {
+          console.error("❌ Erro ao fazer parse da galeria:", error);
+        }
+      } else if (Array.isArray(article.gallery)) {
+        galleryArray = article.gallery;
+      }
+
+      if (galleryArray.length > 0) {
+        const existingGalleryImages = galleryArray.map(
+          (url: string, index: number) => ({
+            file: null,
+            preview: url,
+            id: `existing-${index}-${Date.now()}`,
+            isExisting: true,
+          })
+        );
+        setGalleryImages(existingGalleryImages);
+      }
     }
 
     // Garantir que o formulário está completamente atualizado
