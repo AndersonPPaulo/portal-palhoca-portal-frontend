@@ -133,6 +133,7 @@ export interface Article {
   status_history: StatusHistory[];
   status: string;
   articlePortals: ObjectArticlePortalsProps[];
+  gallery?: string[];
 }
 
 export interface Thumbnail {
@@ -522,7 +523,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
         publishedArticles,
         UpdateArticleHighlight,
         UpdateArticleStatus,
-        refreshFlag
+        refreshFlag,
       }}
     >
       {children}

@@ -15,6 +15,8 @@ export default function TableUsers({ filter, activeFilters }: TableUsersProps) {
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(9);
 
+  console.log(listUser);
+
   useEffect(() => {
     const fetchUsers = async () => {
       try {

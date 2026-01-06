@@ -42,6 +42,7 @@ const articleSchema = z.object({
   chiefEditorId: z.string().optional(),
   portalIds: z.array(z.string()).min(1, "Pelo menos um portal é obrigatório"),
   thumbnailDescription: z.string().optional().default(""),
+  gallery: z.array(z.string()).default([]),
 });
 type ArticleFormData = z.infer<typeof articleSchema>;
 
@@ -87,6 +88,56 @@ const uploadThumbnailToServer = async (
   }
 };
 
+const uploadGalleryImagesToServer = async (
+  files: File[]
+): Promise<string[]> => {
+  const { "user:token": token } = parseCookies();
+  const uploadedUrls: string[] = [];
+
+  for (const file of files) {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    console.log(
+      "📤 Enviando imagem:",
+      file.name,
+      "Tamanho:",
+      file.size,
+      "Tipo:",
+      file.type
+    );
+
+    const config = {
+      headers: {
+        Authorization: `bearer ${token}`,
+        // NÃO definir Content-Type - o navegador define automaticamente com boundary
+      },
+    };
+
+    try {
+      const response = await api.post(
+        `/upload/article-image`,
+        formData,
+        config
+      );
+
+      console.log("✅ Resposta do servidor:", response.data);
+
+      if (response.data?.url) {
+        uploadedUrls.push(response.data.url);
+        console.log("✅ URL adicionada:", response.data.url);
+      } else {
+        console.error("❌ Resposta não contém url:", response.data);
+      }
+    } catch (err) {
+      console.error("❌ Erro ao fazer upload da imagem da galeria:", err);
+      console.error("Detalhes:", err?.response?.data || err?.message);
+    }
+  }
+
+  return uploadedUrls;
+};
+
 export default function FormCreateArticle() {
   const { push, back } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -98,6 +149,10 @@ export default function FormCreateArticle() {
   } | null>(null);
   const [thumbnailDescription, setThumbnailDescription] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [galleryImages, setGalleryImages] = useState<
+    { file: File; preview: string; id: string }[]
+  >([]);
+  const [draggedItem, setDraggedItem] = useState<string | null>(null);
 
   const { CreateArticle, ListAuthorArticles } = useContext(ArticleContext);
   const { ListCategorys, listCategorys } = useContext(CategorysContext);
@@ -112,6 +167,7 @@ export default function FormCreateArticle() {
       ListAuthorArticles(),
       ListPortals(),
     ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const tagOptions: OptionType[] = Array.isArray(listTags)
@@ -149,6 +205,7 @@ export default function FormCreateArticle() {
       chiefEditorId: profile?.chiefEditor?.id,
       portalIds: [],
       thumbnailDescription: "",
+      gallery: [],
     },
   });
 
@@ -161,7 +218,7 @@ export default function FormCreateArticle() {
   // Sincronizar o estado local com o valor do formulário
   useEffect(() => {
     setThumbnailDescription(watchedThumbnailDescription || "");
-  }, []);
+  }, [watchedThumbnailDescription]);
 
   useEffect(() => {
     if (title) setValue("slug", generateSlug(title), { shouldValidate: true });
@@ -195,31 +252,74 @@ export default function FormCreateArticle() {
 
       data.thumbnailDescription = thumbnailDescription;
 
+      // 1. PRIMEIRO: Upload das imagens da galeria
+      let galleryUrls: string[] = [];
+      if (galleryImages.length > 0) {
+        try {
+          console.log(
+            "📸 Iniciando upload de",
+            galleryImages.length,
+            "imagens da galeria..."
+          );
+          const galleryFiles = galleryImages.map((img) => img.file);
+          galleryUrls = await uploadGalleryImagesToServer(galleryFiles);
+          console.log("✅ Upload concluído! URLs:", galleryUrls);
+
+          if (galleryUrls.length !== galleryImages.length) {
+            toast.error(
+              `Apenas ${galleryUrls.length} de ${galleryImages.length} imagens foram enviadas. Verifique e tente novamente.`
+            );
+            return;
+          }
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          toast.error(
+            `Erro ao fazer upload das imagens da galeria: ${errorMessage}. O artigo não foi criado.`
+          );
+          return;
+        }
+      }
+
+      // 2. AGORA SIM: Criar o artigo com as URLs da galeria
       const formData = {
         ...data,
         thumbnail: "",
+        gallery: galleryUrls,
         initialStatus: status,
         chiefEditorId: profile.chiefEditor?.id || "",
         creator: profile.id,
         portals: data.portalIds,
       };
 
+      console.log("🚀 Criando artigo com dados:", formData);
+
       const createdArticle = await CreateArticle(formData);
-      if (selectedImage && selectedImage.file && createdArticle?.id) {
+
+      console.log("🔍 Artigo criado:", createdArticle);
+
+      if (!createdArticle?.id) {
+        toast.error("Erro ao criar o artigo.");
+        return;
+      }
+
+      // 3. Upload thumbnail (depois do artigo criado)
+      if (selectedImage && selectedImage.file) {
         try {
           await uploadThumbnailToServer(
             selectedImage.file,
             thumbnailDescription,
             createdArticle.id
           );
-        } catch (error: any) {
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
           toast.error(
-            `Artigo criado, mas houve um erro no upload da imagem: ${
-              error.message || error
-            }`
+            `Artigo criado, mas houve um erro no upload da imagem: ${errorMessage}`
           );
         }
       }
+
       toast.success(
         status === ARTICLE_STATUS.DRAFT
           ? "Rascunho salvo com sucesso!"
@@ -229,8 +329,9 @@ export default function FormCreateArticle() {
       setSelectedImage(null);
       setEditorContent("");
       setThumbnailDescription("");
+      setGalleryImages([]);
       setTimeout(() => push("/postagens"), 1000);
-    } catch (error: any) {
+    } catch {
       toast.error(
         `Erro ao ${
           status === ARTICLE_STATUS.DRAFT ? "salvar rascunho" : "criar artigo"
@@ -266,6 +367,55 @@ export default function FormCreateArticle() {
 
   const handleCloseModal = () => {
     setIsCreateModalOpen(false);
+  };
+
+  const handleAddGalleryImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.currentTarget.files;
+    if (!files) return;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        const preview = event.target?.result as string;
+        const id = `${Date.now()}-${Math.random()}`;
+        setGalleryImages((prev) => [...prev, { file, preview, id }]);
+      };
+
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveGalleryImage = (id: string) => {
+    setGalleryImages((prev) => prev.filter((img) => img.id !== id));
+  };
+
+  const handleDragStart = (id: string) => {
+    setDraggedItem(id);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (targetId: string) => {
+    if (!draggedItem || draggedItem === targetId) return;
+
+    setGalleryImages((prev) => {
+      const draggedIndex = prev.findIndex((img) => img.id === draggedItem);
+      const targetIndex = prev.findIndex((img) => img.id === targetId);
+
+      if (draggedIndex === -1 || targetIndex === -1) return prev;
+
+      const newImages = [...prev];
+      const [draggedImage] = newImages.splice(draggedIndex, 1);
+      newImages.splice(targetIndex, 0, draggedImage);
+
+      return newImages;
+    });
+
+    setDraggedItem(null);
   };
   // Substitua a função handleTagCreated no seu FormCreateArticle por esta:
 
@@ -500,6 +650,86 @@ export default function FormCreateArticle() {
                 <span className="text-sm text-red-500 ml-6">
                   {errors.content.message}
                 </span>
+              )}
+            </div>
+          </div>
+
+          <div className="w-full">
+            <h1 className="text-xl font-bold text-primary ml-6 pt-4 mb-4">
+              Galeria de Imagens
+            </h1>
+            <div className="ml-6 mr-6">
+              <div className="border-2 border-dashed border-primary-light rounded-[24px] p-6 text-center cursor-pointer hover:bg-gray-50 transition">
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleAddGalleryImage}
+                  className="hidden"
+                  id="gallery-input"
+                />
+                <label htmlFor="gallery-input" className="cursor-pointer block">
+                  <div className="text-gray-700 font-medium">
+                    Clique para adicionar imagens à galeria
+                  </div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    SVG, PNG, JPG ou GIF (max. 5MB cada)
+                  </div>
+                </label>
+              </div>
+
+              {galleryImages.length > 0 && (
+                <div className="mt-6">
+                  <p className="text-sm text-gray-600 mb-4">
+                    {galleryImages.length} imagem(ns) adicionada(s). Arraste
+                    para reordenar.
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {galleryImages.map((img) => (
+                      <div
+                        key={img.id}
+                        draggable
+                        onDragStart={() => handleDragStart(img.id)}
+                        onDragOver={handleDragOver}
+                        onDrop={() => handleDrop(img.id)}
+                        className={`relative group cursor-move rounded-lg overflow-hidden border-2 ${
+                          draggedItem === img.id
+                            ? "border-blue-500 opacity-50"
+                            : "border-gray-200 hover:border-blue-500"
+                        }`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={img.preview}
+                          alt="Gallery"
+                          className="w-full h-40 object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveGalleryImage(img.id)}
+                            className="bg-red-500 hover:bg-red-600 text-white rounded-full p-2 transition"
+                            title="Remover imagem"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
           </div>
