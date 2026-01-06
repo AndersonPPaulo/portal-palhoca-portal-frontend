@@ -129,9 +129,12 @@ const uploadGalleryImagesToServer = async (
       } else {
         console.error("❌ Resposta não contém url:", response.data);
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("❌ Erro ao fazer upload da imagem da galeria:", err);
-      console.error("Detalhes:", err?.response?.data || err?.message);
+      const errorDetails =
+        (err as { response?: { data?: unknown }; message?: string })?.response
+          ?.data || (err as { message?: string })?.message;
+      console.error("Detalhes:", errorDetails);
     }
   }
 

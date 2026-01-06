@@ -55,10 +55,19 @@ const uploadGalleryImagesToServer = async (
     const formData = new FormData();
     formData.append("image", file);
 
+    console.log(
+      "📤 Enviando imagem:",
+      file.name,
+      "Tamanho:",
+      file.size,
+      "Tipo:",
+      file.type
+    );
+
     const config = {
       headers: {
         Authorization: `bearer ${token}`,
-        "Content-Type": "multipart/form-data",
+        // NÃO definir Content-Type - o navegador define automaticamente com boundary
       },
     };
 
@@ -68,11 +77,21 @@ const uploadGalleryImagesToServer = async (
         formData,
         config
       );
-      if (response.data?.imageUrl) {
-        uploadedUrls.push(response.data.imageUrl);
+
+      console.log("✅ Resposta do servidor:", response.data);
+
+      if (response.data?.url) {
+        uploadedUrls.push(response.data.url);
+        console.log("✅ URL adicionada:", response.data.url);
+      } else {
+        console.error("❌ Resposta não contém url:", response.data);
       }
-    } catch (err) {
-      console.error("Erro ao fazer upload da imagem da galeria:", err);
+    } catch (err: unknown) {
+      console.error("❌ Erro ao fazer upload da imagem da galeria:", err);
+      const errorDetails =
+        (err as { response?: { data?: unknown }; message?: string })?.response
+          ?.data || (err as { message?: string })?.message;
+      console.error("Detalhes:", errorDetails);
     }
   }
 
@@ -393,7 +412,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       // Garantir que a descrição da thumbnail esteja nos dados
       data.thumbnailDescription = thumbnailDescription;
 
-      // Processar galeria de imagens
+      // 1. PRIMEIRO: Processar galeria de imagens
       const existingUrls = galleryImages
         .filter((img) => img.isExisting)
         .map((img) => img.preview);
@@ -404,18 +423,34 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
       let galleryUrls = [...existingUrls];
 
-      // Upload de novas imagens da galeria
+      // Upload de novas imagens da galeria (se houver)
       if (newFiles.length > 0) {
         try {
+          console.log(
+            "📸 Iniciando upload de",
+            newFiles.length,
+            "novas imagens da galeria..."
+          );
           const uploadedUrls = await uploadGalleryImagesToServer(newFiles);
+          console.log("✅ Upload concluído! URLs:", uploadedUrls);
+
+          if (uploadedUrls.length !== newFiles.length) {
+            toast.error(
+              `Apenas ${uploadedUrls.length} de ${newFiles.length} novas imagens foram enviadas. O artigo será atualizado com as imagens que foram enviadas com sucesso.`
+            );
+          }
+
           galleryUrls = [...galleryUrls, ...uploadedUrls];
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : String(error);
-          toast.error(`Erro no upload das imagens da galeria: ${errorMessage}`);
+          toast.error(
+            `Erro ao fazer upload das imagens da galeria: ${errorMessage}. O artigo será atualizado sem as novas imagens.`
+          );
         }
       }
 
+      // 2. AGORA SIM: Atualizar o artigo com as URLs da galeria
       const finalData = {
         title: data.title,
         slug: data.slug,
@@ -431,8 +466,12 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         gallery: galleryUrls,
       };
 
+      console.log("🔄 Atualizando artigo com dados:", finalData);
+
       // Enviar dados para API
       await UpdateArticle(finalData, article.id);
+
+      console.log("✅ Artigo atualizado com sucesso!");
 
       // Se tem imagem nova selecionada, faz o upload
       if (selectedImage && selectedImage.file) {
