@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { DataTable } from "./data-table";
 import { useContext, useEffect, useState } from "react";
 import { columns } from "./columns";

@@ -18,6 +18,8 @@ import CustomSelect, { OptionType } from "@/components/select/custom-select";
 import { PortalContext } from "@/providers/portal";
 import ThumbnailUploader from "@/components/thumbnail";
 import { generateSlug } from "@/utils/generateSlug";
+import { api } from "@/service/api";
+import { parseCookies } from "nookies";
 
 const articleSchema = z.object({
   id: z.string().optional(),
@@ -38,15 +40,59 @@ const articleSchema = z.object({
   tagIds: z.array(z.string()).min(1, "Pelo menos uma tag é obrigatória"),
   chiefEditorId: z.string().optional(),
   portalIds: z.array(z.string()).min(1, "Pelo menos um portal é obrigatório"),
+  gallery: z.array(z.string()).default([]),
 });
 
 type ArticleFormData = z.infer<typeof articleSchema>;
+
+const uploadGalleryImagesToServer = async (
+  files: File[]
+): Promise<string[]> => {
+  const { "user:token": token } = parseCookies();
+  const uploadedUrls: string[] = [];
+
+  for (const file of files) {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const config = {
+      headers: {
+        Authorization: `bearer ${token}`,
+        // NÃO definir Content-Type - o navegador define automaticamente com boundary
+      },
+    };
+
+    try {
+      const response = await api.post(
+        `/upload/article-image`,
+        formData,
+        config
+      );
+
+      if (response.data?.url) {
+        uploadedUrls.push(response.data.url);
+      } else {
+        console.error("❌ Resposta não contém url:", response.data);
+      }
+    } catch (err: unknown) {
+      console.error("❌ Erro ao fazer upload da imagem da galeria:", err);
+      const errorDetails =
+        (err as { response?: { data?: unknown }; message?: string })?.response
+          ?.data || (err as { message?: string })?.message;
+      console.error("Detalhes:", errorDetails);
+    }
+  }
+
+  return uploadedUrls;
+};
 
 interface FormEditArticleProps {
   article: Article;
 }
 
 export default function FormEditArticle({ article }: FormEditArticleProps) {
+  console.log(article);
+
   const parameter = useParams();
   const { back, push } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,6 +112,10 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     description: string;
   } | null>(null);
   const [thumbnailDescription, setThumbnailDescription] = useState("");
+  const [galleryImages, setGalleryImages] = useState<
+    { file: File | null; preview: string; id: string; isExisting: boolean }[]
+  >([]);
+  const [draggedItem, setDraggedItem] = useState<string | null>(null);
 
   // Estados para controlar se os dados foram carregados
   const [tagsLoaded, setTagsLoaded] = useState(false);
@@ -90,6 +140,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
     setChangeStatus(sortedHistory[0].status);
     setChangeMessage(sortedHistory[0].change_request_description || "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Carregar dados necessários e garantir que todos carregaram antes de definir valores
@@ -118,12 +169,13 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
           await ListPortals();
           setPortalsLoaded(true);
         }
-      } catch (error) {
+      } catch {
         toast.error("Erro ao carregar dados necessários");
       }
     };
 
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Configurar valores iniciais após todos os dados serem carregados
@@ -162,6 +214,35 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       setValue("thumbnailDescription", article.thumbnail.description || "");
     }
 
+    // Configurar galeria de imagens existentes
+    if (article.gallery) {
+      let galleryArray: string[] = [];
+
+      // Se for string JSON, fazer parse
+      if (typeof article.gallery === "string") {
+        try {
+          galleryArray = JSON.parse(article.gallery);
+          console.log("✅ Gallery parseada com sucesso:", galleryArray);
+        } catch (error) {
+          console.error("❌ Erro ao fazer parse da galeria:", error);
+        }
+      } else if (Array.isArray(article.gallery)) {
+        galleryArray = article.gallery;
+      }
+
+      if (galleryArray.length > 0) {
+        const existingGalleryImages = galleryArray.map(
+          (url: string, index: number) => ({
+            file: null,
+            preview: url,
+            id: `existing-${index}-${Date.now()}`,
+            isExisting: true,
+          })
+        );
+        setGalleryImages(existingGalleryImages);
+      }
+    }
+
     // Garantir que o formulário está completamente atualizado
     reset({
       id: article.id,
@@ -177,7 +258,9 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       portalIds:
         article.articlePortals?.map((portal) => portal.portal.id) || [],
       thumbnailDescription: article.thumbnail?.description || "",
+      gallery: article.gallery || [],
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     article,
     tagsLoaded,
@@ -186,8 +269,6 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     listTags,
     listPortals,
   ]);
-
-  const article_portals = article.articlePortals;
 
   useEffect(() => {
     if (article.thumbnail) {
@@ -203,6 +284,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
       if (thumbnailUrl) {
         setSelectedImage({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           file: null as any,
           preview: thumbnailUrl,
           description: description,
@@ -212,21 +294,22 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         setValue("thumbnailDescription", description);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const tagOptions: OptionType[] = Array.isArray(listTags)
-    ? listTags.map((tag: any) => ({ value: tag.id, label: tag.name }))
+    ? listTags.map((tag) => ({ value: tag.id, label: tag.name }))
     : [];
 
   const categoryOptions: OptionType[] = Array.isArray(listCategorys)
-    ? listCategorys.map((category: any) => ({
+    ? listCategorys.map((category) => ({
         value: category.id,
         label: category.name,
       }))
     : [];
 
   const portalOptions: OptionType[] = Array.isArray(listPortals)
-    ? listPortals.map((portal: any) => ({
+    ? listPortals.map((portal) => ({
         value: portal.id,
         label: portal.name,
       }))
@@ -251,7 +334,6 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     reset,
     watch,
     setValue,
-    getValues,
     handleSubmit,
   } = useForm<ArticleFormData>({
     resolver: zodResolver(articleSchema),
@@ -269,12 +351,13 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     if (watchedThumbnailDescription !== undefined) {
       setThumbnailDescription(watchedThumbnailDescription);
     }
-  }, []);
+  }, [watchedThumbnailDescription]);
 
   useEffect(() => {
     if (title) {
       setValue("slug", generateSlug(title), { shouldValidate: true });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const validateTagSelection = (selectedTags: string[]) => {
@@ -308,20 +391,6 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     setThumbnailDescription(description ?? "");
   };
 
-  const handleDescriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setThumbnailDescription(value);
-    setValue("thumbnailDescription", value);
-
-    // Também atualiza no objeto selectedImage se existir
-    if (selectedImage) {
-      setSelectedImage({
-        ...selectedImage,
-        description: value,
-      });
-    }
-  };
-
   const lastStatus =
     findArticle?.status_history && findArticle.status_history.length > 0
       ? findArticle.status_history.reduce((latest, item) => {
@@ -345,6 +414,39 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       // Garantir que a descrição da thumbnail esteja nos dados
       data.thumbnailDescription = thumbnailDescription;
 
+      // 1. PRIMEIRO: Processar galeria de imagens
+      const existingUrls = galleryImages
+        .filter((img) => img.isExisting)
+        .map((img) => img.preview);
+
+      const newFiles = galleryImages
+        .filter((img) => !img.isExisting && img.file)
+        .map((img) => img.file!);
+
+      let galleryUrls = [...existingUrls];
+
+      // Upload de novas imagens da galeria (se houver)
+      if (newFiles.length > 0) {
+        try {
+          const uploadedUrls = await uploadGalleryImagesToServer(newFiles);
+
+          if (uploadedUrls.length !== newFiles.length) {
+            toast.error(
+              `Apenas ${uploadedUrls.length} de ${newFiles.length} novas imagens foram enviadas. O artigo será atualizado com as imagens que foram enviadas com sucesso.`
+            );
+          }
+
+          galleryUrls = [...galleryUrls, ...uploadedUrls];
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          toast.error(
+            `Erro ao fazer upload das imagens da galeria: ${errorMessage}. O artigo será atualizado sem as novas imagens.`
+          );
+        }
+      }
+
+      // 2. AGORA SIM: Atualizar o artigo com as URLs da galeria
       const finalData = {
         title: data.title,
         slug: data.slug,
@@ -357,6 +459,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         setToDraft: setToDraft,
         chiefEditorId: profile?.chiefEditor?.id,
         thumbnailDescription: thumbnailDescription,
+        gallery: galleryUrls,
       };
 
       // Enviar dados para API
@@ -370,7 +473,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
             thumbnailDescription,
             article.id
           );
-        } catch (error) {
+        } catch {
           toast.error("Erro no upload da thumbnail");
         }
       }
@@ -395,7 +498,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       setTimeout(() => {
         push("/postagens");
       }, 1000);
-    } catch (error) {
+    } catch {
       toast.error("Erro ao atualizar artigo. Tente novamente.");
     } finally {
       setIsSubmitting(false);
@@ -425,6 +528,58 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   };
 
   const contentLength = stripHtml(editorContent).length;
+
+  const handleAddGalleryImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.currentTarget.files;
+    if (!files) return;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        const preview = event.target?.result as string;
+        const id = `${Date.now()}-${Math.random()}`;
+        setGalleryImages((prev) => [
+          ...prev,
+          { file, preview, id, isExisting: false },
+        ]);
+      };
+
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveGalleryImage = (id: string) => {
+    setGalleryImages((prev) => prev.filter((img) => img.id !== id));
+  };
+
+  const handleDragStart = (id: string) => {
+    setDraggedItem(id);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (targetId: string) => {
+    if (!draggedItem || draggedItem === targetId) return;
+
+    setGalleryImages((prev) => {
+      const draggedIndex = prev.findIndex((img) => img.id === draggedItem);
+      const targetIndex = prev.findIndex((img) => img.id === targetId);
+
+      if (draggedIndex === -1 || targetIndex === -1) return prev;
+
+      const newImages = [...prev];
+      const [draggedImage] = newImages.splice(draggedIndex, 1);
+      newImages.splice(targetIndex, 0, draggedImage);
+
+      return newImages;
+    });
+
+    setDraggedItem(null);
+  };
 
   return (
     <div className="w-full h-full flex flex-col bg-white rounded-[24px]">
@@ -615,6 +770,87 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
               )}
             </div>
           </div>
+
+          <div className="w-full">
+            <h1 className="text-xl font-bold text-primary ml-6 pt-4 mb-4">
+              Galeria de Imagens
+            </h1>
+            <div className="ml-6 mr-6">
+              <div className="border-2 border-dashed border-primary-light rounded-[24px] p-6 text-center cursor-pointer hover:bg-gray-50 transition">
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleAddGalleryImage}
+                  className="hidden"
+                  id="gallery-input"
+                />
+                <label htmlFor="gallery-input" className="cursor-pointer block">
+                  <div className="text-gray-700 font-medium">
+                    Clique para adicionar imagens à galeria
+                  </div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    SVG, PNG, JPG ou GIF (max. 5MB cada)
+                  </div>
+                </label>
+              </div>
+
+              {galleryImages.length > 0 && (
+                <div className="mt-6">
+                  <p className="text-sm text-gray-600 mb-4">
+                    {galleryImages.length} imagem(ns) adicionada(s). Arraste
+                    para reordenar.
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {galleryImages.map((img) => (
+                      <div
+                        key={img.id}
+                        draggable
+                        onDragStart={() => handleDragStart(img.id)}
+                        onDragOver={handleDragOver}
+                        onDrop={() => handleDrop(img.id)}
+                        className={`relative group cursor-move rounded-lg overflow-hidden border-2 ${
+                          draggedItem === img.id
+                            ? "border-blue-500 opacity-50"
+                            : "border-gray-200 hover:border-blue-500"
+                        }`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={img.preview}
+                          alt="Gallery"
+                          className="w-full h-40 object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveGalleryImage(img.id)}
+                            className="bg-red-500 hover:bg-red-600 text-white rounded-full p-2 transition"
+                            title="Remover imagem"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {changeStatus === "CHANGES_REQUESTED" ? (
             <div className="w-full">
               <CustomInput

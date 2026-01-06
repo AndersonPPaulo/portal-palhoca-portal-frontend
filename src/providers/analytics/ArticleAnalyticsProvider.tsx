@@ -31,9 +31,23 @@ export interface TotalArticleEvent {
   total: number;
 }
 
+export interface DetailedArticleEvent {
+  id: string;
+  event_type: EventType;
+  timestamp?: string;
+  extra_data?: Record<string, unknown>;
+  article?: {
+    id: string;
+    title: string;
+  };
+}
+
 interface IEventsByArticleResponse {
   message: string;
-  events: ArticleEventRaw[];
+  total: number;
+  showing: number;
+  hasMore: boolean;
+  data: DetailedArticleEvent[];
 }
 
 interface ITotalEventsResponse {
@@ -97,10 +111,11 @@ interface IArticleAnalyticsData {
   ): Promise<void>;
   GetTotalEvents(): Promise<void>;
   UpdateVirtualEvent(data: IUpdateVirtualEventProps): Promise<void>;
-  Get100EventsArticle(): Promise<IVirtualEventResponse>;
+  Get100EventsArticle(limit?: number): Promise<IVirtualEventResponse>;
 
-  last100EventsArticle: IEvent[];
+  lastEventsArticle: IEvent[];
   articleEvents: Record<string, ArticleEvent[]>;
+  detailedArticleEvents: Record<string, DetailedArticleEvent[]>;
   totalEvents: TotalArticleEvent[];
   loading: boolean;
   error: string | null;
@@ -121,6 +136,9 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
   const [articleEvents, setArticleEvents] = useState<
     Record<string, ArticleEvent[]>
   >({});
+  const [detailedArticleEvents, setDetailedArticleEvents] = useState<
+    Record<string, DetailedArticleEvent[]>
+  >({});
   const [rawArticleEvents, setRawArticleEvents] = useState<
     Record<string, ArticleEventRaw[]>
   >({});
@@ -128,21 +146,23 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [last100EventsArticle, setLast100EventsArticle] = useState<IEvent[]>(
+  const [lastEventsArticle, setLastEventsArticle] = useState<IEvent[]>([]);
+
+  const Get100EventsArticle = useCallback(
+    async (limit: number = 100): Promise<IVirtualEventResponse> => {
+      try {
+        const validLimit = Math.min(Math.max(limit, 1), 300);
+        const res = await api.get<IVirtualEventResponse>(
+          `/analytics/last-article-events/${validLimit}`
+        );
+        setLastEventsArticle(res.data.response.articleEvents);
+        return res.data;
+      } catch (err) {
+        throw err;
+      }
+    },
     []
   );
-
-  const Get100EventsArticle = async (): Promise<IVirtualEventResponse> => {
-    try {
-      const res = await api.get<IVirtualEventResponse>(
-        "/analytics/last-100-event-article"
-      );
-      setLast100EventsArticle(res.data.response.articleEvents);
-      return res.data;
-    } catch (err) {
-      throw err;
-    }
-  };
 
   // Função para buscar eventos por artigo (privada - com auth)
   const GetEventsByArticle = useCallback(
@@ -165,37 +185,63 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
       if (endDate) queryParams.append("endDate", endDate);
       const queryString = queryParams.toString();
 
-      const endpoint = `/analytics/event-article/${articleId}/article${
+      // Usar a nova URL: /article/{id}/events
+      const endpoint = `/article/${articleId}/events${
         queryString ? `?${queryString}` : ""
       }`;
 
       const response = await api
         .get(endpoint, config)
         .then((res) => {
-          const responseData: IEventsByArticleResponse = res.data.response;
+          const responseData = res.data;
 
-          // Usar os eventos que já vêm agregados da API
-          const rawEvents = responseData.events || [];
+          // Usar os eventos detalhados da API
+          const detailedEvents = responseData.data || [];
 
-          // Armazenar eventos brutos (se tiverem timestamp para listagem detalhada)
-          const eventsWithTimestamp = rawEvents.filter((e) => e.timestamp);
-          if (eventsWithTimestamp.length > 0) {
-            setRawArticleEvents((prev) => ({
-              ...prev,
-              [articleId]: eventsWithTimestamp,
-            }));
-          }
+          // Armazenar eventos detalhados
+          setDetailedArticleEvents((prev) => ({
+            ...prev,
+            [articleId]: detailedEvents,
+          }));
 
-          // Converter para formato esperado (já vem com virtual_count da API)
-          const processedEvents: ArticleEvent[] = rawEvents.map((event) => ({
-            event_type: event.event_type,
-            virtual_count: event.virtual_count || 0,
+          // Agregar eventos por tipo para exibição nas métricas
+          const aggregatedEvents: Record<EventType, number> = {} as Record<
+            EventType,
+            number
+          >;
+
+          detailedEvents.forEach((event: DetailedArticleEvent) => {
+            aggregatedEvents[event.event_type] =
+              (aggregatedEvents[event.event_type] || 0) + 1;
+          });
+
+          // Converter para formato esperado
+          const processedEvents: ArticleEvent[] = Object.entries(
+            aggregatedEvents
+          ).map(([eventType, count]) => ({
+            event_type: eventType as EventType,
+            virtual_count: count,
           }));
 
           setArticleEvents((prev) => ({
             ...prev,
             [articleId]: processedEvents,
           }));
+
+          // Também armazenar como rawArticleEvents para manter compatibilidade
+          const rawEvents: ArticleEventRaw[] = detailedEvents.map(
+            (event: DetailedArticleEvent) => ({
+              event_type: event.event_type,
+              timestamp: event.timestamp,
+              virtual_count: 1,
+            })
+          );
+
+          setRawArticleEvents((prev) => ({
+            ...prev,
+            [articleId]: rawEvents,
+          }));
+
           setLoading(false);
         })
         .catch((err) => {
@@ -293,13 +339,14 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
         GetTotalEvents,
         UpdateVirtualEvent,
         articleEvents,
+        detailedArticleEvents,
         rawArticleEvents,
         totalEvents,
         loading,
         error,
         ClearError,
         Get100EventsArticle,
-        last100EventsArticle,
+        lastEventsArticle,
       }}
     >
       {children}

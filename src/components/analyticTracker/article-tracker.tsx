@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useContext, useMemo } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,10 +84,15 @@ function ArticleEventItem({ event }: { event: IEvent }) {
   };
 
   function formatTimeAgo(timestamp: string): string {
+    // Backend envia UTC mas com offset incorreto, subtrair 3h
     const date = new Date(timestamp);
+    date.setHours(date.getHours() - 3);
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
+    // Se a diferença for negativa ou muito pequena
+    if (diffInSeconds < 0) return "agora mesmo";
+    if (diffInSeconds < 5) return "agora mesmo";
     if (diffInSeconds < 60) return `${diffInSeconds}s atrás`;
     if (diffInSeconds < 3600)
       return `${Math.floor(diffInSeconds / 60)}min atrás`;
@@ -99,6 +104,15 @@ function ArticleEventItem({ event }: { event: IEvent }) {
   const categoryColor = event?.article?.category?.name
     ? categoryColors[event.article.category.name] || "bg-gray-500"
     : "bg-gray-500";
+
+  // Converter timestamp UTC para hora local brasileira (backend tem offset de +3h)
+  const eventDate = new Date(event.timestamp);
+  eventDate.setHours(eventDate.getHours() - 3);
+  const localTimeString = eventDate.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 
   return (
     <div
@@ -146,9 +160,7 @@ function ArticleEventItem({ event }: { event: IEvent }) {
           </div>
         </div>
 
-        <div className="text-xs text-gray-400">
-          {new Date(event.timestamp).toLocaleTimeString("pt-BR")}
-        </div>
+        <div className="text-xs text-gray-400">{localTimeString}</div>
       </div>
     </div>
   );
@@ -157,23 +169,42 @@ function ArticleEventItem({ event }: { event: IEvent }) {
 export default function ArticleTracker({
   autoRefresh = true,
 }: ArticleTrackerProps) {
-  const { Get100EventsArticle, last100EventsArticle } = useContext(
+  const { Get100EventsArticle, lastEventsArticle } = useContext(
     ArticleAnalyticsContext
   );
 
   const [isLive, setIsLive] = useState(autoRefresh);
   const [itemsPerPage, setItemsPerPage] = useState(100);
 
+  // Buscar dados iniciais com delay de 30 segundos
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      Get100EventsArticle(itemsPerPage);
+    }, 30000);
+    return () => clearTimeout(timer);
+  }, [itemsPerPage, Get100EventsArticle]);
+
   useEffect(() => {
     if (!isLive) return;
 
-    //faça rodar a cada 5 segundos
-    const interval = setInterval(() => {
-      Get100EventsArticle();
-    }, 5000);
+    let interval: NodeJS.Timeout;
 
-    return () => clearInterval(interval);
-  }, [isLive, Get100EventsArticle]);
+    // Aguardar 30 segundos antes de iniciar o intervalo
+    const initialTimer = setTimeout(() => {
+      // Primeira chamada após o delay
+      Get100EventsArticle(itemsPerPage);
+
+      // Intervalo de 45 segundos para atualização automática
+      interval = setInterval(() => {
+        Get100EventsArticle(itemsPerPage);
+      }, 45000);
+    }, 30000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      if (interval) clearInterval(interval);
+    };
+  }, [isLive, Get100EventsArticle, itemsPerPage]);
 
   const [eventFilter, setEventFilter] = useState<
     "all" | "view" | "view_end" | "click_view"
@@ -182,16 +213,11 @@ export default function ArticleTracker({
 
   const categories = Array.from(
     new Set(
-      (Array.isArray(last100EventsArticle) ? last100EventsArticle : [])
+      (Array.isArray(lastEventsArticle) ? lastEventsArticle : [])
         .map((e) => e.article?.category?.name)
         .filter(Boolean)
     )
   );
-
-  const visibleEvents = useMemo(() => {
-    return last100EventsArticle.slice(0, itemsPerPage);
-  }, [last100EventsArticle, itemsPerPage]);
-
   return (
     <Card className="w-full h-full flex flex-col">
       <CardHeader className="flex-shrink-0">
@@ -266,7 +292,7 @@ export default function ArticleTracker({
 
       <CardContent className="flex-1 overflow-hidden p-0">
         <ScrollArea className="h-full p-6">
-          {last100EventsArticle.length === 0 ? (
+          {lastEventsArticle.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p>Nenhum evento de notícia encontrado</p>
@@ -274,7 +300,7 @@ export default function ArticleTracker({
             </div>
           ) : (
             <div className="space-y-3">
-              {visibleEvents.map((event) => (
+              {lastEventsArticle.map((event) => (
                 <ArticleEventItem key={event.id} event={event} />
               ))}
             </div>

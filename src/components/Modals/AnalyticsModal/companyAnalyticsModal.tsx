@@ -24,6 +24,7 @@ export default function CompanyAnalyticsModal({
   // Usando seu provider de comércio
   const {
     companyEvents,
+    detailedCompanyEvents,
     rawCompanyEvents,
     loading,
     error,
@@ -33,7 +34,6 @@ export default function CompanyAnalyticsModal({
   } = useContext(CompanyAnalyticsContext);
 
   console.log("Raw Company Events:", rawCompanyEvents);
-  console.log("Company Events:", companyEvents);
 
   // Carregar eventos quando o modal abrir
   useEffect(() => {
@@ -53,7 +53,7 @@ export default function CompanyAnalyticsModal({
     events: companyEvents[companyId] || [],
     loading,
     error,
-    rawEvents: rawCompanyEvents[companyId] || [],
+    rawEvents: detailedCompanyEvents[companyId] || [],
   };
 
   const analyticsActions = {
