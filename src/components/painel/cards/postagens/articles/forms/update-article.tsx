@@ -55,15 +55,6 @@ const uploadGalleryImagesToServer = async (
     const formData = new FormData();
     formData.append("image", file);
 
-    console.log(
-      "📤 Enviando imagem:",
-      file.name,
-      "Tamanho:",
-      file.size,
-      "Tipo:",
-      file.type
-    );
-
     const config = {
       headers: {
         Authorization: `bearer ${token}`,
@@ -78,11 +69,8 @@ const uploadGalleryImagesToServer = async (
         config
       );
 
-      console.log("✅ Resposta do servidor:", response.data);
-
       if (response.data?.url) {
         uploadedUrls.push(response.data.url);
-        console.log("✅ URL adicionada:", response.data.url);
       } else {
         console.error("❌ Resposta não contém url:", response.data);
       }
@@ -426,13 +414,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       // Upload de novas imagens da galeria (se houver)
       if (newFiles.length > 0) {
         try {
-          console.log(
-            "📸 Iniciando upload de",
-            newFiles.length,
-            "novas imagens da galeria..."
-          );
           const uploadedUrls = await uploadGalleryImagesToServer(newFiles);
-          console.log("✅ Upload concluído! URLs:", uploadedUrls);
 
           if (uploadedUrls.length !== newFiles.length) {
             toast.error(
@@ -466,12 +448,8 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
         gallery: galleryUrls,
       };
 
-      console.log("🔄 Atualizando artigo com dados:", finalData);
-
       // Enviar dados para API
       await UpdateArticle(finalData, article.id);
-
-      console.log("✅ Artigo atualizado com sucesso!");
 
       // Se tem imagem nova selecionada, faz o upload
       if (selectedImage && selectedImage.file) {

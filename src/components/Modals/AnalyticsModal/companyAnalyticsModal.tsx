@@ -34,7 +34,6 @@ export default function CompanyAnalyticsModal({
   } = useContext(CompanyAnalyticsContext);
 
   console.log("Raw Company Events:", rawCompanyEvents);
-  console.log("Company Events:", companyEvents);
 
   // Carregar eventos quando o modal abrir
   useEffect(() => {

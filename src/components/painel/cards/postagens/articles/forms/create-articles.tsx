@@ -98,15 +98,6 @@ const uploadGalleryImagesToServer = async (
     const formData = new FormData();
     formData.append("image", file);
 
-    console.log(
-      "📤 Enviando imagem:",
-      file.name,
-      "Tamanho:",
-      file.size,
-      "Tipo:",
-      file.type
-    );
-
     const config = {
       headers: {
         Authorization: `bearer ${token}`,
@@ -121,11 +112,8 @@ const uploadGalleryImagesToServer = async (
         config
       );
 
-      console.log("✅ Resposta do servidor:", response.data);
-
       if (response.data?.url) {
         uploadedUrls.push(response.data.url);
-        console.log("✅ URL adicionada:", response.data.url);
       } else {
         console.error("❌ Resposta não contém url:", response.data);
       }
@@ -259,14 +247,8 @@ export default function FormCreateArticle() {
       let galleryUrls: string[] = [];
       if (galleryImages.length > 0) {
         try {
-          console.log(
-            "📸 Iniciando upload de",
-            galleryImages.length,
-            "imagens da galeria..."
-          );
           const galleryFiles = galleryImages.map((img) => img.file);
           galleryUrls = await uploadGalleryImagesToServer(galleryFiles);
-          console.log("✅ Upload concluído! URLs:", galleryUrls);
 
           if (galleryUrls.length !== galleryImages.length) {
             toast.error(
@@ -295,11 +277,7 @@ export default function FormCreateArticle() {
         portals: data.portalIds,
       };
 
-      console.log("🚀 Criando artigo com dados:", formData);
-
       const createdArticle = await CreateArticle(formData);
-
-      console.log("🔍 Artigo criado:", createdArticle);
 
       if (!createdArticle?.id) {
         toast.error("Erro ao criar o artigo.");

@@ -147,17 +147,10 @@ const TiptapEditor = ({
       const fileSizeMB = file.size / 1024 / 1024;
       const MAX_SIZE_MB = 2; // Limite de 2MB
 
-      console.log("📤 Preparando upload de imagem...", {
-        fileName: file.name,
-        fileSize: `${fileSizeMB.toFixed(2)}MB`,
-        maxSize: `${MAX_SIZE_MB}MB`,
-      });
-
       let fileToUpload = file;
 
       // Comprimir se for maior que o limite
       if (fileSizeMB > MAX_SIZE_MB) {
-        console.log("🔄 Imagem muito grande, comprimindo...");
         alert(
           `A imagem tem ${fileSizeMB.toFixed(
             2

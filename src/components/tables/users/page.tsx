@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { DataTable } from "./data-table";
 import { useContext, useEffect, useState } from "react";
 import { columns } from "./columns";
@@ -14,8 +15,6 @@ export default function TableUsers({ filter, activeFilters }: TableUsersProps) {
   const { ListUser, listUser } = useContext(UserContext);
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(9);
-
-  console.log(listUser);
 
   useEffect(() => {
     const fetchUsers = async () => {
