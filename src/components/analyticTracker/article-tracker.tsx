@@ -84,13 +84,10 @@ function ArticleEventItem({ event }: { event: IEvent }) {
   };
 
   function formatTimeAgo(timestamp: string): string {
-    // Backend envia UTC mas com offset incorreto, subtrair 3h
     const date = new Date(timestamp);
-    date.setHours(date.getHours() - 3);
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-    // Se a diferença for negativa ou muito pequena
     if (diffInSeconds < 0) return "agora mesmo";
     if (diffInSeconds < 5) return "agora mesmo";
     if (diffInSeconds < 60) return `${diffInSeconds}s atrás`;
@@ -98,20 +95,19 @@ function ArticleEventItem({ event }: { event: IEvent }) {
       return `${Math.floor(diffInSeconds / 60)}min atrás`;
     if (diffInSeconds < 86400)
       return `${Math.floor(diffInSeconds / 3600)}h atrás`;
-    return date.toLocaleDateString("pt-BR");
+    return date.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
   }
   const EventIcon = eventConfig.icon;
   const categoryColor = event?.article?.category?.name
     ? categoryColors[event.article.category.name] || "bg-gray-500"
     : "bg-gray-500";
 
-  // Converter timestamp UTC para hora local brasileira (backend tem offset de +3h)
   const eventDate = new Date(event.timestamp);
-  eventDate.setHours(eventDate.getHours() - 3);
   const localTimeString = eventDate.toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
+    timeZone: "America/Sao_Paulo",
   });
 
   return (
