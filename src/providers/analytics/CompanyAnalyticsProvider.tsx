@@ -87,7 +87,10 @@ interface ICompanyAnalyticsData {
   ): Promise<void>;
   GetTotalEvents(): Promise<void>;
   UpdateVirtualEvent(data: IUpdateVirtualEventProps): Promise<void>;
-  Get100EventsCompany(limit?: number): Promise<IVirtualEventResponse>;
+  Get100EventsCompany(
+    limit?: number,
+    excludeType?: string
+  ): Promise<IVirtualEventResponse>;
 
   lastEventsCompany: IEvent[];
   companyEvents: Record<string, CompanyEvent[]>;
@@ -124,11 +127,15 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
   const [lastEventsCompany, setLastEventsCompany] = useState<IEvent[]>([]);
 
   const Get100EventsCompany = useCallback(
-    async (limit: number = 100): Promise<IVirtualEventResponse> => {
+    async (
+      limit: number = 100,
+      excludeType?: string
+    ): Promise<IVirtualEventResponse> => {
       try {
         const validLimit = Math.min(Math.max(limit, 1), 300);
+        const queryParams = excludeType ? `?excludeType=${excludeType}` : "";
         const res = await api.get<IVirtualEventResponse>(
-          `/analytics/last-company-events/${validLimit}`
+          `/analytics/last-company-events/${validLimit}${queryParams}`
         );
         setLastEventsCompany(res.data.response.companyEvents);
         return res.data;
