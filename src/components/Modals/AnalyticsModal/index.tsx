@@ -16,6 +16,9 @@ import {
   RefreshCw,
   BarChart3,
   AlertCircle,
+  Calendar,
+  Clock,
+  Infinity,
 } from "lucide-react";
 import { useEffect, useState, useCallback, useContext, useRef } from "react";
 import type { LucideIcon } from "lucide-react";
@@ -135,6 +138,9 @@ export default function ReusableAnalyticsModal({
 
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(
+    null
+  );
 
   const [isExporting, setIsExporting] = useState(false);
   const isMobile = useIsMobile();
@@ -268,6 +274,7 @@ export default function ReusableAnalyticsModal({
   };
 
   const handleRefresh = () => {
+    setActiveQuickFilter(null);
     analyticsActions.loadEvents(
       entityId,
       startDate || undefined,
@@ -276,6 +283,7 @@ export default function ReusableAnalyticsModal({
   };
 
   const handleApplyFilter = () => {
+    setActiveQuickFilter(null);
     analyticsActions.loadEvents(
       entityId,
       startDate || undefined,
@@ -286,7 +294,34 @@ export default function ReusableAnalyticsModal({
   const handleClearFilter = () => {
     setStartDate("");
     setEndDate("");
+    setActiveQuickFilter(null);
     analyticsActions.loadEvents(entityId);
+  };
+
+  // Filtros rápidos
+  const handleQuickFilter = (hours: number, filterName: string) => {
+    const now = new Date();
+    const past = new Date(now.getTime() - hours * 60 * 60 * 1000);
+
+    // Formato para datetime-local: "2026-01-11T14:30"
+    const formatDateTime = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const hour = String(date.getHours()).padStart(2, "0");
+      const minute = String(date.getMinutes()).padStart(2, "0");
+      return `${year}-${month}-${day}T${hour}:${minute}`;
+    };
+
+    setStartDate(formatDateTime(past));
+    setEndDate(formatDateTime(now));
+    setActiveQuickFilter(filterName);
+
+    analyticsActions.loadEvents(
+      entityId,
+      past.toISOString(),
+      now.toISOString()
+    );
   };
 
   const handleExportPDF = async () => {
@@ -489,81 +524,172 @@ export default function ReusableAnalyticsModal({
             </div>
           </div>
 
-          {/* Filtros de Data */}
-          <div className="mt-4 flex flex-wrap items-end gap-3">
-            <div className="flex-1 min-w-[200px]">
-              <Label htmlFor="startDate" className="text-xs text-gray-600 mb-1">
-                Data Início
-              </Label>
-              <Input
-                id="startDate"
-                type="datetime-local"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="text-sm"
-                disabled={analyticsData.loading || isEditing || isSaving}
-              />
-            </div>
-            <div className="flex-1 min-w-[200px]">
-              <Label htmlFor="endDate" className="text-xs text-gray-600 mb-1">
-                Data Fim
-              </Label>
-              <Input
-                id="endDate"
-                type="datetime-local"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="text-sm"
-                disabled={analyticsData.loading || isEditing || isSaving}
-              />
-            </div>
-            <div className="flex gap-2">
+          {/* Filtros de Data - Design Melhorado */}
+          <div className="mt-6">
+            <Label className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Período de Análise
+            </Label>
+
+            {/* Filtros em linha única */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Filtros Rápidos */}
               <Button
-                variant="default"
-                size="sm"
-                onClick={handleApplyFilter}
-                disabled={
-                  analyticsData.loading ||
-                  isEditing ||
-                  isSaving ||
-                  (!startDate && !endDate)
+                variant={
+                  activeQuickFilter === null && !startDate && !endDate
+                    ? "default"
+                    : "outline"
                 }
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                size="sm"
+                onClick={handleClearFilter}
+                disabled={analyticsData.loading || isEditing || isSaving}
+                className={`${
+                  activeQuickFilter === null && !startDate && !endDate
+                    ? "bg-blue-600 hover:bg-blue-700 text-white"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
               >
-                Aplicar Filtro
+                <Infinity className="h-4 w-4 mr-2" />
+                Todos
               </Button>
-              {(startDate || endDate) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleClearFilter}
-                  disabled={analyticsData.loading || isEditing || isSaving}
-                  className="text-gray-700"
-                >
-                  Limpar
-                </Button>
-              )}
+              <Button
+                variant={activeQuickFilter === "24h" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleQuickFilter(24, "24h")}
+                disabled={analyticsData.loading || isEditing || isSaving}
+                className={`${
+                  activeQuickFilter === "24h"
+                    ? "bg-blue-600 hover:bg-blue-700 text-white"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <Clock className="h-4 w-4 mr-2" />
+                24h
+              </Button>
+              <Button
+                variant={activeQuickFilter === "7d" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleQuickFilter(24 * 7, "7d")}
+                disabled={analyticsData.loading || isEditing || isSaving}
+                className={`${
+                  activeQuickFilter === "7d"
+                    ? "bg-blue-600 hover:bg-blue-700 text-white"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <Calendar className="h-4 w-4 mr-2" />7 dias
+              </Button>
+              <Button
+                variant={activeQuickFilter === "30d" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleQuickFilter(24 * 30, "30d")}
+                disabled={analyticsData.loading || isEditing || isSaving}
+                className={`${
+                  activeQuickFilter === "30d"
+                    ? "bg-blue-600 hover:bg-blue-700 text-white"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                30 dias
+              </Button>
+
+              {/* Separador visual */}
+              <div className="h-8 w-px bg-gray-300 mx-1"></div>
+
+              {/* Inputs de Data Customizada - Menores e mais clicáveis */}
+              <div className="flex items-center gap-2">
+                <div className="w-[180px]">
+                  <div
+                    className="relative group cursor-pointer"
+                    onClick={() =>
+                      document.getElementById("startDate")?.showPicker?.()
+                    }
+                  >
+                    <Input
+                      id="startDate"
+                      type="datetime-local"
+                      value={startDate}
+                      onChange={(e) => {
+                        setStartDate(e.target.value);
+                        setActiveQuickFilter(null);
+                      }}
+                      className="text-xs h-9 pl-2 pr-2 cursor-pointer hover:border-blue-400 focus:border-blue-500 transition-colors [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:hover:opacity-75"
+                      placeholder="Data início"
+                      disabled={analyticsData.loading || isEditing || isSaving}
+                    />
+                  </div>
+                </div>
+
+                <span className="text-gray-400 text-sm">até</span>
+
+                <div className="w-[180px]">
+                  <div
+                    className="relative group cursor-pointer"
+                    onClick={() =>
+                      document.getElementById("endDate")?.showPicker?.()
+                    }
+                  >
+                    <Input
+                      id="endDate"
+                      type="datetime-local"
+                      value={endDate}
+                      onChange={(e) => {
+                        setEndDate(e.target.value);
+                        setActiveQuickFilter(null);
+                      }}
+                      className="text-xs h-9 pl-2 pr-2 cursor-pointer hover:border-blue-400 focus:border-blue-500 transition-colors [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:hover:opacity-75"
+                      placeholder="Data fim"
+                      disabled={analyticsData.loading || isEditing || isSaving}
+                    />
+                  </div>
+                </div>
+
+                {(startDate || endDate) && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleApplyFilter}
+                    disabled={
+                      analyticsData.loading ||
+                      isEditing ||
+                      isSaving ||
+                      (!startDate && !endDate)
+                    }
+                    className="bg-blue-600 hover:bg-blue-700 text-white h-9"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-1.5" />
+                    Aplicar
+                  </Button>
+                )}
+              </div>
+
+              {/* Separador visual */}
               {profile?.role?.name?.toLowerCase() === "administrador" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportPDF}
-                  disabled={
-                    analyticsData.loading ||
-                    isExporting ||
-                    !hasData ||
-                    isEditing ||
-                    isSaving
-                  }
-                  className="text-gray-700 hover:bg-gray-100"
-                >
-                  {isExporting ? (
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Download className="h-4 w-4 mr-2" />
-                  )}
-                  Exportar PDF
-                </Button>
+                <>
+                  <div className="h-8 w-px bg-gray-300 mx-1"></div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportPDF}
+                    disabled={
+                      analyticsData.loading ||
+                      isExporting ||
+                      !hasData ||
+                      isEditing ||
+                      isSaving
+                    }
+                    className="text-gray-700 hover:bg-gray-100 h-9"
+                  >
+                    {isExporting ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4 mr-2" />
+                    )}
+                    Exportar PDF
+                  </Button>
+                </>
               )}
             </div>
           </div>
