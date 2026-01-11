@@ -376,7 +376,7 @@ const AnalyticsReportPDF: React.FC<AnalyticsReportPDFProps> = ({
             {eventsWithTimestamp.length > 0 && (
               <View style={styles.detailedEventsSection} break>
                 <Text style={styles.sectionTitle}>
-                  Listagem Detalhada de Todos os Eventos (
+                  Listagem Detalhada dos Eventos (máximo de{" "}
                   {eventsWithTimestamp.length} eventos)
                 </Text>
                 {eventTypeConfigs.map((config) => {

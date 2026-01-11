@@ -17,7 +17,7 @@ import {
   BarChart3,
   AlertCircle,
 } from "lucide-react";
-import { useEffect, useState, useCallback, useContext } from "react";
+import { useEffect, useState, useCallback, useContext, useRef } from "react";
 import type { LucideIcon } from "lucide-react";
 import { format } from "date-fns";
 import { pdf } from "@react-pdf/renderer";
@@ -139,6 +139,11 @@ export default function ReusableAnalyticsModal({
   const [isExporting, setIsExporting] = useState(false);
   const isMobile = useIsMobile();
 
+  // Ref para controlar se acabamos de salvar (evita reprocessamento)
+  const justSavedRef = useRef(false);
+  // Ref para armazenar a última versão processada dos events
+  const lastProcessedEventsRef = useRef<string>("");
+
   const processEventData = useCallback(
     (events: GenericEvent[]) => {
       const processed: Record<string, number> = {};
@@ -174,48 +179,77 @@ export default function ReusableAnalyticsModal({
 
   // Processar dados quando chegarem
   useEffect(() => {
-    if (analyticsData.events && analyticsData.events.length > 0) {
-      const processed = processEventData(analyticsData.events);
-      setEditableEvents(processed);
-      setOriginalEvents(processed);
-
-      // Callback opcional
-      if (onDataLoaded) {
-        onDataLoaded(analyticsData.events);
-      }
-    }
-  }, [analyticsData.events, processEventData, onDataLoaded, eventTypeConfigs]);
-
-  const handleSave = async () => {
-    if (!analyticsActions.updateEvent) {
+    // Não processar se:
+    // 1. Não há eventos
+    // 2. Está em modo de edição
+    // 3. Acabamos de salvar (justSavedRef é true)
+    if (!analyticsData.events || analyticsData.events.length === 0) {
       return;
     }
 
+    if (isEditing || justSavedRef.current) {
+      return;
+    }
+
+    // Criar uma "assinatura" dos eventos para detectar mudanças reais
+    const eventsSignature = JSON.stringify(
+      analyticsData.events.map((e) => `${e.event_type}:${e.virtual_count}`)
+    );
+
+    // Só processar se os dados realmente mudaram
+    if (eventsSignature === lastProcessedEventsRef.current) {
+      return;
+    }
+
+    const processed = processEventData(analyticsData.events);
+
+    // Atualizar ambos os estados com os novos dados da API
+    setEditableEvents(processed);
+    setOriginalEvents(processed);
+
+    // Atualizar a referência da última versão processada
+    lastProcessedEventsRef.current = eventsSignature;
+
+    // Callback opcional
+    if (onDataLoaded) {
+      onDataLoaded(analyticsData.events);
+    }
+  }, [
+    analyticsData.events,
+    processEventData,
+    onDataLoaded,
+    eventTypeConfigs,
+    isEditing,
+  ]);
+
+  const handleSave = async () => {
     setIsSaving(true);
 
     try {
-      // Atualizar apenas eventos que mudaram
-      for (const [eventType, newValue] of Object.entries(editableEvents)) {
-        const originalValue = originalEvents[eventType] || 0;
+      // EDIÇÃO APENAS LOCAL - NÃO ENVIA PARA API
+      // Os valores editados ficam apenas em editableEvents (useState)
+      // Útil para testes e visualizações sem persistir dados no backend
 
-        if (newValue !== originalValue) {
-          await analyticsActions.updateEvent(entityId, eventType, newValue);
+      // Atualizar originalEvents com os valores editados
+      // para que não sejam considerados como "modificações pendentes"
+      setOriginalEvents({ ...editableEvents });
 
-          // Callback opcional
-          if (onEventUpdated) {
-            onEventUpdated(eventType, newValue);
-          }
-        }
-      }
+      // Marcar que acabamos de salvar para evitar reprocessamento
+      justSavedRef.current = true;
 
       setIsEditing(false);
 
-      // Recarregar dados
+      // Resetar a flag após 1 segundo
       setTimeout(() => {
-        analyticsActions.loadEvents(entityId);
-      }, 500);
+        justSavedRef.current = false;
+      }, 1000);
+
+      // Valores editados permanecem localmente até:
+      // 1. Fechar o modal
+      // 2. Clicar em "Atualizar"
+      // 3. Aplicar filtros de data
     } catch (error) {
-      console.error(` Erro ao atualizar ${entityType} analytics:`, error);
+      console.error(`Erro ao processar edição local:`, error);
     } finally {
       setIsSaving(false);
     }
@@ -467,7 +501,7 @@ export default function ReusableAnalyticsModal({
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="text-sm"
-                disabled={analyticsData.loading || isEditing}
+                disabled={analyticsData.loading || isEditing || isSaving}
               />
             </div>
             <div className="flex-1 min-w-[200px]">
@@ -480,7 +514,7 @@ export default function ReusableAnalyticsModal({
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 className="text-sm"
-                disabled={analyticsData.loading || isEditing}
+                disabled={analyticsData.loading || isEditing || isSaving}
               />
             </div>
             <div className="flex gap-2">
@@ -489,7 +523,10 @@ export default function ReusableAnalyticsModal({
                 size="sm"
                 onClick={handleApplyFilter}
                 disabled={
-                  analyticsData.loading || isEditing || (!startDate && !endDate)
+                  analyticsData.loading ||
+                  isEditing ||
+                  isSaving ||
+                  (!startDate && !endDate)
                 }
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
@@ -500,7 +537,7 @@ export default function ReusableAnalyticsModal({
                   variant="outline"
                   size="sm"
                   onClick={handleClearFilter}
-                  disabled={analyticsData.loading || isEditing}
+                  disabled={analyticsData.loading || isEditing || isSaving}
                   className="text-gray-700"
                 >
                   Limpar
@@ -511,7 +548,13 @@ export default function ReusableAnalyticsModal({
                   variant="outline"
                   size="sm"
                   onClick={handleExportPDF}
-                  disabled={analyticsData.loading || isExporting || !hasData}
+                  disabled={
+                    analyticsData.loading ||
+                    isExporting ||
+                    !hasData ||
+                    isEditing ||
+                    isSaving
+                  }
                   className="text-gray-700 hover:bg-gray-100"
                 >
                   {isExporting ? (
