@@ -506,20 +506,22 @@ export default function ReusableAnalyticsModal({
                   Limpar
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportPDF}
-                disabled={analyticsData.loading || isExporting || !hasData}
-                className="text-gray-700 hover:bg-gray-100"
-              >
-                {isExporting ? (
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4 mr-2" />
-                )}
-                Exportar PDF
-              </Button>
+              {profile?.role?.name?.toLowerCase() === "administrador" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportPDF}
+                  disabled={analyticsData.loading || isExporting || !hasData}
+                  className="text-gray-700 hover:bg-gray-100"
+                >
+                  {isExporting ? (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4 mr-2" />
+                  )}
+                  Exportar PDF
+                </Button>
+              )}
             </div>
           </div>
         </div>
