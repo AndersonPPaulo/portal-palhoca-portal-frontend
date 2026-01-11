@@ -181,8 +181,16 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
 
       // Construir query params
       const queryParams = new URLSearchParams();
-      if (startDate) queryParams.append("startDate", startDate);
-      if (endDate) queryParams.append("endDate", endDate);
+      if (startDate) {
+        // Converter datetime-local para ISO 8601
+        const isoStartDate = new Date(startDate).toISOString();
+        queryParams.append("startDate", isoStartDate);
+      }
+      if (endDate) {
+        // Converter datetime-local para ISO 8601
+        const isoEndDate = new Date(endDate).toISOString();
+        queryParams.append("endDate", isoEndDate);
+      }
       const queryString = queryParams.toString();
 
       // Usar a nova URL: /article/{id}/events
