@@ -176,40 +176,31 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
         .then((res) => {
           const responseData = res.data;
 
-          // Usar os eventos detalhados da API
-          const detailedEvents = responseData.data || [];
+          // Nova estrutura da API com aggregated e detailed_events
+          const aggregated = responseData.aggregated || [];
+          const detailedEvents =
+            responseData.detailed_events || responseData.data || [];
 
-          // Armazenar eventos detalhados
+          // Armazenar eventos detalhados (para logs/PDF)
           setDetailedCompanyEvents((prev) => ({
             ...prev,
             [companyId]: detailedEvents,
           }));
 
-          // Agregar eventos por tipo para exibição nas métricas
-          const aggregatedEvents: Record<EventType, number> = {} as Record<
-            EventType,
-            number
-          >;
-
-          detailedEvents.forEach((event: DetailedCompanyEvent) => {
-            aggregatedEvents[event.event_type] =
-              (aggregatedEvents[event.event_type] || 0) + 1;
-          });
-
-          // Converter para formato esperado
-          const processedEvents: CompanyEvent[] = Object.entries(
-            aggregatedEvents
-          ).map(([eventType, count]) => ({
-            event_type: eventType as EventType,
-            virtual_count: count,
-          }));
+          // Usar os dados agregados da API (COUNT real do banco)
+          const processedEvents: CompanyEvent[] = aggregated.map(
+            (item: any) => ({
+              event_type: item.event_type as EventType,
+              virtual_count: item.total_count || 0,
+            })
+          );
 
           setCompanyEvents((prev) => ({
             ...prev,
             [companyId]: processedEvents,
           }));
 
-          // Também armazenar como rawCompanyEvents para manter compatibilidade
+          // Armazenar rawCompanyEvents para manter compatibilidade
           const rawEvents: CompanyEventRaw[] = detailedEvents.map(
             (event: DetailedCompanyEvent) => ({
               event_type: event.event_type,
