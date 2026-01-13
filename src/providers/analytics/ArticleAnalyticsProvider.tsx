@@ -181,8 +181,16 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
 
       // Construir query params
       const queryParams = new URLSearchParams();
-      if (startDate) queryParams.append("startDate", startDate);
-      if (endDate) queryParams.append("endDate", endDate);
+      if (startDate) {
+        // Converter datetime-local para ISO 8601
+        const isoStartDate = new Date(startDate).toISOString();
+        queryParams.append("startDate", isoStartDate);
+      }
+      if (endDate) {
+        // Converter datetime-local para ISO 8601
+        const isoEndDate = new Date(endDate).toISOString();
+        queryParams.append("endDate", isoEndDate);
+      }
       const queryString = queryParams.toString();
 
       // Usar a nova URL: /article/{id}/events
@@ -195,40 +203,31 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
         .then((res) => {
           const responseData = res.data;
 
-          // Usar os eventos detalhados da API
-          const detailedEvents = responseData.data || [];
+          // Nova estrutura da API com aggregated e detailed_events
+          const aggregated = responseData.aggregated || [];
+          const detailedEvents =
+            responseData.detailed_events || responseData.data || [];
 
-          // Armazenar eventos detalhados
+          // Armazenar eventos detalhados (para logs/PDF)
           setDetailedArticleEvents((prev) => ({
             ...prev,
             [articleId]: detailedEvents,
           }));
 
-          // Agregar eventos por tipo para exibição nas métricas
-          const aggregatedEvents: Record<EventType, number> = {} as Record<
-            EventType,
-            number
-          >;
-
-          detailedEvents.forEach((event: DetailedArticleEvent) => {
-            aggregatedEvents[event.event_type] =
-              (aggregatedEvents[event.event_type] || 0) + 1;
-          });
-
-          // Converter para formato esperado
-          const processedEvents: ArticleEvent[] = Object.entries(
-            aggregatedEvents
-          ).map(([eventType, count]) => ({
-            event_type: eventType as EventType,
-            virtual_count: count,
-          }));
+          // Usar os dados agregados da API (COUNT real do banco)
+          const processedEvents: ArticleEvent[] = aggregated.map(
+            (item: any) => ({
+              event_type: item.event_type as EventType,
+              virtual_count: item.total_count || 0,
+            })
+          );
 
           setArticleEvents((prev) => ({
             ...prev,
             [articleId]: processedEvents,
           }));
 
-          // Também armazenar como rawArticleEvents para manter compatibilidade
+          // Armazenar rawArticleEvents para manter compatibilidade
           const rawEvents: ArticleEventRaw[] = detailedEvents.map(
             (event: DetailedArticleEvent) => ({
               event_type: event.event_type,

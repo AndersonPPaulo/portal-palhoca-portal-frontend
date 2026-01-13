@@ -88,6 +88,18 @@ const uploadThumbnailToServer = async (
   }
 };
 
+const renameFileWithTimestamp = (file: File): File => {
+  const timestamp = Date.now();
+  const fileExtension = file.name.split(".").pop() || "";
+  const fileNameWithoutExtension = file.name
+    .substring(0, file.name.lastIndexOf("."))
+    .replace(/\s+/g, "_");
+
+  const newFileName = `${fileNameWithoutExtension}_${timestamp}.${fileExtension}`;
+
+  return new File([file], newFileName, { type: file.type });
+};
+
 const uploadGalleryImagesToServer = async (
   files: File[]
 ): Promise<string[]> => {
@@ -95,6 +107,7 @@ const uploadGalleryImagesToServer = async (
   const uploadedUrls: string[] = [];
 
   for (const file of files) {
+    // O arquivo já vem renomeado da galeria
     const formData = new FormData();
     formData.append("image", file);
 
@@ -356,15 +369,22 @@ export default function FormCreateArticle() {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+
+      // Renomear o arquivo com timestamp ANTES de adicionar à galeria
+      const renamedFile = renameFileWithTimestamp(file);
+
       const reader = new FileReader();
 
       reader.onload = (event) => {
         const preview = event.target?.result as string;
         const id = `${Date.now()}-${Math.random()}`;
-        setGalleryImages((prev) => [...prev, { file, preview, id }]);
+        setGalleryImages((prev) => [
+          ...prev,
+          { file: renamedFile, preview, id },
+        ]);
       };
 
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(renamedFile);
     }
   };
 

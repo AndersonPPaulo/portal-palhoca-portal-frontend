@@ -163,8 +163,16 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
 
       // Construir query params
       const queryParams = new URLSearchParams();
-      if (startDate) queryParams.append("startDate", startDate);
-      if (endDate) queryParams.append("endDate", endDate);
+      if (startDate) {
+        // Converter datetime-local para ISO 8601
+        const isoStartDate = new Date(startDate).toISOString();
+        queryParams.append("startDate", isoStartDate);
+      }
+      if (endDate) {
+        // Converter datetime-local para ISO 8601
+        const isoEndDate = new Date(endDate).toISOString();
+        queryParams.append("endDate", isoEndDate);
+      }
       const queryString = queryParams.toString();
 
       // Usar a nova URL: /banner/{id}/events
@@ -177,43 +185,31 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
         .then((res) => {
           const responseData = res.data;
 
-          // Usar os eventos detalhados da API
-          const detailedEvents = responseData.data || [];
+          // Nova estrutura da API com aggregated e detailed_events
+          const aggregated = responseData.aggregated || [];
+          const detailedEvents =
+            responseData.detailed_events || responseData.data || [];
 
-          // Armazenar eventos detalhados
+          // Armazenar eventos detalhados (para logs/PDF)
           setDetailedBannerEvents((prev) => ({
             ...prev,
             [bannerId]: detailedEvents,
           }));
 
-          // Agregar eventos por tipo para exibição nas métricas
-          const aggregatedEvents: Record<EventType, number> = {} as Record<
-            EventType,
-            number
-          >;
+          // Usar os dados agregados da API (COUNT real do banco)
+          const processedEvents: BannerEvent[] = aggregated.map(
+            (item: any) => ({
+              event_type: item.event_type as EventType,
+              virtual_count: item.total_count || 0,
+            })
+          );
 
-          detailedEvents.forEach((event: DetailedEvent) => {
-            aggregatedEvents[event.event_type] =
-              (aggregatedEvents[event.event_type] || 0) + 1;
-          });
-
-          // Converter para formato esperado
-          const processedEvents: BannerEvent[] = Object.entries(
-            aggregatedEvents
-          ).map(([eventType, count]) => ({
-            event_type: eventType as EventType,
-            virtual_count: count,
+          setBannerEvents((prev) => ({
+            ...prev,
+            [bannerId]: processedEvents,
           }));
 
-          setBannerEvents((prev) => {
-            const newState = {
-              ...prev,
-              [bannerId]: processedEvents,
-            };
-            return newState;
-          });
-
-          // Também armazenar como rawBannerEvents para manter compatibilidade
+          // Armazenar rawBannerEvents para manter compatibilidade
           const rawEvents: BannerEventRaw[] = detailedEvents.map(
             (event: DetailedEvent) => ({
               event_type: event.event_type,
