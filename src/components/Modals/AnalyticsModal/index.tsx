@@ -125,7 +125,6 @@ export default function ReusableAnalyticsModal({
   customDescription,
   disableAutoLoad = false,
   onDataLoaded,
-  onEventUpdated,
 }: ReusableAnalyticsModalProps) {
   const [editableEvents, setEditableEvents] = useState<Record<string, number>>(
     {}
@@ -603,7 +602,11 @@ export default function ReusableAnalyticsModal({
                   <div
                     className="relative group cursor-pointer"
                     onClick={() =>
-                      document.getElementById("startDate")?.showPicker?.()
+                      (
+                        document.getElementById(
+                          "startDate"
+                        ) as HTMLInputElement | null
+                      )?.showPicker?.()
                     }
                   >
                     <Input
@@ -627,7 +630,11 @@ export default function ReusableAnalyticsModal({
                   <div
                     className="relative group cursor-pointer"
                     onClick={() =>
-                      document.getElementById("endDate")?.showPicker?.()
+                      (
+                        document.getElementById(
+                          "endDate"
+                        ) as HTMLInputElement | null
+                      )?.showPicker?.()
                     }
                   >
                     <Input
