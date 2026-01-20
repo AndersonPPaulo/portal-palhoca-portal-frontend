@@ -204,7 +204,7 @@ interface IArticleData {
   article: Article | null;
   ListAuthorArticles(
     creatorId?: string,
-    params?: ArticleListParams
+    params?: ArticleListParams,
   ): Promise<ArticleResponse>;
   listArticles: ArticleResponse | null;
   UpdateArticle(data: UpdateArticleProps, articleId: string): Promise<void>;
@@ -212,17 +212,17 @@ interface IArticleData {
   uploadThumbnail(
     file: File,
     description: string,
-    articleId: string
+    articleId: string,
   ): Promise<string>;
   GetPublishedArticles(page?: number, limit?: number): Promise<ArticleResponse>;
   publishedArticles: ArticleResponse | null;
   UpdateArticleHighlight(
     data: UpdateArticleHighlightProps,
-    articleId: string
+    articleId: string,
   ): Promise<void>;
   UpdateArticleStatus(
     data: UpdateArticleStatusProps,
-    articleId: string
+    articleId: string,
   ): Promise<Article>;
 
   refreshFlag: number;
@@ -238,7 +238,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
   const { back } = useRouter();
   const [article, setArticle] = useState<Article | null>(null);
   const [listArticles, setListArticles] = useState<ArticleResponse | null>(
-    null
+    null,
   );
   const [publishedArticles, setPublishedArticles] =
     useState<ArticleResponse | null>(null);
@@ -288,7 +288,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
 
   const ListAuthorArticles = async (
     creatorId?: string,
-    params: ArticleListParams = {}
+    params: ArticleListParams = {},
   ): Promise<ArticleResponse> => {
     const { "user:token": token } = parseCookies();
     // Monta os parâmetros dinâmicos com todos os filtros definidos
@@ -343,7 +343,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
   // Função geral para atualizar dados do artigo (rota /article)
   const UpdateArticle = async (
     data: UpdateArticleProps,
-    articleId: string
+    articleId: string,
   ): Promise<void> => {
     const { "user:token": token } = parseCookies();
     const config = {
@@ -351,10 +351,32 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
       params: { articleId },
     };
 
+    console.log("📤 PAYLOAD COMPLETO ENVIADO PARA BACKEND:");
+    console.log("URL:", `/article?articleId=${articleId}`);
+    console.log("Dados enviados:", JSON.stringify(data, null, 2));
+    console.log("Verificação de campos importantes:");
+    console.log("- title:", data.title);
+    console.log(
+      "- content (primeiros 100 chars):",
+      data.content?.substring(0, 100),
+    );
+    console.log(
+      "- resume_content (primeiros 50 chars):",
+      data.resume_content?.substring(0, 50),
+    );
+    console.log("- creator:", data.creator);
+    console.log("- categoryId:", data.categoryId);
+    console.log("- tagIds:", data.tagIds);
+    console.log("- portalIds:", data.portalIds);
+    console.log("- gallery:", data.gallery);
+
     try {
-      await api.patch("/article", data, config);
+      const response = await api.patch("/article", data, config);
+      console.log("✅ Resposta do backend:", response.data);
       toast.success("Artigo atualizado com sucesso!");
     } catch (err: any) {
+      console.error("❌ Erro ao atualizar artigo:", err);
+      console.error("Resposta de erro:", err.response?.data);
       toast.error(err.response?.data?.message || "Erro ao atualizar artigo");
       throw err;
     }
@@ -364,7 +386,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
   // Função específica para atualizar APENAS highlight e highlight_position (rota /article)
   const UpdateArticleHighlight = async (
     data: UpdateArticleHighlightProps,
-    articleId: string
+    articleId: string,
   ): Promise<void> => {
     const { "user:token": token } = parseCookies();
     const config = {
@@ -376,7 +398,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
       await api.put(
         `/article/${articleId}/portals`,
         data, // <- data já possui a estrutura { portals: [...] }
-        config
+        config,
       );
 
       setRefreshFlag((prev) => prev + 1);
@@ -391,7 +413,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
   // Função específica para atualizar APENAS o status (rota /article-status-review/:articleId)
   const UpdateArticleStatus = async (
     data: UpdateArticleStatusProps,
-    articleId: string
+    articleId: string,
   ): Promise<Article> => {
     const { "user:token": token } = parseCookies();
     const config = {
@@ -411,7 +433,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
       const response = await api.patch(
         `/article-status-review/${articleId}`,
         statusData,
-        config
+        config,
       );
 
       // Extrair dados completos da resposta conforme formato do backend
@@ -430,7 +452,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
       // Atualizar a lista de artigos no contexto
       if (listArticles) {
         const updatedArticles = listArticles.data.map((article) =>
-          article.id === articleId ? updatedArticle : article
+          article.id === articleId ? updatedArticle : article,
         );
         setListArticles({
           ...listArticles,
@@ -461,7 +483,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
   const uploadThumbnail = async (
     file: File,
     description: string,
-    articleId: string
+    articleId: string,
   ): Promise<string> => {
     const { "user:token": token } = parseCookies();
     const formData = new FormData();
@@ -479,12 +501,12 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
       const response = await api.post(
         `/upload-thumbnail/${articleId}`,
         formData,
-        config
+        config,
       );
       return response.data.url;
     } catch (err: any) {
       toast.error(
-        err.response?.data?.message || "Erro ao fazer upload da imagem"
+        err.response?.data?.message || "Erro ao fazer upload da imagem",
       );
       throw err;
     }
@@ -492,7 +514,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
 
   const GetPublishedArticles = async (
     page: number,
-    limit: number
+    limit: number,
   ): Promise<ArticleResponse> => {
     try {
       const response = await api.get("/article-published", {
@@ -502,7 +524,7 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
       return response.data;
     } catch (err: any) {
       toast.error(
-        err.response?.data?.message || "Erro ao listar artigos publicados"
+        err.response?.data?.message || "Erro ao listar artigos publicados",
       );
       throw err;
     }

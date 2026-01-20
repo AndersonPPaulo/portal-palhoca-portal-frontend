@@ -20,6 +20,13 @@ import ThumbnailUploader from "@/components/thumbnail";
 import { generateSlug } from "@/utils/generateSlug";
 import { api } from "@/service/api";
 import { parseCookies } from "nookies";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const articleSchema = z.object({
   id: z.string().optional(),
@@ -28,9 +35,11 @@ const articleSchema = z.object({
   creator: z.string().min(1, "Criador é obrigatório"),
   reading_time: z.preprocess(
     (val) => (val === "" ? undefined : Number(val)),
-    z.number().min(1, "Tempo de leitura é obrigatório")
+    z.number().min(1, "Tempo de leitura é obrigatório"),
   ),
-  resume_content: z.string(),
+  resume_content: z
+    .string()
+    .min(100, "Resumo deve ter no mínimo 100 caracteres"),
   content: z
     .string()
     .min(300, "Conteúdo é obrigatório mínimo de 300 caracteres"),
@@ -46,7 +55,7 @@ const articleSchema = z.object({
 type ArticleFormData = z.infer<typeof articleSchema>;
 
 const uploadGalleryImagesToServer = async (
-  files: File[]
+  files: File[],
 ): Promise<string[]> => {
   const { "user:token": token } = parseCookies();
   const uploadedUrls: string[] = [];
@@ -66,7 +75,7 @@ const uploadGalleryImagesToServer = async (
       const response = await api.post(
         `/upload/article-image`,
         formData,
-        config
+        config,
       );
 
       if (response.data?.url) {
@@ -91,8 +100,6 @@ interface FormEditArticleProps {
 }
 
 export default function FormEditArticle({ article }: FormEditArticleProps) {
-  console.log(article);
-
   const parameter = useParams();
   const { back, push } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -121,9 +128,10 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   const [tagsLoaded, setTagsLoaded] = useState(false);
   const [portalsLoaded, setPortalsLoaded] = useState(false);
   const [categoriesLoaded, setCategoriesLoaded] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(true);
 
   const findArticle = listArticles?.data?.find(
-    (item) => item.id === parameter.id
+    (item) => item.id === parameter.id,
   );
 
   useEffect(() => {
@@ -135,7 +143,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     }
     const sortedHistory = [...findArticle.status_history].sort(
       (a, b) =>
-        new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
+        new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime(),
     );
 
     setChangeStatus(sortedHistory[0].status);
@@ -201,7 +209,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     ) {
       const validPortalIds = article.articlePortals
         .filter((portal) =>
-          listPortals.some((listPortal) => listPortal.id === portal.portal.id)
+          listPortals.some((listPortal) => listPortal.id === portal.portal.id),
         )
         .map((portal) => portal.portal.id);
 
@@ -222,7 +230,6 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       if (typeof article.gallery === "string") {
         try {
           galleryArray = JSON.parse(article.gallery);
-          console.log("✅ Gallery parseada com sucesso:", galleryArray);
         } catch (error) {
           console.error("❌ Erro ao fazer parse da galeria:", error);
         }
@@ -237,9 +244,27 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
             preview: url,
             id: `existing-${index}-${Date.now()}`,
             isExisting: true,
-          })
+          }),
         );
         setGalleryImages(existingGalleryImages);
+      }
+    }
+
+    // Processar gallery para garantir que seja sempre um array
+    let galleryArrayForForm: string[] = [];
+    if (article.gallery) {
+      if (typeof article.gallery === "string") {
+        try {
+          galleryArrayForForm = JSON.parse(article.gallery);
+        } catch (error) {
+          console.error(
+            "❌ Erro ao fazer parse da galeria para formulário:",
+            error,
+          );
+          galleryArrayForForm = [];
+        }
+      } else if (Array.isArray(article.gallery)) {
+        galleryArrayForForm = article.gallery;
       }
     }
 
@@ -258,7 +283,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       portalIds:
         article.articlePortals?.map((portal) => portal.portal.id) || [],
       thumbnailDescription: article.thumbnail?.description || "",
-      gallery: article.gallery || [],
+      gallery: galleryArrayForForm,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -323,8 +348,8 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
             .map((article) => [
               article.creator.id,
               { value: article.creator.id, label: article.creator.name },
-            ])
-        ).values()
+            ]),
+        ).values(),
       )
     : [];
 
@@ -362,12 +387,12 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
   const validateTagSelection = (selectedTags: string[]) => {
     const validTags = selectedTags.filter((tagId) =>
-      tagOptions.some((option) => option.value === tagId)
+      tagOptions.some((option) => option.value === tagId),
     );
 
     if (validTags.length !== selectedTags.length) {
       toast.error(
-        "Uma ou mais tags selecionadas não foram encontradas. Por favor, selecione apenas tags válidas."
+        "Uma ou mais tags selecionadas não foram encontradas. Por favor, selecione apenas tags válidas.",
       );
       return validTags;
     }
@@ -378,7 +403,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   const handleImageUpload = (
     file: File,
     previewUrl: string,
-    description?: string
+    description?: string,
   ) => {
     setSelectedImage({
       file,
@@ -401,6 +426,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       : undefined;
 
   const submitArticle = async (data: ArticleFormData, setToDraft: boolean) => {
+    console.log("🚀 submitArticle chamado com:", { data, setToDraft });
     try {
       const validatedTags = validateTagSelection(data.tagIds);
 
@@ -432,7 +458,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
           if (uploadedUrls.length !== newFiles.length) {
             toast.error(
-              `Apenas ${uploadedUrls.length} de ${newFiles.length} novas imagens foram enviadas. O artigo será atualizado com as imagens que foram enviadas com sucesso.`
+              `Apenas ${uploadedUrls.length} de ${newFiles.length} novas imagens foram enviadas. O artigo será atualizado com as imagens que foram enviadas com sucesso.`,
             );
           }
 
@@ -441,7 +467,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
           const errorMessage =
             error instanceof Error ? error.message : String(error);
           toast.error(
-            `Erro ao fazer upload das imagens da galeria: ${errorMessage}. O artigo será atualizado sem as novas imagens.`
+            `Erro ao fazer upload das imagens da galeria: ${errorMessage}. O artigo será atualizado sem as novas imagens.`,
           );
         }
       }
@@ -450,6 +476,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       const finalData = {
         title: data.title,
         slug: data.slug,
+        creator: data.creator,
         reading_time: data.reading_time,
         resume_content: data.resume_content,
         content: data.content,
@@ -471,23 +498,11 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
           await uploadThumbnail(
             selectedImage.file,
             thumbnailDescription,
-            article.id
+            article.id,
           );
         } catch {
           toast.error("Erro no upload da thumbnail");
         }
-      }
-
-      if (
-        lastStatus?.status === "DRAFT" ||
-        lastStatus?.status === "PENDING_REVIEW"
-      ) {
-        const statusMsg = setToDraft ? "Rascunho" : "Pendente de Revisão";
-        toast.success(`Artigo atualizado com sucesso! Status: ${statusMsg}`);
-      }
-
-      if (lastStatus?.status === "PUBLISHED") {
-        toast.success(`Artigo atualizado com sucesso!`);
       }
 
       // Recarregar dados do local listing após submissão
@@ -498,7 +513,8 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       setTimeout(() => {
         push("/postagens");
       }, 1000);
-    } catch {
+    } catch (error) {
+      console.error("Erro ao atualizar artigo:", error);
       toast.error("Erro ao atualizar artigo. Tente novamente.");
     } finally {
       setIsSubmitting(false);
@@ -506,11 +522,41 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   };
 
   const handleSaveAsDraft = async () => {
-    handleSubmit((data) => submitArticle(data, true))();
+    console.log("🔵 Botão Rascunho clicado");
+    console.log("Erros do formulário:", errors);
+    handleSubmit(
+      (data) => {
+        console.log("✅ Validação passou, dados:", data);
+        submitArticle(data, true);
+      },
+      (errors) => {
+        console.error("❌ Erros de validação:", errors);
+        toast.error("Preencha todos os campos obrigatórios corretamente");
+      },
+    )();
   };
 
   const handleSendForReview = async () => {
-    handleSubmit((data) => submitArticle(data, false))();
+    console.log("🟢 Botão Atualizar/Enviar clicado");
+    console.log("Erros do formulário:", errors);
+    console.log("Valores atuais:", {
+      title: watch("title"),
+      creator: watch("creator"),
+      categoryId: watch("categoryId"),
+      tagIds: watch("tagIds"),
+      portalIds: watch("portalIds"),
+      content: editorContent?.substring(0, 50),
+    });
+    handleSubmit(
+      (data) => {
+        console.log("✅ Validação passou, dados:", data);
+        submitArticle(data, false);
+      },
+      (errors) => {
+        console.error("❌ Erros de validação:", errors);
+        toast.error("Preencha todos os campos obrigatórios corretamente");
+      },
+    )();
   };
 
   const handleEditorChange = (content: string) => {
@@ -582,323 +628,362 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-white rounded-[24px]">
-      <div className="flex-1 overflow-y-auto overflow-x-hidden">
-        <form className="space-y-6 p-6">
-          <div className="flex justify-between items-center -mb-4">
-            <ReturnPageButton />
-          </div>
-          <div className="flex gap-6">
-            <CustomInput
-              id="title"
-              label="Título"
-              {...register("title")}
-              placeholder="Digite o título"
-            />
-            {errors.title && (
-              <span className="text-sm text-red-500">
-                {errors.title.message}
+    <>
+      <Dialog open={showInfoModal} onOpenChange={setShowInfoModal}>
+        <DialogContent className="sm:max-w-md bg-white">
+          <DialogHeader>
+            <DialogTitle>💡 Informação Importante</DialogTitle>
+            <DialogDescription className="pt-4 space-y-3">
+              <span>
+                Caso você já tenha atualizado os dados dessa notícia e esteja
+                vendo informações desatualizadas,{" "}
+                <strong className="text-primary">
+                  recarregue a página (F5)
+                </strong>{" "}
+                para ver as alterações mais recentes.
               </span>
-            )}
-            <CustomInput
-              id="slug"
-              label="Slug"
-              {...register("slug")}
-              disabled
-            />
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="bg-primary text-white hover:bg-primary/90"
+            >
+              Recarregar Agora
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowInfoModal(false)}
+            >
+              Entendi
+            </Button>
           </div>
+        </DialogContent>
+      </Dialog>
 
-          <div className="flex gap-6">
-            <div className="flex flex-col  w-full">
-              <ThumbnailUploader
-                onImageUpload={handleImageUpload}
-                initialImage={selectedImage?.preview}
+      <div className="w-full h-full flex flex-col bg-white rounded-[24px]">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          <form className="space-y-6 p-6">
+            <div className="flex justify-between items-center -mb-4">
+              <ReturnPageButton />
+            </div>
+            <div className="flex gap-6">
+              <CustomInput
+                id="title"
+                label="Título"
+                {...register("title")}
+                placeholder="Digite o título"
               />
-
-              {/* Campo oculto para o valor do formulário */}
-              <input type="hidden" {...register("thumbnail")} />
-              <input
-                type="hidden"
-                {...register("thumbnailDescription")}
-                value={thumbnailDescription}
-              />
-              {/* Campo para a descrição da thumbnail */}
-              {thumbnailDescription && (
-                <span className="text-gray-700 ">
-                  Descrição da Imagem: {thumbnailDescription}
+              {errors.title && (
+                <span className="text-sm text-red-500">
+                  {errors.title.message}
                 </span>
               )}
+              <CustomInput
+                id="slug"
+                label="Slug"
+                {...register("slug")}
+                disabled
+              />
             </div>
-            <div className="basis-1/2">
-              <div className="mt-5">
+
+            <div className="flex gap-6">
+              <div className="flex flex-col  w-full">
+                <ThumbnailUploader
+                  onImageUpload={handleImageUpload}
+                  initialImage={selectedImage?.preview}
+                />
+
+                {/* Campo oculto para o valor do formulário */}
+                <input type="hidden" {...register("thumbnail")} />
+                <input
+                  type="hidden"
+                  {...register("thumbnailDescription")}
+                  value={thumbnailDescription}
+                />
+                {/* Campo para a descrição da thumbnail */}
+                {thumbnailDescription && (
+                  <span className="text-gray-700 ">
+                    Descrição da Imagem: {thumbnailDescription}
+                  </span>
+                )}
+              </div>
+              <div className="basis-1/2">
+                <div className="mt-5">
+                  <CustomSelect
+                    id="tagIds"
+                    label="Tag(s):"
+                    placeholder="Selecione uma ou mais tags"
+                    options={tagOptions}
+                    value={tagIds}
+                    onChange={(value) =>
+                      setValue("tagIds", value as string[], {
+                        shouldValidate: true,
+                      })
+                    }
+                    isMulti={true}
+                    error={errors.tagIds?.message}
+                    noOptionsMessage="Nenhuma tag disponível"
+                  />
+                </div>
+                <div className="mt-10">
+                  <CustomInput
+                    id="reading_time"
+                    label="Tempo de leitura"
+                    type="number"
+                    {...register("reading_time", {
+                      setValueAs: (value: string) => Number(value) || undefined,
+                    })}
+                    onChange={(e) => {
+                      setValue("reading_time", Number(e.target.value));
+                    }}
+                    min={1}
+                  />
+                  {errors.reading_time && (
+                    <span className="text-sm text-red-500">
+                      https://us-east-1.console.aws.amazon.com/console/home?region=us-east-1
+                      {errors.reading_time.message}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-6">
+              <div className="flex flex-col gap-1 w-full">
                 <CustomSelect
-                  id="tagIds"
-                  label="Tag(s):"
-                  placeholder="Selecione uma ou mais tags"
-                  options={tagOptions}
-                  value={tagIds}
+                  id="creator"
+                  label="Criador"
+                  placeholder="Selecione um criador"
+                  options={creatorOptions}
+                  value={creator}
+                  onChange={(value) => setValue("creator", value as string)}
+                  isMulti={false}
+                  error={errors.creator?.message}
+                  noOptionsMessage="Nenhum criador disponível"
+                />
+              </div>
+
+              <div className="flex gap-6 w-full">
+                <CustomSelect
+                  id="categoryId"
+                  label="Categoria"
+                  placeholder="Selecione uma categoria"
+                  options={categoryOptions}
+                  value={categoryId}
                   onChange={(value) =>
-                    setValue("tagIds", value as string[], {
+                    setValue("categoryId", value as string, {
                       shouldValidate: true,
                     })
                   }
-                  isMulti={true}
-                  error={errors.tagIds?.message}
-                  noOptionsMessage="Nenhuma tag disponível"
+                  isMulti={false}
+                  error={errors.categoryId?.message}
+                  noOptionsMessage="Nenhuma categoria disponível"
                 />
               </div>
-              <div className="mt-10">
-                <CustomInput
-                  id="reading_time"
-                  label="Tempo de leitura"
-                  type="number"
-                  {...register("reading_time", {
-                    setValueAs: (value: string) => Number(value) || undefined,
-                  })}
-                  onChange={(e) => {
-                    setValue("reading_time", Number(e.target.value));
+              <div className="flex gap-6 w-full">
+                <CustomSelect
+                  id="portalIds"
+                  label="Portal"
+                  placeholder="Selecione um ou mais portais"
+                  options={portalOptions}
+                  value={portalIds}
+                  onChange={(value) => {
+                    setValue("portalIds", value as string[], {
+                      shouldValidate: true,
+                    });
                   }}
-                  min={1}
+                  isMulti={true}
+                  error={errors.portalIds?.message}
+                  noOptionsMessage="Nenhum portal disponível"
                 />
-                {errors.reading_time && (
-                  <span className="text-sm text-red-500">
-                    https://us-east-1.console.aws.amazon.com/console/home?region=us-east-1
-                    {errors.reading_time.message}
+              </div>
+            </div>
+
+            <div className="w-full">
+              <CustomInput
+                id="resume_content"
+                label="Resumo"
+                textareaInput
+                className="min-h-32"
+                {...register("resume_content")}
+                placeholder="Digite o resumo"
+              />
+              <div className="text-sm mt-1 px-6">
+                <span
+                  className={`${
+                    resumeLength < 100 ? "text-gray-500" : "text-green-600"
+                  }`}
+                >
+                  Contador de caracteres: {resumeLength}
+                </span>
+                {resumeLength < 100 && (
+                  <span className="text-red-500 ml-2">
+                    Mínimo de 100 caracteres necessário
+                  </span>
+                )}
+              </div>
+              {errors.resume_content && (
+                <span className="text-sm text-red-500">
+                  {errors.resume_content.message}
+                </span>
+              )}
+            </div>
+
+            <div className="w-full">
+              <h1 className="text-xl font-bold text-primary ml-6 pt-4">
+                Editar conteúdo de texto
+              </h1>
+              <div className="w-full">
+                <TiptapEditor
+                  value={editorContent}
+                  onChange={handleEditorChange}
+                />
+                <div className="text-sm mt-1 ml-6 text-gray-500">
+                  Contador de caracteres: {contentLength}
+                </div>
+                {errors.content && (
+                  <span className="text-sm text-red-500 ml-6">
+                    {errors.content.message}
                   </span>
                 )}
               </div>
             </div>
-          </div>
 
-          <div className="flex gap-6">
-            <div className="flex flex-col gap-1 w-full">
-              <CustomSelect
-                id="creator"
-                label="Criador"
-                placeholder="Selecione um criador"
-                options={creatorOptions}
-                value={creator}
-                onChange={(value) => setValue("creator", value as string)}
-                isMulti={false}
-                error={errors.creator?.message}
-                noOptionsMessage="Nenhum criador disponível"
-              />
-            </div>
-
-            <div className="flex gap-6 w-full">
-              <CustomSelect
-                id="categoryId"
-                label="Categoria"
-                placeholder="Selecione uma categoria"
-                options={categoryOptions}
-                value={categoryId}
-                onChange={(value) =>
-                  setValue("categoryId", value as string, {
-                    shouldValidate: true,
-                  })
-                }
-                isMulti={false}
-                error={errors.categoryId?.message}
-                noOptionsMessage="Nenhuma categoria disponível"
-              />
-            </div>
-            <div className="flex gap-6 w-full">
-              <CustomSelect
-                id="portalIds"
-                label="Portal"
-                placeholder="Selecione um ou mais portais"
-                options={portalOptions}
-                value={portalIds}
-                onChange={(value) => {
-                  setValue("portalIds", value as string[], {
-                    shouldValidate: true,
-                  });
-                }}
-                isMulti={true}
-                error={errors.portalIds?.message}
-                noOptionsMessage="Nenhum portal disponível"
-              />
-            </div>
-          </div>
-
-          <div className="w-full">
-            <CustomInput
-              id="resume_content"
-              label="Resumo"
-              textareaInput
-              className="min-h-32"
-              {...register("resume_content")}
-              placeholder="Digite o resumo"
-            />
-            <div className="text-sm mt-1 px-6">
-              <span
-                className={`${
-                  resumeLength < 100 ? "text-gray-500" : "text-green-600"
-                }`}
-              >
-                Contador de caracteres: {resumeLength}
-              </span>
-              {resumeLength < 100 && (
-                <span className="text-red-500 ml-2">
-                  Mínimo de 100 caracteres necessário
-                </span>
-              )}
-            </div>
-            {errors.resume_content && (
-              <span className="text-sm text-red-500">
-                {errors.resume_content.message}
-              </span>
-            )}
-          </div>
-
-          <div className="w-full">
-            <h1 className="text-xl font-bold text-primary ml-6 pt-4">
-              Editar conteúdo de texto
-            </h1>
             <div className="w-full">
-              <TiptapEditor
-                value={editorContent}
-                onChange={handleEditorChange}
-              />
-              <div className="text-sm mt-1 ml-6 text-gray-500">
-                Contador de caracteres: {contentLength}
-              </div>
-              {errors.content && (
-                <span className="text-sm text-red-500 ml-6">
-                  {errors.content.message}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="w-full">
-            <h1 className="text-xl font-bold text-primary ml-6 pt-4 mb-4">
-              Galeria de Imagens
-            </h1>
-            <div className="ml-6 mr-6">
-              <div className="border-2 border-dashed border-primary-light rounded-[24px] p-6 text-center cursor-pointer hover:bg-gray-50 transition">
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleAddGalleryImage}
-                  className="hidden"
-                  id="gallery-input"
-                />
-                <label htmlFor="gallery-input" className="cursor-pointer block">
-                  <div className="text-gray-700 font-medium">
-                    Clique para adicionar imagens à galeria
-                  </div>
-                  <div className="text-sm text-gray-500 mt-1">
-                    SVG, PNG, JPG ou GIF (max. 5MB cada)
-                  </div>
-                </label>
-              </div>
-
-              {galleryImages.length > 0 && (
-                <div className="mt-6">
-                  <p className="text-sm text-gray-600 mb-4">
-                    {galleryImages.length} imagem(ns) adicionada(s). Arraste
-                    para reordenar.
-                  </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {galleryImages.map((img) => (
-                      <div
-                        key={img.id}
-                        draggable
-                        onDragStart={() => handleDragStart(img.id)}
-                        onDragOver={handleDragOver}
-                        onDrop={() => handleDrop(img.id)}
-                        className={`relative group cursor-move rounded-lg overflow-hidden border-2 ${
-                          draggedItem === img.id
-                            ? "border-blue-500 opacity-50"
-                            : "border-gray-200 hover:border-blue-500"
-                        }`}
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={img.preview}
-                          alt="Gallery"
-                          className="w-full h-40 object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveGalleryImage(img.id)}
-                            className="bg-red-500 hover:bg-red-600 text-white rounded-full p-2 transition"
-                            title="Remover imagem"
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M6 18L18 6M6 6l12 12"
-                              />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+              <h1 className="text-xl font-bold text-primary ml-6 pt-4 mb-4">
+                Galeria de Imagens
+              </h1>
+              <div className="ml-6 mr-6">
+                <div className="border-2 border-dashed border-primary-light rounded-[24px] p-6 text-center cursor-pointer hover:bg-gray-50 transition">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleAddGalleryImage}
+                    className="hidden"
+                    id="gallery-input"
+                  />
+                  <label
+                    htmlFor="gallery-input"
+                    className="cursor-pointer block"
+                  >
+                    <div className="text-gray-700 font-medium">
+                      Clique para adicionar imagens à galeria
+                    </div>
+                    <div className="text-sm text-gray-500 mt-1">
+                      SVG, PNG, JPG ou GIF (max. 5MB cada)
+                    </div>
+                  </label>
                 </div>
-              )}
-            </div>
-          </div>
 
-          {changeStatus === "CHANGES_REQUESTED" ? (
-            <div className="w-full">
-              <CustomInput
-                id="changes_requested"
-                label="Mudanças necessárias"
-                textareaInput
-                className="min-h-32"
-                value={changeMessage}
-                disabled
-              />
+                {galleryImages.length > 0 && (
+                  <div className="mt-6">
+                    <p className="text-sm text-gray-600 mb-4">
+                      {galleryImages.length} imagem(ns) adicionada(s). Arraste
+                      para reordenar.
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {galleryImages.map((img) => (
+                        <div
+                          key={img.id}
+                          draggable
+                          onDragStart={() => handleDragStart(img.id)}
+                          onDragOver={handleDragOver}
+                          onDrop={() => handleDrop(img.id)}
+                          className={`relative group cursor-move rounded-lg overflow-hidden border-2 ${
+                            draggedItem === img.id
+                              ? "border-blue-500 opacity-50"
+                              : "border-gray-200 hover:border-blue-500"
+                          }`}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={img.preview}
+                            alt="Gallery"
+                            className="w-full h-40 object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveGalleryImage(img.id)}
+                              className="bg-red-500 hover:bg-red-600 text-white rounded-full p-2 transition"
+                              title="Remover imagem"
+                            >
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M6 18L18 6M6 6l12 12"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          ) : null}
-          <div className="flex justify-end gap-4">
-            <Button
-              type="button"
-              onClick={handleSaveAsDraft}
-              className="bg-yellow-200 text-[#9c6232] hover:bg-yellow-100 rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
-              disabled={isSubmitting}
-            >
-              Salvar como Rascunho
-            </Button>
-            <Button
-              type="button"
-              onClick={back}
-              className="bg-red-light text-[#611A1A] hover:bg-red-light/80 rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
-              disabled={isSubmitting}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSendForReview}
-              className={`${
-                lastStatus?.status === "PUBLISHED"
-                  ? "bg-green-500 text-white hover:bg-green-600"
-                  : "bg-blue-500 text-white hover:bg-blue-600"
-              } rounded-3xl min-h-[48px] text-[16px] pt-3 px-6`}
-              disabled={isSubmitting}
-            >
-              {isSubmitting
-                ? "Salvando..."
-                : lastStatus?.status === "PUBLISHED"
-                ? "Atualizar"
-                : "Enviar para Revisão"}
-            </Button>
-          </div>
-        </form>
+
+            {changeStatus === "CHANGES_REQUESTED" ? (
+              <div className="w-full">
+                <CustomInput
+                  id="changes_requested"
+                  label="Mudanças necessárias"
+                  textareaInput
+                  className="min-h-32"
+                  value={changeMessage}
+                  disabled
+                />
+              </div>
+            ) : null}
+            <div className="flex justify-end gap-4">
+              <Button
+                type="button"
+                onClick={handleSaveAsDraft}
+                className="bg-yellow-200 text-[#9c6232] hover:bg-yellow-100 rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
+                disabled={isSubmitting}
+              >
+                Salvar como Rascunho
+              </Button>
+              <Button
+                type="button"
+                onClick={back}
+                className="bg-red-light text-[#611A1A] hover:bg-red-light/80 rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
+                disabled={isSubmitting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSendForReview}
+                className={`${
+                  lastStatus?.status === "PUBLISHED"
+                    ? "bg-green-500 text-white hover:bg-green-600"
+                    : "bg-blue-500 text-white hover:bg-blue-600"
+                } rounded-3xl min-h-[48px] text-[16px] pt-3 px-6`}
+                disabled={isSubmitting}
+              >
+                {isSubmitting
+                  ? "Salvando..."
+                  : lastStatus?.status === "PUBLISHED"
+                    ? "Atualizar"
+                    : "Enviar para Revisão"}
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
