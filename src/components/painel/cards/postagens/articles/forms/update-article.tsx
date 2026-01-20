@@ -28,9 +28,11 @@ const articleSchema = z.object({
   creator: z.string().min(1, "Criador é obrigatório"),
   reading_time: z.preprocess(
     (val) => (val === "" ? undefined : Number(val)),
-    z.number().min(1, "Tempo de leitura é obrigatório")
+    z.number().min(1, "Tempo de leitura é obrigatório"),
   ),
-  resume_content: z.string(),
+  resume_content: z
+    .string()
+    .min(100, "Resumo deve ter no mínimo 100 caracteres"),
   content: z
     .string()
     .min(300, "Conteúdo é obrigatório mínimo de 300 caracteres"),
@@ -46,7 +48,7 @@ const articleSchema = z.object({
 type ArticleFormData = z.infer<typeof articleSchema>;
 
 const uploadGalleryImagesToServer = async (
-  files: File[]
+  files: File[],
 ): Promise<string[]> => {
   const { "user:token": token } = parseCookies();
   const uploadedUrls: string[] = [];
@@ -66,7 +68,7 @@ const uploadGalleryImagesToServer = async (
       const response = await api.post(
         `/upload/article-image`,
         formData,
-        config
+        config,
       );
 
       if (response.data?.url) {
@@ -91,8 +93,6 @@ interface FormEditArticleProps {
 }
 
 export default function FormEditArticle({ article }: FormEditArticleProps) {
-  console.log(article);
-
   const parameter = useParams();
   const { back, push } = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -123,7 +123,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   const [categoriesLoaded, setCategoriesLoaded] = useState(false);
 
   const findArticle = listArticles?.data?.find(
-    (item) => item.id === parameter.id
+    (item) => item.id === parameter.id,
   );
 
   useEffect(() => {
@@ -135,7 +135,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     }
     const sortedHistory = [...findArticle.status_history].sort(
       (a, b) =>
-        new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
+        new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime(),
     );
 
     setChangeStatus(sortedHistory[0].status);
@@ -201,7 +201,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
     ) {
       const validPortalIds = article.articlePortals
         .filter((portal) =>
-          listPortals.some((listPortal) => listPortal.id === portal.portal.id)
+          listPortals.some((listPortal) => listPortal.id === portal.portal.id),
         )
         .map((portal) => portal.portal.id);
 
@@ -222,7 +222,6 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       if (typeof article.gallery === "string") {
         try {
           galleryArray = JSON.parse(article.gallery);
-          console.log("✅ Gallery parseada com sucesso:", galleryArray);
         } catch (error) {
           console.error("❌ Erro ao fazer parse da galeria:", error);
         }
@@ -237,9 +236,27 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
             preview: url,
             id: `existing-${index}-${Date.now()}`,
             isExisting: true,
-          })
+          }),
         );
         setGalleryImages(existingGalleryImages);
+      }
+    }
+
+    // Processar gallery para garantir que seja sempre um array
+    let galleryArrayForForm: string[] = [];
+    if (article.gallery) {
+      if (typeof article.gallery === "string") {
+        try {
+          galleryArrayForForm = JSON.parse(article.gallery);
+        } catch (error) {
+          console.error(
+            "❌ Erro ao fazer parse da galeria para formulário:",
+            error,
+          );
+          galleryArrayForForm = [];
+        }
+      } else if (Array.isArray(article.gallery)) {
+        galleryArrayForForm = article.gallery;
       }
     }
 
@@ -258,7 +275,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       portalIds:
         article.articlePortals?.map((portal) => portal.portal.id) || [],
       thumbnailDescription: article.thumbnail?.description || "",
-      gallery: article.gallery || [],
+      gallery: galleryArrayForForm,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -323,8 +340,8 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
             .map((article) => [
               article.creator.id,
               { value: article.creator.id, label: article.creator.name },
-            ])
-        ).values()
+            ]),
+        ).values(),
       )
     : [];
 
@@ -362,12 +379,12 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
   const validateTagSelection = (selectedTags: string[]) => {
     const validTags = selectedTags.filter((tagId) =>
-      tagOptions.some((option) => option.value === tagId)
+      tagOptions.some((option) => option.value === tagId),
     );
 
     if (validTags.length !== selectedTags.length) {
       toast.error(
-        "Uma ou mais tags selecionadas não foram encontradas. Por favor, selecione apenas tags válidas."
+        "Uma ou mais tags selecionadas não foram encontradas. Por favor, selecione apenas tags válidas.",
       );
       return validTags;
     }
@@ -378,7 +395,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   const handleImageUpload = (
     file: File,
     previewUrl: string,
-    description?: string
+    description?: string,
   ) => {
     setSelectedImage({
       file,
@@ -401,6 +418,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       : undefined;
 
   const submitArticle = async (data: ArticleFormData, setToDraft: boolean) => {
+    console.log("🚀 submitArticle chamado com:", { data, setToDraft });
     try {
       const validatedTags = validateTagSelection(data.tagIds);
 
@@ -432,7 +450,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
 
           if (uploadedUrls.length !== newFiles.length) {
             toast.error(
-              `Apenas ${uploadedUrls.length} de ${newFiles.length} novas imagens foram enviadas. O artigo será atualizado com as imagens que foram enviadas com sucesso.`
+              `Apenas ${uploadedUrls.length} de ${newFiles.length} novas imagens foram enviadas. O artigo será atualizado com as imagens que foram enviadas com sucesso.`,
             );
           }
 
@@ -441,7 +459,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
           const errorMessage =
             error instanceof Error ? error.message : String(error);
           toast.error(
-            `Erro ao fazer upload das imagens da galeria: ${errorMessage}. O artigo será atualizado sem as novas imagens.`
+            `Erro ao fazer upload das imagens da galeria: ${errorMessage}. O artigo será atualizado sem as novas imagens.`,
           );
         }
       }
@@ -450,6 +468,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       const finalData = {
         title: data.title,
         slug: data.slug,
+        creator: data.creator,
         reading_time: data.reading_time,
         resume_content: data.resume_content,
         content: data.content,
@@ -471,23 +490,11 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
           await uploadThumbnail(
             selectedImage.file,
             thumbnailDescription,
-            article.id
+            article.id,
           );
         } catch {
           toast.error("Erro no upload da thumbnail");
         }
-      }
-
-      if (
-        lastStatus?.status === "DRAFT" ||
-        lastStatus?.status === "PENDING_REVIEW"
-      ) {
-        const statusMsg = setToDraft ? "Rascunho" : "Pendente de Revisão";
-        toast.success(`Artigo atualizado com sucesso! Status: ${statusMsg}`);
-      }
-
-      if (lastStatus?.status === "PUBLISHED") {
-        toast.success(`Artigo atualizado com sucesso!`);
       }
 
       // Recarregar dados do local listing após submissão
@@ -498,7 +505,8 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       setTimeout(() => {
         push("/postagens");
       }, 1000);
-    } catch {
+    } catch (error) {
+      console.error("Erro ao atualizar artigo:", error);
       toast.error("Erro ao atualizar artigo. Tente novamente.");
     } finally {
       setIsSubmitting(false);
@@ -506,11 +514,41 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
   };
 
   const handleSaveAsDraft = async () => {
-    handleSubmit((data) => submitArticle(data, true))();
+    console.log("🔵 Botão Rascunho clicado");
+    console.log("Erros do formulário:", errors);
+    handleSubmit(
+      (data) => {
+        console.log("✅ Validação passou, dados:", data);
+        submitArticle(data, true);
+      },
+      (errors) => {
+        console.error("❌ Erros de validação:", errors);
+        toast.error("Preencha todos os campos obrigatórios corretamente");
+      },
+    )();
   };
 
   const handleSendForReview = async () => {
-    handleSubmit((data) => submitArticle(data, false))();
+    console.log("🟢 Botão Atualizar/Enviar clicado");
+    console.log("Erros do formulário:", errors);
+    console.log("Valores atuais:", {
+      title: watch("title"),
+      creator: watch("creator"),
+      categoryId: watch("categoryId"),
+      tagIds: watch("tagIds"),
+      portalIds: watch("portalIds"),
+      content: editorContent?.substring(0, 50),
+    });
+    handleSubmit(
+      (data) => {
+        console.log("✅ Validação passou, dados:", data);
+        submitArticle(data, false);
+      },
+      (errors) => {
+        console.error("❌ Erros de validação:", errors);
+        toast.error("Preencha todos os campos obrigatórios corretamente");
+      },
+    )();
   };
 
   const handleEditorChange = (content: string) => {
@@ -893,8 +931,8 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
               {isSubmitting
                 ? "Salvando..."
                 : lastStatus?.status === "PUBLISHED"
-                ? "Atualizar"
-                : "Enviar para Revisão"}
+                  ? "Atualizar"
+                  : "Enviar para Revisão"}
             </Button>
           </div>
         </form>
