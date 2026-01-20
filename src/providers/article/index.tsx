@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { api } from "@/service/api";
@@ -350,25 +351,6 @@ export const ArticleProvider = ({ children }: ICihldrenReact) => {
       headers: { Authorization: `bearer ${token}` },
       params: { articleId },
     };
-
-    console.log("📤 PAYLOAD COMPLETO ENVIADO PARA BACKEND:");
-    console.log("URL:", `/article?articleId=${articleId}`);
-    console.log("Dados enviados:", JSON.stringify(data, null, 2));
-    console.log("Verificação de campos importantes:");
-    console.log("- title:", data.title);
-    console.log(
-      "- content (primeiros 100 chars):",
-      data.content?.substring(0, 100),
-    );
-    console.log(
-      "- resume_content (primeiros 50 chars):",
-      data.resume_content?.substring(0, 50),
-    );
-    console.log("- creator:", data.creator);
-    console.log("- categoryId:", data.categoryId);
-    console.log("- tagIds:", data.tagIds);
-    console.log("- portalIds:", data.portalIds);
-    console.log("- gallery:", data.gallery);
 
     try {
       const response = await api.patch("/article", data, config);
