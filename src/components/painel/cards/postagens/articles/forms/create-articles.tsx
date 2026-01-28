@@ -343,12 +343,87 @@ export default function FormCreateArticle() {
       setThumbnailDescription("");
       setGalleryImages([]);
       setTimeout(() => push("/postagens"), 1000);
-    } catch {
-      toast.error(
-        `Erro ao ${
-          status === ARTICLE_STATUS.DRAFT ? "salvar rascunho" : "criar artigo"
-        }. Tente novamente.`,
-      );
+    } catch (error: any) {
+      console.error("❌ Erro completo:", error);
+      console.error("❌ Resposta do backend:", error?.response?.data);
+
+      // Extrair todas as possíveis mensagens de erro do backend
+      let errorMessage = `Erro ao ${
+        status === ARTICLE_STATUS.DRAFT ? "salvar rascunho" : "criar artigo"
+      }`;
+      let errorDetails: string[] = [];
+
+      if (error?.response?.data) {
+        const responseData = error.response.data;
+
+        // Verificar se a mensagem está em data.data (nível extra)
+        const dataLevel = responseData.data || responseData;
+
+        // Verificar se há mensagem principal (em qualquer nível)
+        if (dataLevel.message) {
+          errorMessage = dataLevel.message;
+        } else if (responseData.message) {
+          errorMessage = responseData.message;
+        } else if (dataLevel.error) {
+          errorMessage = dataLevel.error;
+        } else if (responseData.error) {
+          errorMessage = responseData.error;
+        }
+
+        // Adicionar statusCode se existir
+        if (dataLevel.statusCode || responseData.statusCode) {
+          const statusCode = dataLevel.statusCode || responseData.statusCode;
+          errorDetails.push(`Status Code: ${statusCode}`);
+        }
+
+        // Verificar se há array de erros (validações do backend)
+        const errorsArray = dataLevel.errors || responseData.errors;
+        if (Array.isArray(errorsArray)) {
+          errorDetails.push(
+            ...errorsArray.map((err: any) => {
+              if (typeof err === "string") return err;
+              if (err.message) return err.message;
+              if (err.msg) return err.msg;
+              return JSON.stringify(err);
+            }),
+          );
+        } else if (errorsArray && typeof errorsArray === "object") {
+          // Se errors é um objeto com campos específicos
+          errorDetails.push(
+            ...Object.entries(errorsArray).map(([field, messages]) => {
+              if (Array.isArray(messages)) {
+                return `${field}: ${messages.join(", ")}`;
+              }
+              return `${field}: ${messages}`;
+            }),
+          );
+        }
+
+        // Verificar outros campos comuns de erro
+        if (dataLevel.details) {
+          errorDetails.push(dataLevel.details);
+        } else if (responseData.details) {
+          errorDetails.push(responseData.details);
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+
+      // Montar descrição com detalhes
+      let description = "";
+      if (error?.response?.status) {
+        description = `Código HTTP: ${error.response.status}`;
+      }
+      if (errorDetails.length > 0) {
+        description += description ? "\n" : "";
+        description += errorDetails.join("\n");
+      }
+
+      // Exibir toast com todos os detalhes
+      toast.error(errorMessage, {
+        duration: 7000,
+        description: description || undefined,
+      });
     } finally {
       setIsSubmitting(false);
     }

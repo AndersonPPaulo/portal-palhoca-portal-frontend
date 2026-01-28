@@ -282,9 +282,9 @@ export default function FormCreateAuthors() {
       const payload = { ...data };
 
       // Remover campos vazios para evitar erro 400
-      if (!payload.topic || payload.topic.trim() === "") {
-        delete payload.topic;
-      }
+      // if (!payload.topic || payload.topic.trim() === "") {
+      //   delete payload.topic;
+      // }
 
       // Se for vendedor, remover o chiefEditorId
       if (isVendedor) {
@@ -296,6 +296,9 @@ export default function FormCreateAuthors() {
       console.log("🔍 É vendedor?", isVendedor);
 
       const hasImage = selectedImage && selectedImage.file;
+
+      // console.log(payload);
+      // return;
 
       // Enviar o payload ajustado (sem chiefEditorId se for vendedor)
       const response = await CreateUser(payload);
@@ -336,18 +339,65 @@ export default function FormCreateAuthors() {
       console.error("❌ Erro completo:", error);
       console.error("❌ Resposta do backend:", error?.response?.data);
 
-      // Pegar mensagem específica do backend
-      const errorMessage =
-        error?.response?.data?.message ||
-        error?.response?.data?.error ||
-        error?.message ||
-        "Erro ao criar usuário";
+      // Extrair todas as possíveis mensagens de erro do backend
+      let errorMessage = "Erro ao criar usuário";
+      let errorDetails: string[] = [];
 
+      if (error?.response?.data) {
+        const responseData = error.response.data;
+
+        // Verificar se há mensagem principal
+        if (responseData.message) {
+          errorMessage = responseData.message;
+        } else if (responseData.error) {
+          errorMessage = responseData.error;
+        }
+
+        // Verificar se há array de erros (validações do backend)
+        if (Array.isArray(responseData.errors)) {
+          errorDetails = responseData.errors.map((err: any) => {
+            if (typeof err === "string") return err;
+            if (err.message) return err.message;
+            if (err.msg) return err.msg;
+            return JSON.stringify(err);
+          });
+        } else if (
+          responseData.errors &&
+          typeof responseData.errors === "object"
+        ) {
+          // Se errors é um objeto com campos específicos
+          errorDetails = Object.entries(responseData.errors).map(
+            ([field, messages]) => {
+              if (Array.isArray(messages)) {
+                return `${field}: ${messages.join(", ")}`;
+              }
+              return `${field}: ${messages}`;
+            },
+          );
+        }
+
+        // Verificar outros campos comuns de erro
+        if (responseData.details) {
+          errorDetails.push(responseData.details);
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+
+      // Montar descrição com detalhes
+      let description = "";
+      if (error?.response?.status) {
+        description = `Código: ${error.response.status}`;
+      }
+      if (errorDetails.length > 0) {
+        description += description ? "\n" : "";
+        description += errorDetails.join("\n");
+      }
+
+      // Exibir toast com todos os detalhes
       toast.error(errorMessage, {
-        duration: 5000,
-        description: error?.response?.status
-          ? `Código: ${error.response.status}`
-          : undefined,
+        duration: 7000,
+        description: description || undefined,
       });
     }
   };
