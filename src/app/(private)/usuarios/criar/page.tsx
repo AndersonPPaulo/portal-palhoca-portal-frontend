@@ -10,7 +10,7 @@ export default function CriarAutor() {
         description="Criar usuários para poderem publicar artigos/postagens para o site"
       />
       <div className="flex-1 p-6">
-        <FormCreateAuthors/>
+        <FormCreateAuthors />
       </div>
     </div>
   );

@@ -3,17 +3,16 @@
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import CustomInput from "@/components/input/custom-input";
 import CustomSelect from "@/components/select/custom-select";
-import ThumbnailUploader from "@/components/thumbnail";
 import { Button } from "@/components/ui/button";
-import ReturnPageButton from "@/components/button/returnPage";
 import { UserContext } from "@/providers/user";
 import { parseCookies } from "nookies";
 import { toast } from "sonner";
 import { api } from "@/service/api";
+import { Pencil, User } from "lucide-react";
 
 interface OptionType {
   value: string;
@@ -47,8 +46,8 @@ type FormUpdateAuthorsProps = {
 export default function FormUpdateAuthors({
   profileData,
 }: FormUpdateAuthorsProps) {
-  const { UpdateUser, ListRoles, ListUser, roles, profile } =
-    useContext(UserContext);
+  const { UpdateProfile, ListUser, profile } = useContext(UserContext);
+
   const { back } = useRouter();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,6 +57,7 @@ export default function FormUpdateAuthors({
     file: File;
     preview: string;
   } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -72,29 +72,39 @@ export default function FormUpdateAuthors({
     },
   });
 
+  // Usar o cargo do profile ao invés de buscar todas as roles
+  // O campo está desabilitado, então só precisa mostrar o cargo atual
   useEffect(() => {
-    ListRoles();
-  }, []);
-
-  useEffect(() => {
-    if (roles) {
-      setRolesOptions(
-        roles.map((role) => ({ value: role.id, label: role.name })),
-      );
+    if (profile?.role) {
+      setRolesOptions([{ value: profile.role.id, label: profile.role.name }]);
     }
-  }, [roles]);
+  }, [profile]);
 
   useEffect(() => {
-    const roleId = watch("roleId");
-    const roleName = roles
-      ?.find((role) => role.id === roleId)
-      ?.name?.toLowerCase();
+    const roleName = profile?.role?.name?.toLowerCase();
 
+    // Vendedores não têm permissão para listar usuários
+    // Então usamos apenas o chiefEditor que já vem no profile
+    if (roleName === "vendedor") {
+      if (profile?.chiefEditor) {
+        setUsersOptions([
+          {
+            value: profile.chiefEditor.id,
+            label: profile.chiefEditor.name,
+          },
+        ]);
+      } else {
+        setUsersOptions([]);
+      }
+      return; // Não tenta buscar lista de usuários
+    }
+
+    // Para outros cargos, busca a lista de responsáveis
     if (roleName) {
       let roleFilter = "";
       if (["jornalista", "colunista", "chefe de redação"].includes(roleName)) {
         roleFilter = "chefe de redação";
-      } else if (["vendedor", "gerente comercial"].includes(roleName)) {
+      } else if (roleName === "gerente comercial") {
         roleFilter = "gerente comercial";
       } else if (roleName === "administrador") {
         roleFilter = "chefe de redação|gerente comercial|administrador";
@@ -113,17 +123,64 @@ export default function FormUpdateAuthors({
         });
       }
     }
-  }, [watch("roleId")]);
+  }, [profile]);
 
-  const handleImageUpload = (file: File, previewUrl: string) => {
-    setSelectedImage({ file, preview: previewUrl });
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validar tipo de arquivo
+      const allowedTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(
+          "Tipo de arquivo não suportado. Use JPEG, PNG, GIF ou WebP.",
+        );
+        return;
+      }
+
+      // Validar tamanho (max 5MB)
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast.error("Arquivo muito grande. Máximo permitido: 5MB.");
+        return;
+      }
+
+      const previewUrl = URL.createObjectURL(file);
+      setSelectedImage({ file, preview: previewUrl });
+    }
+  };
+
+  const getProfileImageUrl = () => {
+    if (selectedImage) {
+      return selectedImage.preview;
+    }
+    return profile?.user_image?.url || null;
   };
 
   const uploadUserImage = async (file: File, user_id: string) => {
     const { "user:token": token } = parseCookies();
 
+    // Gerar nome único: timestamp + nome original
+    const timestamp = Date.now();
+    const originalName = file.name;
+    const extension = originalName.substring(originalName.lastIndexOf("."));
+    const nameWithoutExtension = originalName.substring(
+      0,
+      originalName.lastIndexOf("."),
+    );
+    const uniqueName = `${nameWithoutExtension}_${timestamp}${extension}`;
+
     const formData = new FormData();
-    formData.append("user_image", file, file.name);
+    formData.append("user_image", file, uniqueName);
 
     await api.post(`/user/${user_id}/upload-user-image`, formData, {
       headers: {
@@ -140,15 +197,23 @@ export default function FormUpdateAuthors({
     try {
       const formattedData = {
         ...data,
-        phone: data.phone?.trim() || undefined, // transforma string vazia ou undefined em undefined
+        phone: data.phone?.trim() || undefined,
       };
-      await UpdateUser(formattedData, profileData.id);
 
+      // Se for vendedor, remover chiefEditorId do payload (não pode alterar)
+      const isVendedor = profile?.role?.name?.toLowerCase() === "vendedor";
+      if (isVendedor) {
+        delete formattedData.chiefEditorId;
+      }
+
+      await UpdateProfile(formattedData, profileData.id);
+
+      // Se há nova foto selecionada, faz upload
       if (selectedImage?.file) {
         await uploadUserImage(selectedImage.file, profileData.id);
       }
 
-      toast.success("Usuário atualizado com sucesso!");
+      toast.success("Perfil atualizado com sucesso!");
     } catch (error) {
       console.error(error);
       toast.error("Erro ao atualizar usuário.");
@@ -161,26 +226,40 @@ export default function FormUpdateAuthors({
     <div className="w-full p-6 rounded-[24px] bg-white">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="flex gap-6 items-start">
-          <div className="flex-shrink-0 w-32">
-            <ThumbnailUploader
-              showDescription={false}
-              width="w-full"
-              height="h-28"
-              borderRadius="rounded-xl"
-              label="Foto"
-              modalWidth="max-w-sm"
-              previewHeight="h-32"
-              onImageUpload={handleImageUpload}
-              modalTitle="Alterar Foto de Perfil"
-              confirmButtonText="Selecionar Foto"
-              uploadAreaText="Clique para adicionar foto"
-              uploadAreaSubtext="JPG, PNG ou GIF (max. 5MB)"
+          {/* Foto de Perfil Circular */}
+          <div className="flex-shrink-0 flex flex-col items-center gap-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+              onChange={handleFileChange}
+              className="hidden"
             />
-            {selectedImage && (
-              <p className="text-green-600 text-xs mt-1">Foto selecionada</p>
-            )}
+
+            <div
+              onClick={handleImageClick}
+              className="relative w-32 h-32 rounded-full overflow-hidden cursor-pointer group border-4 border-gray-200 hover:border-blue-500 transition-all"
+            >
+              {getProfileImageUrl() ? (
+                <img
+                  src={getProfileImageUrl()!}
+                  alt="Foto de perfil"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                  <User className="w-16 h-16 text-gray-400" />
+                </div>
+              )}
+
+              {/* Overlay com ícone de editar no hover */}
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Pencil className="w-8 h-8 text-white" />
+              </div>
+            </div>
           </div>
 
+          {/* Container dos inputs organizados em duas linhas */}
           <div className="flex-1 space-y-4">
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1">
@@ -259,6 +338,7 @@ export default function FormUpdateAuthors({
                     )
                   }
                   placeholder="Selecione o responsável"
+                  disable={profile?.role?.name?.toLowerCase() === "vendedor"}
                 />
                 {errors.chiefEditorId && (
                   <span className="text-xs text-red-500">

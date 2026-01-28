@@ -9,11 +9,11 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import ReturnPageButton from "@/components/button/returnPage";
 import { ResponsePromise, UserContext } from "@/providers/user";
-import ThumbnailUploader from "@/components/thumbnail";
 import { parseCookies } from "nookies";
 import { api } from "@/service/api";
 import { toast } from "sonner";
 import CustomSelect from "@/components/select/custom-select";
+import { Pencil, User } from "lucide-react";
 
 interface OptionType {
   value: string;
@@ -39,6 +39,7 @@ export default function FormCreateAuthors() {
   const [rolesOptions, setRolesOptions] = useState<OptionType[]>([]);
   const [usersOptions, setUsersOptions] = useState<OptionType[]>([]);
   const formSubmittedSuccessfully = useRef(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedImage, setSelectedImage] = useState<{
     file: File;
     preview: string;
@@ -136,8 +137,45 @@ export default function FormCreateAuthors() {
     fetchChiefEditorsByRole();
   }, [watch("roleId"), roles]);
 
-  const handleImageUpload = (file: File, previewUrl: string) => {
-    setSelectedImage({ file, preview: previewUrl });
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validar tipo de arquivo
+      const allowedTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(
+          "Tipo de arquivo não suportado. Use JPEG, PNG, GIF ou WebP.",
+        );
+        return;
+      }
+
+      // Validar tamanho (max 5MB)
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast.error("Arquivo muito grande. Máximo permitido: 5MB.");
+        return;
+      }
+
+      const previewUrl = URL.createObjectURL(file);
+      setSelectedImage({ file, preview: previewUrl });
+    }
+  };
+
+  const getProfileImageUrl = () => {
+    if (selectedImage) {
+      return selectedImage.preview;
+    }
+    return null;
   };
 
   useEffect(() => {}, [selectedImage]);
@@ -160,7 +198,7 @@ export default function FormCreateAuthors() {
         ];
         if (!allowedTypes.includes(file.type)) {
           throw new Error(
-            `Tipo de arquivo não suportado: ${file.type}. Use JPEG, PNG, GIF ou WebP.`
+            `Tipo de arquivo não suportado: ${file.type}. Use JPEG, PNG, GIF ou WebP.`,
           );
         }
 
@@ -169,15 +207,25 @@ export default function FormCreateAuthors() {
         if (file.size > maxSize) {
           throw new Error(
             `Arquivo muito grande: ${(file.size / 1024 / 1024).toFixed(
-              2
-            )}MB. Máximo permitido: 5MB.`
+              2,
+            )}MB. Máximo permitido: 5MB.`,
           );
         }
 
         // Criar FormData para enviar o arquivo
         const formData = new FormData();
 
-        formData.append("user_image", file, file.name);
+        // Gerar nome único: timestamp + nome original
+        const timestamp = Date.now();
+        const originalName = file.name;
+        const extension = originalName.substring(originalName.lastIndexOf("."));
+        const nameWithoutExtension = originalName.substring(
+          0,
+          originalName.lastIndexOf("."),
+        );
+        const uniqueName = `${nameWithoutExtension}_${timestamp}${extension}`;
+
+        formData.append("user_image", file, uniqueName);
 
         // Fazer o upload da foto
         const uploadResponse = await api.post(
@@ -190,7 +238,7 @@ export default function FormCreateAuthors() {
             timeout: 60000, // 60 segundos timeout
             maxContentLength: Infinity,
             maxBodyLength: Infinity,
-          }
+          },
         );
 
         // Verificar se a resposta contém user_image
@@ -198,12 +246,12 @@ export default function FormCreateAuthors() {
           toast.success("Foto de perfil enviada com sucesso!");
         } else {
           toast.success(
-            "Upload realizado, mas verifique se a foto foi salva corretamente"
+            "Upload realizado, mas verifique se a foto foi salva corretamente",
           );
         }
       } else {
         throw new Error(
-          "Usuário criado, mas não foi possível encontrá-lo para adicionar a foto"
+          "Usuário criado, mas não foi possível encontrá-lo para adicionar a foto",
         );
       }
     } catch (error: any) {
@@ -226,9 +274,31 @@ export default function FormCreateAuthors() {
       setIsSubmitting(true);
       formSubmittedSuccessfully.current = false;
 
+      // Verificar se o cargo selecionado é "vendedor"
+      const selectedRole = roles?.find((role) => role.id === data.roleId);
+      const isVendedor = selectedRole?.name.toLowerCase() === "vendedor";
+
+      // Criar payload ajustado
+      const payload = { ...data };
+
+      // Remover campos vazios para evitar erro 400
+      if (!payload.topic || payload.topic.trim() === "") {
+        delete payload.topic;
+      }
+
+      // Se for vendedor, remover o chiefEditorId
+      if (isVendedor) {
+        delete payload.chiefEditorId;
+      }
+
+      // Log para debug - remover depois
+      console.log("📤 Payload sendo enviado:", payload);
+      console.log("🔍 É vendedor?", isVendedor);
+
       const hasImage = selectedImage && selectedImage.file;
 
-      const response = await CreateUser(data);
+      // Enviar o payload ajustado (sem chiefEditorId se for vendedor)
+      const response = await CreateUser(payload);
 
       formSubmittedSuccessfully.current = true;
 
@@ -253,6 +323,7 @@ export default function FormCreateAuthors() {
           toast.error("Usuário criado, mas houve erro no upload da foto");
         }
       }
+
       // Limpar formulário e imagem
       reset();
       setSelectedImage(null);
@@ -260,10 +331,24 @@ export default function FormCreateAuthors() {
       setTimeout(() => {
         setIsSubmitting(false);
       }, 1000);
-    } catch (error) {
+    } catch (error: any) {
       setIsSubmitting(false);
-      console.error("Erro ao criar usuário:", error);
-      toast.error("Erro ao criar usuário: " + (error as Error).message);
+      console.error("❌ Erro completo:", error);
+      console.error("❌ Resposta do backend:", error?.response?.data);
+
+      // Pegar mensagem específica do backend
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        "Erro ao criar usuário";
+
+      toast.error(errorMessage, {
+        duration: 5000,
+        description: error?.response?.status
+          ? `Código: ${error.response.status}`
+          : undefined,
+      });
     }
   };
 
@@ -276,25 +361,37 @@ export default function FormCreateAuthors() {
 
         {/* Layout com foto à esquerda e inputs em duas linhas à direita */}
         <div className="flex gap-6 items-start">
-          {/* Thumbnail Uploader - mantém posição e tamanho */}
-          <div className="flex-shrink-0 w-32">
-            <ThumbnailUploader
-              showDescription={false}
-              width="w-full"
-              height="h-28"
-              borderRadius="rounded-xl"
-              label="Foto"
-              modalWidth="max-w-sm"
-              previewHeight="h-32"
-              onImageUpload={handleImageUpload}
-              modalTitle="Adicionar Foto de Perfil"
-              confirmButtonText="Selecionar Foto"
-              uploadAreaText="Clique para adicionar foto"
-              uploadAreaSubtext="JPG, PNG ou GIF (max. 5MB)"
+          {/* Foto de Perfil Circular */}
+          <div className="flex-shrink-0 flex flex-col items-center gap-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+              onChange={handleFileChange}
+              className="hidden"
             />
-            {selectedImage && (
-              <p className="text-green-600 text-xs mt-1">Foto selecionada</p>
-            )}
+
+            <div
+              onClick={handleImageClick}
+              className="relative w-32 h-32 rounded-full overflow-hidden cursor-pointer group border-4 border-gray-200 hover:border-blue-500 transition-all"
+            >
+              {getProfileImageUrl() ? (
+                <img
+                  src={getProfileImageUrl()!}
+                  alt="Foto de perfil"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                  <User className="w-16 h-16 text-gray-400" />
+                </div>
+              )}
+
+              {/* Overlay com ícone de editar no hover */}
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Pencil className="w-8 h-8 text-white" />
+              </div>
+            </div>
           </div>
 
           {/* Container dos inputs organizados em duas linhas */}
@@ -376,7 +473,7 @@ export default function FormCreateAuthors() {
                   onChange={(value) =>
                     setValue(
                       "roleId",
-                      Array.isArray(value) ? value[0] ?? "" : value
+                      Array.isArray(value) ? (value[0] ?? "") : value,
                     )
                   }
                   placeholder="Selecione a função"
@@ -398,7 +495,7 @@ export default function FormCreateAuthors() {
                   onChange={(value) =>
                     setValue(
                       "chiefEditorId",
-                      Array.isArray(value) ? value[0] ?? "" : value
+                      Array.isArray(value) ? (value[0] ?? "") : value,
                     )
                   }
                   placeholder="Selecione o responsável"
