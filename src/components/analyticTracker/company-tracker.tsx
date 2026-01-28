@@ -148,7 +148,7 @@ export default function CompanyTracker({
 
   // Buscar dados iniciais imediatamente
   useEffect(() => {
-    Get100EventsCompany(itemsPerPage, "view");
+    Get100EventsCompany(itemsPerPage);
   }, [itemsPerPage, Get100EventsCompany]);
 
   useEffect(() => {
@@ -156,7 +156,7 @@ export default function CompanyTracker({
 
     // Intervalo de 30 segundos para atualização automática
     const interval = setInterval(() => {
-      Get100EventsCompany(itemsPerPage, "view");
+      Get100EventsCompany(itemsPerPage);
     }, 30000);
 
     return () => clearInterval(interval);
@@ -167,9 +167,14 @@ export default function CompanyTracker({
   >("all");
 
   const filteredEvents = useMemo(() => {
-    return lastEventsCompany.filter((event) =>
-      eventFilter === "all" ? true : event.event_type === eventFilter,
-    );
+    return lastEventsCompany.filter((event) => {
+      // Filtrar apenas view e whatsapp_click
+      const isAllowedType =
+        event.event_type === "view" || event.event_type === "whatsapp_click";
+      if (!isAllowedType) return false;
+
+      return eventFilter === "all" ? true : event.event_type === eventFilter;
+    });
   }, [lastEventsCompany, eventFilter]);
 
   return (
