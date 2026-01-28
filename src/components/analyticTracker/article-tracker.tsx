@@ -167,7 +167,7 @@ export default function ArticleTracker({
   autoRefresh = true,
 }: ArticleTrackerProps) {
   const { Get100EventsArticle, lastEventsArticle } = useContext(
-    ArticleAnalyticsContext
+    ArticleAnalyticsContext,
   );
 
   const [isLive, setIsLive] = useState(autoRefresh);
@@ -212,8 +212,8 @@ export default function ArticleTracker({
     new Set(
       (Array.isArray(lastEventsArticle) ? lastEventsArticle : [])
         .map((e) => e.article?.category?.name)
-        .filter(Boolean)
-    )
+        .filter(Boolean),
+    ),
   );
   return (
     <Card className="w-full h-full flex flex-col">

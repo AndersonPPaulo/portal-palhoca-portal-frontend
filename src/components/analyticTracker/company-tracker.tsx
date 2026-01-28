@@ -140,7 +140,7 @@ export default function CompanyTracker({
   autoRefresh = true,
 }: CompanyTrackerProps) {
   const { Get100EventsCompany, lastEventsCompany } = useContext(
-    CompanyAnalyticsContext
+    CompanyAnalyticsContext,
   );
 
   const [isLive, setIsLive] = useState(autoRefresh);
@@ -154,10 +154,10 @@ export default function CompanyTracker({
   useEffect(() => {
     if (!isLive) return;
 
-    // Intervalo de 45 segundos para atualização automática
+    // Intervalo de 30 segundos para atualização automática
     const interval = setInterval(() => {
       Get100EventsCompany(itemsPerPage, "view");
-    }, 45000);
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [isLive, Get100EventsCompany, itemsPerPage]);
@@ -168,7 +168,7 @@ export default function CompanyTracker({
 
   const filteredEvents = useMemo(() => {
     return lastEventsCompany.filter((event) =>
-      eventFilter === "all" ? true : event.event_type === eventFilter
+      eventFilter === "all" ? true : event.event_type === eventFilter,
     );
   }, [lastEventsCompany, eventFilter]);
 
