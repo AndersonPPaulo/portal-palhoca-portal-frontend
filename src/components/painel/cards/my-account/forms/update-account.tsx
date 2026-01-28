@@ -79,7 +79,7 @@ export default function FormUpdateAuthors({
   useEffect(() => {
     if (roles) {
       setRolesOptions(
-        roles.map((role) => ({ value: role.id, label: role.name }))
+        roles.map((role) => ({ value: role.id, label: role.name })),
       );
     }
   }, [roles]);
@@ -107,7 +107,7 @@ export default function FormUpdateAuthors({
               res.data.map((user) => ({
                 value: user.id,
                 label: `${user.name} - ${user.role?.name}`,
-              }))
+              })),
             );
           }
         });
@@ -255,7 +255,7 @@ export default function FormUpdateAuthors({
                   onChange={(value) =>
                     setValue(
                       "chiefEditorId",
-                      Array.isArray(value) ? value[0] : value
+                      Array.isArray(value) ? value[0] : value,
                     )
                   }
                   placeholder="Selecione o responsável"
