@@ -29,7 +29,7 @@ const articleSchema = z.object({
   slug: z.string().min(1, "Slug é obrigatório"),
   reading_time: z.preprocess(
     (val) => (val === "" ? undefined : Number(val)),
-    z.number().min(0, "Tempo de leitura é obrigatório")
+    z.number().min(0, "Tempo de leitura é obrigatório"),
   ),
   resume_content: z
     .string()
@@ -59,7 +59,7 @@ const generateSlug = (text: string) =>
 const uploadThumbnailToServer = async (
   file: File,
   description: string,
-  articleId: string
+  articleId: string,
 ): Promise<string> => {
   const { "user:token": token } = parseCookies();
   const formData = new FormData();
@@ -79,7 +79,7 @@ const uploadThumbnailToServer = async (
     const response = await api.post(
       `/upload-thumbnail/${articleId}`,
       formData,
-      config
+      config,
     );
     return response.data?.thumbnailUrl || "";
   } catch (err) {
@@ -100,8 +100,20 @@ const renameFileWithTimestamp = (file: File): File => {
   return new File([file], newFileName, { type: file.type });
 };
 
+const renameThumbnailFile = (file: File, articleSlug: string): File => {
+  const now = new Date();
+  const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`;
+
+  const fileExtension = file.name.split(".").pop() || "";
+  const sanitizedSlug = articleSlug.replace(/[^a-zA-Z0-9-]/g, "_");
+
+  const newFileName = `thumbnail_${sanitizedSlug}_${timestamp}.${fileExtension}`;
+
+  return new File([file], newFileName, { type: file.type });
+};
+
 const uploadGalleryImagesToServer = async (
-  files: File[]
+  files: File[],
 ): Promise<string[]> => {
   const { "user:token": token } = parseCookies();
   const uploadedUrls: string[] = [];
@@ -122,7 +134,7 @@ const uploadGalleryImagesToServer = async (
       const response = await api.post(
         `/upload/article-image`,
         formData,
-        config
+        config,
       );
 
       if (response.data?.url) {
@@ -236,7 +248,7 @@ export default function FormCreateArticle() {
   const handleImageUpload = (
     file: File,
     previewUrl: string,
-    description?: string
+    description?: string,
   ) => {
     const desc = description ?? "";
     setSelectedImage({ file, preview: previewUrl, description: desc });
@@ -249,7 +261,7 @@ export default function FormCreateArticle() {
       setIsSubmitting(true);
       if (!profile?.id) {
         toast.error(
-          "Seu perfil não está completamente carregado. Recarregue a página."
+          "Seu perfil não está completamente carregado. Recarregue a página.",
         );
         return;
       }
@@ -265,7 +277,7 @@ export default function FormCreateArticle() {
 
           if (galleryUrls.length !== galleryImages.length) {
             toast.error(
-              `Apenas ${galleryUrls.length} de ${galleryImages.length} imagens foram enviadas. Verifique e tente novamente.`
+              `Apenas ${galleryUrls.length} de ${galleryImages.length} imagens foram enviadas. Verifique e tente novamente.`,
             );
             return;
           }
@@ -273,7 +285,7 @@ export default function FormCreateArticle() {
           const errorMessage =
             error instanceof Error ? error.message : String(error);
           toast.error(
-            `Erro ao fazer upload das imagens da galeria: ${errorMessage}. O artigo não foi criado.`
+            `Erro ao fazer upload das imagens da galeria: ${errorMessage}. O artigo não foi criado.`,
           );
           return;
         }
@@ -300,16 +312,22 @@ export default function FormCreateArticle() {
       // 3. Upload thumbnail (depois do artigo criado)
       if (selectedImage && selectedImage.file) {
         try {
-          await uploadThumbnailToServer(
+          // Renomear a thumbnail com o slug do artigo + timestamp
+          const renamedThumbnail = renameThumbnailFile(
             selectedImage.file,
+            data.slug,
+          );
+
+          await uploadThumbnailToServer(
+            renamedThumbnail,
             thumbnailDescription,
-            createdArticle.id
+            createdArticle.id,
           );
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : String(error);
           toast.error(
-            `Artigo criado, mas houve um erro no upload da imagem: ${errorMessage}`
+            `Artigo criado, mas houve um erro no upload da imagem: ${errorMessage}`,
           );
         }
       }
@@ -317,7 +335,7 @@ export default function FormCreateArticle() {
       toast.success(
         status === ARTICLE_STATUS.DRAFT
           ? "Rascunho salvo com sucesso!"
-          : "Artigo enviado para revisão com sucesso!"
+          : "Artigo enviado para revisão com sucesso!",
       );
       reset();
       setSelectedImage(null);
@@ -329,7 +347,7 @@ export default function FormCreateArticle() {
       toast.error(
         `Erro ao ${
           status === ARTICLE_STATUS.DRAFT ? "salvar rascunho" : "criar artigo"
-        }. Tente novamente.`
+        }. Tente novamente.`,
       );
     } finally {
       setIsSubmitting(false);
@@ -449,7 +467,7 @@ export default function FormCreateArticle() {
     } catch (error) {
       console.error("Erro ao processar nova tag:", error);
       toast.error(
-        "Erro ao atualizar a lista de tags. Tente recarregar a página."
+        "Erro ao atualizar a lista de tags. Tente recarregar a página.",
       );
     }
   };
@@ -458,7 +476,7 @@ export default function FormCreateArticle() {
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <form
           onSubmit={handleSubmit((data) =>
-            submitWithStatus(data, ARTICLE_STATUS.PENDING_REVIEW)
+            submitWithStatus(data, ARTICLE_STATUS.PENDING_REVIEW),
           )}
           className="space-y-6 p-6"
         >
@@ -738,7 +756,7 @@ export default function FormCreateArticle() {
             <Button
               type="button"
               onClick={handleSubmit((data) =>
-                submitWithStatus(data, ARTICLE_STATUS.DRAFT)
+                submitWithStatus(data, ARTICLE_STATUS.DRAFT),
               )}
               className="bg-yellow-200 text-[#9c6232] hover:bg-yellow-100 rounded-3xl min-h-[48px] text-[16px] pt-3 px-6"
               disabled={isSubmitting}
