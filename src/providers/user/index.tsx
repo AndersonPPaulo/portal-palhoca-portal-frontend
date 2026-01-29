@@ -115,6 +115,7 @@ interface IUserData {
   Profile(): Promise<ResponsePromise>;
   profile: ResponsePromise | null;
   UpdateUser(data: UpdateUserProps, updateUserId: string): Promise<void>;
+  UpdateUserAsAdmin(data: UpdateUserProps, updateUserId: string): Promise<void>;
   UpdateProfile(data: UpdateUserProps, updateUserId: string): Promise<void>;
   UpdatePasswordUser(
     data: UpdatePasswordUserProps,
@@ -180,6 +181,29 @@ export const UserProvider = ({ children }: IChildrenReact) => {
 
       // Recarregar perfil e lista após atualização
       await Promise.all([Profile(), ListUser()]);
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message || "Erro ao atualizar usuário";
+      toast.error(errorMessage);
+      throw err;
+    }
+  };
+
+  const UpdateUserAsAdmin = async (
+    data: UpdateUserProps,
+    updateUserId: string,
+  ): Promise<void> => {
+    const { "user:token": token } = parseCookies();
+    const config = {
+      headers: { Authorization: `bearer ${token}` },
+    };
+
+    try {
+      await api.patch(`/user/admin/${updateUserId}`, data, config);
+      toast.success("Usuário atualizado com sucesso!");
+
+      // Recarregar lista após atualização
+      await ListUser();
     } catch (err: any) {
       const errorMessage =
         err.response?.data?.message || "Erro ao atualizar usuário";
@@ -385,6 +409,7 @@ export const UserProvider = ({ children }: IChildrenReact) => {
         Profile,
         profile,
         UpdateUser,
+        UpdateUserAsAdmin,
         UpdateProfile,
         UpdatePasswordUser,
         UploadUserImage,
