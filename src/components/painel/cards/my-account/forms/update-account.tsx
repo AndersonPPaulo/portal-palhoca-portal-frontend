@@ -21,7 +21,7 @@ interface OptionType {
 
 const authorsSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
-  email: z.string().email("Email inválido").min(1, "Email é obrigatório"),
+  email: z.string().email("Email inválido").optional(), // Email apenas para exibição
   phone: z.string().optional(),
   roleId: z.string().min(1, "Função obrigatória"),
   password: z.string().optional(), // Senha opcional na edição
@@ -48,7 +48,7 @@ export default function FormUpdateAuthors({
 }: FormUpdateAuthorsProps) {
   const { UpdateProfile, ListUser, profile } = useContext(UserContext);
 
-  const { back } = useRouter();
+  const { back, push } = useRouter();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rolesOptions, setRolesOptions] = useState<OptionType[]>([]);
@@ -200,6 +200,9 @@ export default function FormUpdateAuthors({
         phone: data.phone?.trim() || undefined,
       };
 
+      // Remover email do payload (não pode ser alterado)
+      delete formattedData.email;
+
       // Se for vendedor, remover chiefEditorId do payload (não pode alterar)
       const isVendedor = profile?.role?.name?.toLowerCase() === "vendedor";
       if (isVendedor) {
@@ -214,6 +217,10 @@ export default function FormUpdateAuthors({
       }
 
       toast.success("Perfil atualizado com sucesso!");
+
+      setTimeout(() => {
+        push("/dashboard");
+      }, 1500);
     } catch (error) {
       console.error(error);
       toast.error("Erro ao atualizar usuário.");
@@ -282,6 +289,7 @@ export default function FormUpdateAuthors({
                   label="Email"
                   {...register("email")}
                   placeholder="email@exemplo.com"
+                  disabled={true}
                 />
                 {errors.email && (
                   <span className="text-xs text-red-500">
