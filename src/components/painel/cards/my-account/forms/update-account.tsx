@@ -81,47 +81,17 @@ export default function FormUpdateAuthors({
   }, [profile]);
 
   useEffect(() => {
-    const roleName = profile?.role?.name?.toLowerCase();
-
-    // Vendedores não têm permissão para listar usuários
-    // Então usamos apenas o chiefEditor que já vem no profile
-    if (roleName === "vendedor") {
-      if (profile?.chiefEditor) {
-        setUsersOptions([
-          {
-            value: profile.chiefEditor.id,
-            label: profile.chiefEditor.name,
-          },
-        ]);
-      } else {
-        setUsersOptions([]);
-      }
-      return; // Não tenta buscar lista de usuários
-    }
-
-    // Para outros cargos, busca a lista de responsáveis
-    if (roleName) {
-      let roleFilter = "";
-      if (["jornalista", "colunista", "chefe de redação"].includes(roleName)) {
-        roleFilter = "chefe de redação";
-      } else if (roleName === "gerente comercial") {
-        roleFilter = "gerente comercial";
-      } else if (roleName === "administrador") {
-        roleFilter = "chefe de redação|gerente comercial|administrador";
-      }
-
-      if (roleFilter) {
-        ListUser({ role: roleFilter }).then((res) => {
-          if (res?.data?.length) {
-            setUsersOptions(
-              res.data.map((user) => ({
-                value: user.id,
-                label: `${user.name} - ${user.role?.name}`,
-              })),
-            );
-          }
-        });
-      }
+    // Campo de responsável técnico agora é apenas para visualização
+    // Mostra o chiefEditor que já vem no profile
+    if (profile?.chiefEditor) {
+      setUsersOptions([
+        {
+          value: profile.chiefEditor.id,
+          label: profile.chiefEditor.name,
+        },
+      ]);
+    } else {
+      setUsersOptions([]);
     }
   }, [profile]);
 
@@ -203,11 +173,8 @@ export default function FormUpdateAuthors({
       // Remover email do payload (não pode ser alterado)
       delete formattedData.email;
 
-      // Se for vendedor, remover chiefEditorId do payload (não pode alterar)
-      const isVendedor = profile?.role?.name?.toLowerCase() === "vendedor";
-      if (isVendedor) {
-        delete formattedData.chiefEditorId;
-      }
+      // Remover chiefEditorId do payload (campo desabilitado, não pode alterar)
+      delete formattedData.chiefEditorId;
 
       await UpdateProfile(formattedData, profileData.id);
 
@@ -334,25 +301,15 @@ export default function FormUpdateAuthors({
               </div>
 
               <div className="space-y-1">
-                <CustomSelect
-                  id="chiefEditorId"
+                <CustomInput
+                  id="chiefEditorName"
                   label="Responsável Técnico"
-                  options={usersOptions}
-                  value={watch("chiefEditorId") ?? ""}
-                  onChange={(value) =>
-                    setValue(
-                      "chiefEditorId",
-                      Array.isArray(value) ? value[0] : value,
-                    )
+                  value={
+                    profile?.chiefEditor?.name || "Nenhum responsável atribuído"
                   }
-                  placeholder="Selecione o responsável"
-                  disable={profile?.role?.name?.toLowerCase() === "vendedor"}
+                  placeholder="Nenhum responsável atribuído"
+                  disabled={true}
                 />
-                {errors.chiefEditorId && (
-                  <span className="text-xs text-red-500">
-                    {errors.chiefEditorId.message}
-                  </span>
-                )}
               </div>
 
               <div className="space-y-1">

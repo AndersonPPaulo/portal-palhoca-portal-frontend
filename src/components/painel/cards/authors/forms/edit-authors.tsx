@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -11,7 +12,6 @@ import ReturnPageButton from "@/components/button/returnPage";
 import { UserContext } from "@/providers/user";
 import { toast } from "sonner";
 import CustomSelect from "@/components/select/custom-select";
-import { User } from "lucide-react";
 
 interface OptionType {
   value: string;
@@ -47,7 +47,6 @@ export default function FormEditUser({ userId }: FormEditUserProps) {
     register,
     handleSubmit,
     formState: { errors },
-    reset,
     setValue,
     watch,
   } = useForm<EditUserFormData>({
