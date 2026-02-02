@@ -578,7 +578,7 @@ export default function FormCreateAuthors() {
                   id="chiefEditorId"
                   label="Responsável Técnico"
                   options={usersOptions}
-                  value={watch("chiefEditorId")}
+                  value={watch("chiefEditorId") || ""}
                   onChange={(value) =>
                     setValue(
                       "chiefEditorId",
