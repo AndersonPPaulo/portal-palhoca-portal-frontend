@@ -139,15 +139,20 @@ export default function FormUpdateAuthors({
   const uploadUserImage = async (file: File, user_id: string) => {
     const { "user:token": token } = parseCookies();
 
-    // Gerar nome único: timestamp + nome original
+    // Gerar nome único: nome do usuário + timestamp
     const timestamp = Date.now();
     const originalName = file.name;
     const extension = originalName.substring(originalName.lastIndexOf("."));
-    const nameWithoutExtension = originalName.substring(
-      0,
-      originalName.lastIndexOf("."),
-    );
-    const uniqueName = `${nameWithoutExtension}_${timestamp}${extension}`;
+
+    // Formatar nome do usuário (remover espaços e caracteres especiais)
+    const userName = profileData.name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+      .replace(/[^a-z0-9]/g, "_") // Substitui caracteres especiais por underscore
+      .replace(/_+/g, "_"); // Remove underscores duplicados
+
+    const uniqueName = `${userName}_${timestamp}${extension}`;
 
     const formData = new FormData();
     formData.append("user_image", file, uniqueName);

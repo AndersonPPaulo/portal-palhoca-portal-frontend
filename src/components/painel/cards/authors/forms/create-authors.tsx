@@ -14,6 +14,7 @@ import { api } from "@/service/api";
 import { toast } from "sonner";
 import CustomSelect from "@/components/select/custom-select";
 import { Pencil, User } from "lucide-react";
+import Image from "next/image";
 
 interface OptionType {
   value: string;
@@ -26,7 +27,10 @@ const authorsSchema = z.object({
   phone: z.string().min(1, "Telefone/celular obrigatório"),
   roleId: z.string().min(1, "Função obrigatório"),
   password: z.string().min(1, "Senha obrigatório"),
-  chiefEditorId: z.string().min(1, "Responsável necessita ser indicado"),
+  chiefEditorId: z
+    .string()
+    .min(1, "Responsável necessita ser indicado")
+    .optional(),
   topic: z.string(),
 });
 
@@ -79,6 +83,7 @@ export default function FormCreateAuthors() {
     };
 
     loadInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -91,9 +96,10 @@ export default function FormCreateAuthors() {
     }
   }, [roles]);
 
+  const selectedRoleId = watch("roleId");
+
   useEffect(() => {
     const fetchChiefEditorsByRole = async () => {
-      const selectedRoleId = watch("roleId");
       const selectedRole = roles?.find((role) => role.id === selectedRoleId);
 
       if (!selectedRole?.name) {
@@ -135,7 +141,8 @@ export default function FormCreateAuthors() {
     };
 
     fetchChiefEditorsByRole();
-  }, [watch("roleId"), roles]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRoleId, roles]);
 
   const handleImageClick = () => {
     fileInputRef.current?.click();
@@ -180,7 +187,11 @@ export default function FormCreateAuthors() {
 
   useEffect(() => {}, [selectedImage]);
 
-  const uploadUserImage = async (file: File, user_id: string) => {
+  const uploadUserImage = async (
+    file: File,
+    user_id: string,
+    userName: string,
+  ) => {
     try {
       const { "user:token": token } = parseCookies();
 
@@ -215,15 +226,20 @@ export default function FormCreateAuthors() {
         // Criar FormData para enviar o arquivo
         const formData = new FormData();
 
-        // Gerar nome único: timestamp + nome original
+        // Gerar nome único: nome do usuário + timestamp
         const timestamp = Date.now();
         const originalName = file.name;
         const extension = originalName.substring(originalName.lastIndexOf("."));
-        const nameWithoutExtension = originalName.substring(
-          0,
-          originalName.lastIndexOf("."),
-        );
-        const uniqueName = `${nameWithoutExtension}_${timestamp}${extension}`;
+
+        // Formatar nome do usuário (remover espaços e caracteres especiais)
+        const formattedUserName = userName
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+          .replace(/[^a-z0-9]/g, "_") // Substitui caracteres especiais por underscore
+          .replace(/_+/g, "_"); // Remove underscores duplicados
+
+        const uniqueName = `${formattedUserName}_${timestamp}${extension}`;
 
         formData.append("user_image", file, uniqueName);
 
@@ -254,15 +270,20 @@ export default function FormCreateAuthors() {
           "Usuário criado, mas não foi possível encontrá-lo para adicionar a foto",
         );
       }
-    } catch (error: any) {
-      if (error.response) {
-      } else if (error.request) {
-        console.error("Request feito mas sem resposta:", error.request);
+    } catch (error: unknown) {
+      const err = error as {
+        response?: { data?: { message?: string } };
+        request?: unknown;
+        message?: string;
+      };
+      if (err.response) {
+      } else if (err.request) {
+        console.error("Request feito mas sem resposta:", err.request);
       }
 
       const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
+        err.response?.data?.message ||
+        err.message ||
         "Erro ao fazer upload da foto";
       toast.error(errorMessage);
       throw error;
@@ -312,7 +333,7 @@ export default function FormCreateAuthors() {
         await new Promise((resolve) => setTimeout(resolve, 3000));
 
         try {
-          await uploadUserImage(imageFile, response.response.id);
+          await uploadUserImage(imageFile, response.response.id, data.name);
 
           setTimeout(async () => {
             try {
@@ -334,17 +355,29 @@ export default function FormCreateAuthors() {
       setTimeout(() => {
         setIsSubmitting(false);
       }, 1000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       setIsSubmitting(false);
+      const err = error as {
+        response?: {
+          data?: {
+            message?: string;
+            error?: string;
+            errors?: unknown;
+            details?: string;
+          };
+          status?: number;
+        };
+        message?: string;
+      };
       console.error("❌ Erro completo:", error);
-      console.error("❌ Resposta do backend:", error?.response?.data);
+      console.error("❌ Resposta do backend:", err?.response?.data);
 
       // Extrair todas as possíveis mensagens de erro do backend
       let errorMessage = "Erro ao criar usuário";
       let errorDetails: string[] = [];
 
-      if (error?.response?.data) {
-        const responseData = error.response.data;
+      if (err?.response?.data) {
+        const responseData = err.response.data;
 
         // Verificar se há mensagem principal
         if (responseData.message) {
@@ -355,11 +388,12 @@ export default function FormCreateAuthors() {
 
         // Verificar se há array de erros (validações do backend)
         if (Array.isArray(responseData.errors)) {
-          errorDetails = responseData.errors.map((err: any) => {
-            if (typeof err === "string") return err;
-            if (err.message) return err.message;
-            if (err.msg) return err.msg;
-            return JSON.stringify(err);
+          errorDetails = responseData.errors.map((errItem: unknown) => {
+            const errDetail = errItem as { message?: string; msg?: string };
+            if (typeof errDetail === "string") return errDetail;
+            if (errDetail.message) return errDetail.message;
+            if (errDetail.msg) return errDetail.msg;
+            return JSON.stringify(errDetail);
           });
         } else if (
           responseData.errors &&
@@ -380,14 +414,14 @@ export default function FormCreateAuthors() {
         if (responseData.details) {
           errorDetails.push(responseData.details);
         }
-      } else if (error?.message) {
-        errorMessage = error.message;
+      } else if (err?.message) {
+        errorMessage = err.message;
       }
 
       // Montar descrição com detalhes
       let description = "";
-      if (error?.response?.status) {
-        description = `Código: ${error.response.status}`;
+      if (err?.response?.status) {
+        description = `Código: ${err.response.status}`;
       }
       if (errorDetails.length > 0) {
         description += description ? "\n" : "";
@@ -426,10 +460,13 @@ export default function FormCreateAuthors() {
               className="relative w-32 h-32 rounded-full overflow-hidden cursor-pointer group border-4 border-gray-200 hover:border-blue-500 transition-all"
             >
               {getProfileImageUrl() ? (
-                <img
+                <Image
                   src={getProfileImageUrl()!}
                   alt="Foto de perfil"
                   className="w-full h-full object-cover"
+                  width={128}
+                  height={128}
+                  unoptimized
                 />
               ) : (
                 <div className="w-full h-full bg-gray-100 flex items-center justify-center">
@@ -541,7 +578,7 @@ export default function FormCreateAuthors() {
                   id="chiefEditorId"
                   label="Responsável Técnico"
                   options={usersOptions}
-                  value={watch("chiefEditorId")}
+                  value={watch("chiefEditorId") || ""}
                   onChange={(value) =>
                     setValue(
                       "chiefEditorId",
