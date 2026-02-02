@@ -37,7 +37,7 @@ apiBaseURL = apiBaseURL.replace(/\/$/, "");
 
 export const api = axios.create({
   baseURL: apiBaseURL,
-  timeout: 30000, // 30 segundos de timeout
+  timeout: 120000, // 2 minutos de timeout
 });
 
 // Log para facilitar debug (sempre mostrar para ajudar desenvolvimento)
@@ -104,7 +104,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export const api_cep = axios.create({

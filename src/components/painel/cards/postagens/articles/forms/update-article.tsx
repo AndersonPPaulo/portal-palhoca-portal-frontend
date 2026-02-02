@@ -54,6 +54,18 @@ const articleSchema = z.object({
 
 type ArticleFormData = z.infer<typeof articleSchema>;
 
+const renameThumbnailFile = (file: File, articleSlug: string): File => {
+  const now = new Date();
+  const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`;
+
+  const fileExtension = file.name.split(".").pop() || "";
+  const sanitizedSlug = articleSlug.replace(/[^a-zA-Z0-9-]/g, "_");
+
+  const newFileName = `thumbnail_${sanitizedSlug}_${timestamp}.${fileExtension}`;
+
+  return new File([file], newFileName, { type: file.type });
+};
+
 const uploadGalleryImagesToServer = async (
   files: File[],
 ): Promise<string[]> => {
@@ -495,8 +507,14 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
       // Se tem imagem nova selecionada, faz o upload
       if (selectedImage && selectedImage.file) {
         try {
-          await uploadThumbnail(
+          // Renomear a thumbnail com o slug do artigo + timestamp
+          const renamedThumbnail = renameThumbnailFile(
             selectedImage.file,
+            data.slug,
+          );
+
+          await uploadThumbnail(
+            renamedThumbnail,
             thumbnailDescription,
             article.id,
           );

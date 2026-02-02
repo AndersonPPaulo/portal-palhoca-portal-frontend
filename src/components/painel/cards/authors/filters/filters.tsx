@@ -19,11 +19,7 @@ interface FilterProps {
   onFilterChange: (filters: FilterState) => void;
 }
 
-const FilterUsers = ({
-  filter,
-  setFilter,
-  onFilterChange,
-}: FilterProps) => {
+const FilterUsers = ({ filter, setFilter, onFilterChange }: FilterProps) => {
   const [filters, setFilters] = useState<FilterState>({
     status: null,
   });
@@ -55,8 +51,6 @@ const FilterUsers = ({
             onChange={(e) => setFilter(e.target.value)}
           />
         </div>
-        
-        
 
         <Popover
           open={openPopovers.status}
@@ -116,4 +110,4 @@ const FilterUsers = ({
   );
 };
 
-export default FilterUsers
+export default FilterUsers;

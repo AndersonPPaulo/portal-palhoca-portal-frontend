@@ -83,13 +83,13 @@ interface ICompanyAnalyticsData {
   GetEventsByCompany(
     companyId: string,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
   ): Promise<void>;
   GetTotalEvents(): Promise<void>;
   UpdateVirtualEvent(data: IUpdateVirtualEventProps): Promise<void>;
   Get100EventsCompany(
     limit?: number,
-    excludeType?: string
+    excludeType?: string,
   ): Promise<IVirtualEventResponse>;
 
   lastEventsCompany: IEvent[];
@@ -108,7 +108,7 @@ interface IChildrenReact {
 }
 
 export const CompanyAnalyticsContext = createContext<ICompanyAnalyticsData>(
-  {} as ICompanyAnalyticsData
+  {} as ICompanyAnalyticsData,
 );
 
 export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
@@ -129,13 +129,13 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
   const Get100EventsCompany = useCallback(
     async (
       limit: number = 100,
-      excludeType?: string
+      excludeType?: string,
     ): Promise<IVirtualEventResponse> => {
       try {
         const validLimit = Math.min(Math.max(limit, 1), 300);
         const queryParams = excludeType ? `?excludeType=${excludeType}` : "";
         const res = await api.get<IVirtualEventResponse>(
-          `/analytics/last-company-events/${validLimit}${queryParams}`
+          `/analytics/last-company-events/${validLimit}${queryParams}`,
         );
         setLastEventsCompany(res.data.response.companyEvents);
         return res.data;
@@ -143,14 +143,14 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
         throw err;
       }
     },
-    []
+    [],
   );
   // Função para buscar eventos por comércio (privada - com auth)
   const GetEventsByCompany = useCallback(
     async (
       companyId: string,
       startDate?: string,
-      endDate?: string
+      endDate?: string,
     ): Promise<void> => {
       setLoading(true);
       setError(null);
@@ -200,7 +200,7 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
             (item: any) => ({
               event_type: item.event_type as EventType,
               virtual_count: item.total_count || 0,
-            })
+            }),
           );
 
           setCompanyEvents((prev) => ({
@@ -214,7 +214,7 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
               event_type: event.event_type,
               timestamp: event.timestamp,
               virtual_count: 1,
-            })
+            }),
           );
 
           setRawCompanyEvents((prev) => ({
@@ -226,7 +226,7 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
         })
         .catch((err) => {
           setError(
-            err.response?.data?.message || "Erro ao buscar eventos do comércio"
+            err.response?.data?.message || "Erro ao buscar eventos do comércio",
           );
           setLoading(false);
           return err;
@@ -234,7 +234,7 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
 
       return response;
     },
-    []
+    [],
   );
 
   // Função para buscar totais de eventos (privada - com auth)
@@ -258,7 +258,7 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
       })
       .catch((err) => {
         setError(
-          err.response?.data?.message || "Erro ao buscar totais de eventos"
+          err.response?.data?.message || "Erro ao buscar totais de eventos",
         );
         setLoading(false);
         return err;
@@ -290,7 +290,7 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
       .patch(
         `/analytics/event-company/${company_id}/company`,
         requestData,
-        config
+        config,
       )
       .then((res) => {
         GetEventsByCompany(company_id);
@@ -298,7 +298,7 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
       })
       .catch((err) => {
         setError(
-          err.response?.data?.message || "Erro ao atualizar evento virtual"
+          err.response?.data?.message || "Erro ao atualizar evento virtual",
         );
         setLoading(false);
         return err;

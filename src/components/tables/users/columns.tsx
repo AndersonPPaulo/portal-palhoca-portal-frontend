@@ -6,8 +6,10 @@ import {
 } from "@/components/ui/tooltip";
 import { Tooltip, TooltipArrow, TooltipPortal } from "@radix-ui/react-tooltip";
 import { ColumnDef } from "@tanstack/react-table";
-
-import React from "react";
+import { UserContext } from "@/providers/user";
+import { Pencil } from "lucide-react";
+import { useRouter } from "next/navigation";
+import React, { useContext } from "react";
 
 // Interface corrigida para corresponder ao tipo ResponsePromise do contexto
 interface UsersProps {
@@ -44,8 +46,26 @@ interface Props {
 }
 
 const CellActions = ({ user }: Props) => {
+  const { profile } = useContext(UserContext);
+  const router = useRouter();
+
+  const isAdmin = profile?.role?.name?.toLowerCase() === "administrador";
+
+  const handleEdit = () => {
+    router.push(`/usuarios/editar/${user.id}`);
+  };
+
   return (
-    <div className="flex gap-6">
+    <div className="flex gap-6 items-center justify-center">
+      {isAdmin && (
+        <button
+          onClick={handleEdit}
+          className="text-blue-600 hover:text-blue-800 transition-colors"
+          title="Editar usuário"
+        >
+          <Pencil className="w-5 h-5" />
+        </button>
+      )}
       <DialogDelete context="users" item_name={user.name} item_id={user.id} />
     </div>
   );
@@ -279,9 +299,7 @@ export const columns: ColumnDef<UsersProps>[] = [
                 className="rounded-2xl shadow-sm bg-white text-[16px] text-gray-30 px-4 py-2 animate-fadeIn"
                 sideOffset={5}
               >
-                <span>
-                  {row.original.chiefEditor?.name || "-"}
-                </span>
+                <span>{row.original.chiefEditor?.name || "-"}</span>
                 <TooltipArrow
                   className="fill-primary-light"
                   width={11}

@@ -50,14 +50,14 @@ export default function InfoPainel() {
   const count = {
     published_articles: listArticles?.meta.total,
     inactives_articles: listArticles?.data.filter(
-      (item) => item.status === "inactive" || item.status === "blocked"
+      (item) => item.status === "inactive" || item.status === "blocked",
     ).length,
     clicks_views: listArticles?.data.reduce(
       (acc, article) => acc + Number(article.clicks_view),
-      0
+      0,
     ),
     highlight_articles: listArticles?.data.filter((item) =>
-      item.articlePortals.some((ap) => ap.highlight)
+      item.articlePortals.some((ap) => ap.highlight),
     ).length,
     authors: listUser?.total,
     total_companies: listCompany?.total,

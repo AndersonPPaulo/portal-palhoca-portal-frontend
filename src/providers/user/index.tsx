@@ -115,9 +115,11 @@ interface IUserData {
   Profile(): Promise<ResponsePromise>;
   profile: ResponsePromise | null;
   UpdateUser(data: UpdateUserProps, updateUserId: string): Promise<void>;
+  UpdateUserAsAdmin(data: UpdateUserProps, updateUserId: string): Promise<void>;
+  UpdateProfile(data: UpdateUserProps, updateUserId: string): Promise<void>;
   UpdatePasswordUser(
     data: UpdatePasswordUserProps,
-    updateUserId: string
+    updateUserId: string,
   ): Promise<void>;
   UploadUserImage(file: File, userId: string): Promise<void>;
   roles: Role[];
@@ -134,7 +136,7 @@ export const UserProvider = ({ children }: IChildrenReact) => {
   const { push, back } = useRouter();
 
   const CreateUser = async (
-    data: UserProps
+    data: UserProps,
   ): Promise<CreateResponsePromise> => {
     const { "user:token": token } = parseCookies();
     const config = {
@@ -166,7 +168,7 @@ export const UserProvider = ({ children }: IChildrenReact) => {
 
   const UpdateUser = async (
     data: UpdateUserProps,
-    updateUserId: string
+    updateUserId: string,
   ): Promise<void> => {
     const { "user:token": token } = parseCookies();
     const config = {
@@ -187,9 +189,56 @@ export const UserProvider = ({ children }: IChildrenReact) => {
     }
   };
 
+  const UpdateUserAsAdmin = async (
+    data: UpdateUserProps,
+    updateUserId: string,
+  ): Promise<void> => {
+    const { "user:token": token } = parseCookies();
+    const config = {
+      headers: { Authorization: `bearer ${token}` },
+    };
+
+    try {
+      await api.patch(`/user/admin/${updateUserId}`, data, config);
+      toast.success("Usuário atualizado com sucesso!");
+
+      // Recarregar lista após atualização
+      await ListUser();
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message || "Erro ao atualizar usuário";
+      toast.error(errorMessage);
+      throw err;
+    }
+  };
+
+  // Função específica para atualizar o próprio perfil (não recarrega lista de usuários)
+  const UpdateProfile = async (
+    data: UpdateUserProps,
+    updateUserId: string,
+  ): Promise<void> => {
+    const { "user:token": token } = parseCookies();
+    const config = {
+      headers: { Authorization: `bearer ${token}` },
+    };
+
+    try {
+      await api.patch(`/user/${updateUserId}`, data, config);
+      toast.success("Perfil atualizado com sucesso!");
+
+      // Recarregar apenas o perfil, sem tentar listar usuários
+      await Profile();
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message || "Erro ao atualizar perfil";
+      toast.error(errorMessage);
+      throw err;
+    }
+  };
+
   const UpdatePasswordUser = async (
     data: UpdatePasswordUserProps,
-    updateUserId: string
+    updateUserId: string,
   ): Promise<void> => {
     const { "user:token": token } = parseCookies();
     const config = {
@@ -239,7 +288,7 @@ export const UserProvider = ({ children }: IChildrenReact) => {
 
   const [listUser, setListUser] = useState<IUserPagesResponse | null>(null);
   const ListUser = async (
-    params: UserListParams = {}
+    params: UserListParams = {},
   ): Promise<IUserPagesResponse> => {
     const { "user:token": token } = parseCookies();
 
@@ -360,6 +409,8 @@ export const UserProvider = ({ children }: IChildrenReact) => {
         Profile,
         profile,
         UpdateUser,
+        UpdateUserAsAdmin,
+        UpdateProfile,
         UpdatePasswordUser,
         UploadUserImage,
         roles,

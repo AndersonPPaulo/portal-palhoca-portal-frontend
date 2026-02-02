@@ -167,11 +167,16 @@ export default function ArticleTracker({
   autoRefresh = true,
 }: ArticleTrackerProps) {
   const { Get100EventsArticle, lastEventsArticle } = useContext(
-    ArticleAnalyticsContext
+    ArticleAnalyticsContext,
   );
 
   const [isLive, setIsLive] = useState(autoRefresh);
   const [itemsPerPage, setItemsPerPage] = useState(100);
+
+  // Filtrar apenas view e view_end (começou a ler e leu até o final)
+  const filteredEvents = lastEventsArticle.filter(
+    (event) => event.event_type === "view" || event.event_type === "view_end",
+  );
 
   // Buscar dados iniciais com delay de 30 segundos
   useEffect(() => {
@@ -212,8 +217,8 @@ export default function ArticleTracker({
     new Set(
       (Array.isArray(lastEventsArticle) ? lastEventsArticle : [])
         .map((e) => e.article?.category?.name)
-        .filter(Boolean)
-    )
+        .filter(Boolean),
+    ),
   );
   return (
     <Card className="w-full h-full flex flex-col">
@@ -289,7 +294,7 @@ export default function ArticleTracker({
 
       <CardContent className="flex-1 overflow-hidden p-0">
         <ScrollArea className="h-full p-6">
-          {lastEventsArticle.length === 0 ? (
+          {filteredEvents.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p>Nenhum evento de notícia encontrado</p>
@@ -297,7 +302,7 @@ export default function ArticleTracker({
             </div>
           ) : (
             <div className="space-y-3">
-              {lastEventsArticle.map((event) => (
+              {filteredEvents.map((event) => (
                 <ArticleEventItem key={event.id} event={event} />
               ))}
             </div>

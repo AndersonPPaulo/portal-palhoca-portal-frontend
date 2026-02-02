@@ -58,12 +58,12 @@ export interface AnalyticsActions {
   loadEvents: (
     entityId: string,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
   ) => Promise<void>;
   updateEvent?: (
     entityId: string,
     eventType: string,
-    newValue: number
+    newValue: number,
   ) => Promise<void>;
   clearError: () => void;
 }
@@ -127,18 +127,18 @@ export default function ReusableAnalyticsModal({
   onDataLoaded,
 }: ReusableAnalyticsModalProps) {
   const [editableEvents, setEditableEvents] = useState<Record<string, number>>(
-    {}
+    {},
   );
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [originalEvents, setOriginalEvents] = useState<Record<string, number>>(
-    {}
+    {},
   );
 
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(
-    null
+    null,
   );
 
   const [isExporting, setIsExporting] = useState(false);
@@ -167,7 +167,7 @@ export default function ReusableAnalyticsModal({
 
       return processed;
     },
-    [eventTypeConfigs]
+    [eventTypeConfigs],
   );
 
   // Carregar dados quando modal abrir
@@ -176,7 +176,7 @@ export default function ReusableAnalyticsModal({
       analyticsActions.loadEvents(
         entityId,
         startDate || undefined,
-        endDate || undefined
+        endDate || undefined,
       );
       analyticsActions.clearError();
     }
@@ -198,7 +198,7 @@ export default function ReusableAnalyticsModal({
 
     // Criar uma "assinatura" dos eventos para detectar mudanças reais
     const eventsSignature = JSON.stringify(
-      analyticsData.events.map((e) => `${e.event_type}:${e.virtual_count}`)
+      analyticsData.events.map((e) => `${e.event_type}:${e.virtual_count}`),
     );
 
     // Só processar se os dados realmente mudaram
@@ -277,7 +277,7 @@ export default function ReusableAnalyticsModal({
     analyticsActions.loadEvents(
       entityId,
       startDate || undefined,
-      endDate || undefined
+      endDate || undefined,
     );
   };
 
@@ -286,7 +286,7 @@ export default function ReusableAnalyticsModal({
     analyticsActions.loadEvents(
       entityId,
       startDate || undefined,
-      endDate || undefined
+      endDate || undefined,
     );
   };
 
@@ -319,7 +319,7 @@ export default function ReusableAnalyticsModal({
     analyticsActions.loadEvents(
       entityId,
       past.toISOString(),
-      now.toISOString()
+      now.toISOString(),
     );
   };
 
@@ -327,9 +327,8 @@ export default function ReusableAnalyticsModal({
     setIsExporting(true);
     try {
       // Importação dinâmica do componente PDF
-      const { default: AnalyticsReportPDF } = await import(
-        "@/components/pdf/AnalyticsReportPDF"
-      );
+      const { default: AnalyticsReportPDF } =
+        await import("@/components/pdf/AnalyticsReportPDF");
 
       const doc = (
         <AnalyticsReportPDF
@@ -604,7 +603,7 @@ export default function ReusableAnalyticsModal({
                     onClick={() =>
                       (
                         document.getElementById(
-                          "startDate"
+                          "startDate",
                         ) as HTMLInputElement | null
                       )?.showPicker?.()
                     }
@@ -632,7 +631,7 @@ export default function ReusableAnalyticsModal({
                     onClick={() =>
                       (
                         document.getElementById(
-                          "endDate"
+                          "endDate",
                         ) as HTMLInputElement | null
                       )?.showPicker?.()
                     }
@@ -937,7 +936,7 @@ export default function ReusableAnalyticsModal({
                                   onChange={(e) =>
                                     updateEventValue(
                                       config.type,
-                                      parseInt(e.target.value) || 0
+                                      parseInt(e.target.value) || 0,
                                     )
                                   }
                                   className={`text-lg font-bold mt-1 ${

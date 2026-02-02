@@ -45,7 +45,7 @@ export default function TableBanners({
         pagination.pageSize,
         false,
         true,
-        filterParams
+        filterParams,
       );
     };
 
@@ -73,7 +73,7 @@ export default function TableBanners({
         pagination={pagination}
         onPaginationChange={(updater) =>
           setPagination((prev) =>
-            typeof updater === "function" ? updater(prev) : updater
+            typeof updater === "function" ? updater(prev) : updater,
           )
         }
       />

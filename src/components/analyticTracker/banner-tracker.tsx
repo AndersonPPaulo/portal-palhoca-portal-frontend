@@ -139,16 +139,16 @@ export default function BannerTracker({
   autoRefresh = true,
 }: BannerTrackerProps) {
   const { Get100EventsBanner, lastEventsBanner } = useContext(
-    BannerAnalyticsContext
+    BannerAnalyticsContext,
   );
   const [isLive, setIsLive] = useState(autoRefresh);
   const [itemsPerPage, setItemsPerPage] = useState(100);
 
-  // Buscar dados iniciais com delay de 15 segundos
+  // Buscar dados iniciais com delay de 30 segundos
   useEffect(() => {
     const timer = setTimeout(() => {
       Get100EventsBanner(itemsPerPage);
-    }, 15000);
+    }, 30000);
     return () => clearTimeout(timer);
   }, [itemsPerPage, Get100EventsBanner]);
 
