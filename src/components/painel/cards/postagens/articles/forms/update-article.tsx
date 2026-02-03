@@ -858,6 +858,7 @@ export default function FormEditArticle({ article }: FormEditArticleProps) {
                 <TiptapEditor
                   value={editorContent}
                   onChange={handleEditorChange}
+                  contentName={watch("slug") || watch("title")}
                 />
                 <div className="text-sm mt-1 ml-6 text-gray-500">
                   Contador de caracteres: {contentLength}
