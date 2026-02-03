@@ -27,11 +27,13 @@ import {
 interface TiptapEditorProps {
   value: string;
   onChange: (content: string) => void;
+  contentName?: string; // Nome do artigo/banner para renomear a imagem
 }
 
 const TiptapEditor = ({
   value = "</br> </br> </br> </br> </br> </br>",
   onChange,
+  contentName,
 }: TiptapEditorProps) => {
   const [isClient, setIsClient] = useState(false);
 
@@ -109,7 +111,7 @@ const TiptapEditor = ({
                 }
               },
               "image/jpeg",
-              quality
+              quality,
             );
           };
 
@@ -122,7 +124,7 @@ const TiptapEditor = ({
   };
 
   const handleImageUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -140,7 +142,7 @@ const TiptapEditor = ({
 
       if (!token) {
         throw new Error(
-          "Token de autenticação não encontrado. Faça login novamente."
+          "Token de autenticação não encontrado. Faça login novamente.",
         );
       }
 
@@ -153,8 +155,8 @@ const TiptapEditor = ({
       if (fileSizeMB > MAX_SIZE_MB) {
         alert(
           `A imagem tem ${fileSizeMB.toFixed(
-            2
-          )}MB e será comprimida para ${MAX_SIZE_MB}MB...`
+            2,
+          )}MB e será comprimida para ${MAX_SIZE_MB}MB...`,
         );
         try {
           fileToUpload = await compressImage(file, MAX_SIZE_MB);
@@ -163,13 +165,20 @@ const TiptapEditor = ({
         } catch (compressError) {
           console.error("❌ Erro ao comprimir:", compressError);
           throw new Error(
-            "Não foi possível comprimir a imagem. Tente uma imagem menor."
+            "Não foi possível comprimir a imagem. Tente uma imagem menor.",
           );
         }
       }
 
       const formData = new FormData();
       formData.append("image", fileToUpload);
+
+      // Enviar nome do artigo/banner para o backend renomear: nome+timestamp
+      if (contentName) {
+        formData.append("contentName", contentName);
+      }
+
+      // Timestamp será gerado no backend junto com o contentName
 
       const config = {
         headers: {
@@ -186,7 +195,7 @@ const TiptapEditor = ({
       const response = await api.post(
         "/upload/article-image",
         formData,
-        config
+        config,
       );
 
       console.log("✅ Resposta da API:", response);
@@ -207,7 +216,7 @@ const TiptapEditor = ({
       if (!imageUrl) {
         console.error("❌ Estrutura da resposta:", response.data);
         throw new Error(
-          "URL da imagem não retornada pela API. Verifique o console."
+          "URL da imagem não retornada pela API. Verifique o console.",
         );
       }
 
