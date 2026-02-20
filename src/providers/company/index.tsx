@@ -134,7 +134,7 @@ interface ICompanyData {
   ListCompany(
     page?: number,
     limit?: number,
-    options?: ListCompanyOptions
+    options?: ListCompanyOptions,
   ): Promise<CompanyProps>;
   CreateCompany(data: UpdateCompanyProps): Promise<ICompanyProps | void>;
   apiCep: GetCEPProps | null;
@@ -146,11 +146,11 @@ interface ICompanyData {
   company: ICompanyProps | null;
   CreateImageCompany(
     data: { filename: string; contentType: string },
-    company_id: string
+    company_id: string,
   ): Promise<void>;
   UploadCompanyLogo(
     file: { filename: string; contentType: string },
-    company_id: string
+    company_id: string,
   ): Promise<uploadResponseProps>;
   currentFilters: ListCompanyOptions; // ✅ Adicionar
   currentPage: number; // ✅ Adicionar
@@ -170,79 +170,87 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [currentLimit, setCurrentLimit] = useState(9);
 
-const ListCompany = async (
-  page: number = 1,
-  limit: number = 9,
-  options: ListCompanyOptions = {}
-): Promise<CompanyProps> => {
-  setCurrentFilters(options);
-  setCurrentPage(page);
-  setCurrentLimit(limit);
+  const ListCompany = async (
+    page: number = 1,
+    limit: number = 9,
+    options: ListCompanyOptions = {},
+  ): Promise<CompanyProps> => {
+    setCurrentFilters(options);
+    setCurrentPage(page);
+    setCurrentLimit(limit);
 
-  const params: any = {
-    limit: String(limit), 
-    page: String(page), 
-    excludeStatus: 'new_lead,in_process', 
+    const params: any = {
+      limit: String(limit),
+      page: String(page),
+      excludeStatus: "new_lead,in_process",
+    };
+
+    if (options.name) {
+      params.name = options.name;
+    }
+
+    if (options.categories && options.categories.length > 0) {
+      params.categories = options.categories.join(",");
+    }
+
+    if (options.highlight !== undefined && options.highlight !== null) {
+      params.highlight = String(options.highlight);
+    }
+
+    if (options.isActive !== undefined && options.isActive !== null) {
+      params.isActive =
+        typeof options.isActive === "boolean"
+          ? String(options.isActive)
+          : options.isActive;
+    }
+
+    console.log("🔍 Params sendo enviados:", params);
+
+    const queryString = new URLSearchParams(params).toString();
+
+    const config = { params };
+
+    const response = await api
+      .get("/company", config)
+      .then((res) => {
+        console.log("📦 Total de empresas retornadas:", res.data.data?.length);
+        console.log(
+          "📦 Status das empresas:",
+          res.data.data?.map((c: any) => c.status),
+        );
+        setListCompany(res.data);
+        return res.data;
+      })
+      .catch((err) => {
+        console.error("Erro ao listar empresas:", err);
+        toast.error(err.response?.data?.message || "Erro ao listar empresas");
+        return {
+          total: 0,
+          page: 0,
+          limit: 0,
+          totalPages: 0,
+          data: [],
+        };
+      });
+
+    return response;
   };
-
-  if (options.name) {
-    params.name = options.name;
-  }
-
-  if (options.categories && options.categories.length > 0) {
-    params.categories = options.categories.join(',');
-  }
-
-  if (options.highlight !== undefined && options.highlight !== null) {
-    params.highlight = String(options.highlight);
-  }
-
-  if (options.isActive !== undefined && options.isActive !== null) {
-    params.isActive =
-      typeof options.isActive === "boolean"
-        ? String(options.isActive)
-        : options.isActive;
-  }
-
-  console.log('🔍 Params sendo enviados:', params);
-  
-  const queryString = new URLSearchParams(params).toString();
-
-  const config = { params };
-
-  const response = await api
-    .get("/company", config)
-    .then((res) => {
-      console.log('📦 Total de empresas retornadas:', res.data.data?.length);
-      console.log('📦 Status das empresas:', res.data.data?.map((c: any) => c.status));
-      setListCompany(res.data);
-      return res.data;
-    })
-    .catch((err) => {
-      console.error("Erro ao listar empresas:", err);
-      toast.error(err.response?.data?.message || "Erro ao listar empresas");
-      return {
-        total: 0,
-        page: 0,
-        limit: 0,
-        totalPages: 0,
-        data: [],
-      };
-    });
-
-  return response;
-};
   const CreateCompany = async (
-    data: UpdateCompanyProps
-  ): Promise<ICompanyProps | void> => {
+    data: UpdateCompanyProps,
+  ): Promise<ICompanyProps> => {
     const { "user:token": token } = parseCookies();
     const config = {
       headers: { Authorization: `bearer ${token}` },
     };
     try {
       const response = await api.post("/company", data, config);
+      const companyData = {
+        ...response.data,
+        status: response.data.status || "inactive",
+      };
       toast.success("Empresa criada com sucesso!");
       push("/comercio");
+      return companyData;
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Erro ao criar empresa");
       throw err;
@@ -251,7 +259,7 @@ const ListCompany = async (
 
   const UpdateCompany = async (
     data: UpdateCompanyProps,
-    id: string
+    id: string,
   ): Promise<void> => {
     const { "user:token": token } = parseCookies();
     const config = {
@@ -304,7 +312,7 @@ const ListCompany = async (
       };
     } catch (err: any) {
       toast.error(
-        err.response?.data?.message || "Erro ao buscar detalhes da empresa"
+        err.response?.data?.message || "Erro ao buscar detalhes da empresa",
       );
       throw err;
     }
@@ -312,7 +320,7 @@ const ListCompany = async (
 
   const CreateImageCompany = async (
     data: { filename: string; contentType: string },
-    company_id: string
+    company_id: string,
   ): Promise<void> => {
     const { "user:token": token } = parseCookies();
     const config = {
@@ -322,12 +330,12 @@ const ListCompany = async (
       await api.post(
         `/company/${company_id}/upload-company-image`,
         data,
-        config
+        config,
       );
       toast.success("Logo da empresa criada com sucesso!");
     } catch (err: any) {
       toast.error(
-        err.response?.data?.message || "Erro ao criar logo da empresa"
+        err.response?.data?.message || "Erro ao criar logo da empresa",
       );
       throw err;
     }
@@ -335,7 +343,7 @@ const ListCompany = async (
 
   const UploadCompanyLogo = async (
     file: { filename: string; contentType: string },
-    presignedURL: string
+    presignedURL: string,
   ): Promise<uploadResponseProps> => {
     const config = {
       headers: {
@@ -349,7 +357,7 @@ const ListCompany = async (
       return response.data;
     } catch (err: any) {
       toast.error(
-        err.response?.data?.message || "Erro ao fazer upload do logo"
+        err.response?.data?.message || "Erro ao fazer upload do logo",
       );
       throw err;
     }
