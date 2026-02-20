@@ -66,7 +66,7 @@ const statusOptions: OptionType[] = Object.entries(statusLabels).map(
   ([value, label]) => ({
     value,
     label,
-  })
+  }),
 );
 
 const highlightOptions: OptionType[] = [
@@ -76,10 +76,10 @@ const highlightOptions: OptionType[] = [
 
 export default function FormCreateCompany() {
   const { back } = useRouter();
-  const { CreateCompany, SelfCompany } = useContext(CompanyContext);
+  const { CreateCompany } = useContext(CompanyContext);
   const { listPortals, ListPortals } = useContext(PortalContext);
   const { listCompanyCategory, ListCompanyCategory } = useContext(
-    CompanyCategoryContext
+    CompanyCategoryContext,
   );
 
   // Estados otimizados
@@ -165,7 +165,7 @@ export default function FormCreateCompany() {
     }
 
     const selectedPortal = listPortals?.find((portal) =>
-      selectedPortalIds.includes(portal.id)
+      selectedPortalIds.includes(portal.id),
     );
 
     if (selectedPortal) {
@@ -208,7 +208,7 @@ export default function FormCreateCompany() {
       const message = encodeURIComponent(dynamicMessage);
       setValue(
         "linkWhatsapp",
-        `https://wa.me/55${currentWhatsapp}?text=${message}`
+        `https://wa.me/55${currentWhatsapp}?text=${message}`,
       );
     }
   }, [watch("portalIds"), listPortals]);
@@ -224,7 +224,7 @@ export default function FormCreateCompany() {
           ? `(${value.substring(0, 2)}) ${value.substring(2)}`
           : `(${value.substring(0, 2)}) ${value.substring(
               2,
-              7
+              7,
             )}-${value.substring(7)}`;
     }
 
@@ -287,12 +287,16 @@ export default function FormCreateCompany() {
   };
 
   // Função de upload da logo
-  const uploadCompanyLogo = async (file: File, company_name: string) => {
+  const uploadCompanyLogo = async (file: File, companyId: string) => {
     try {
       const { "user:token": token } = parseCookies();
 
-      const response = await SelfCompany(company_name);
-      const companyId = response.id;
+      if (!token) {
+        toast.error("Token de autenticação não encontrado");
+        return;
+      }
+
+      console.log("Iniciando upload da imagem para empresa:", companyId);
 
       const response_upload = await api.post(
         `/company/${companyId}/upload-company-image`,
@@ -304,14 +308,16 @@ export default function FormCreateCompany() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       const presignedUrl = response_upload.data.uploadUrl;
 
+      console.log("Presigned URL obtida, fazendo upload do arquivo...");
+
       const uploadRes = await api.put(presignedUrl, file, {
         headers: {
-          "Content-Type": file.type, // importante para manter o tipo do arquivo
+          "Content-Type": file.type,
         },
       });
 
@@ -319,7 +325,12 @@ export default function FormCreateCompany() {
         toast.success("Imagem da empresa cadastrada com sucesso!");
       }
     } catch (error: any) {
-      toast.error("Erro ao fazer upload do logo");
+      console.error("Erro ao fazer upload do logo:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Erro ao fazer upload do logo";
+      toast.error(errorMessage);
     }
   };
   // Submit otimizado do formulário
@@ -361,24 +372,21 @@ export default function FormCreateCompany() {
         document_type: data.document_type || "cnpj",
       };
 
-      // Criar empresa
-      await CreateCompany(companyData).then((res) => {
-        // Upload da imagem se houver (async)
-        if (selectedImage?.file) {
-          setTimeout(
-            () => uploadCompanyLogo(selectedImage.file, data.name),
-            500
-          );
-        }
-      });
+      // Criar empresa e obter o ID
+      const createdCompany = await CreateCompany(companyData);
+
+      // Upload da imagem se houver
+      if (selectedImage?.file && createdCompany?.id) {
+        console.log("Empresa criada com ID:", createdCompany.id);
+        await uploadCompanyLogo(selectedImage.file, createdCompany.id);
+      }
+
       formSubmittedSuccessfully.current = true;
 
       // Reset completo
       reset();
       setSelectedImage(null);
       setWhatsappDisplay("");
-
-      toast.success("Empresa criada com sucesso!");
     } catch (error: any) {
       console.error("Erro ao criar empresa:", error);
       toast.error(error.message || "Erro ao criar empresa");
@@ -799,7 +807,8 @@ export default function FormCreateCompany() {
                               <p className="text-gray-500 italic text-xs">
                                 Mensagem: "
                                 {decodeURIComponent(
-                                  watch("linkWhatsapp")?.split("text=")[1] || ""
+                                  watch("linkWhatsapp")?.split("text=")[1] ||
+                                    "",
                                 )}
                                 "
                               </p>

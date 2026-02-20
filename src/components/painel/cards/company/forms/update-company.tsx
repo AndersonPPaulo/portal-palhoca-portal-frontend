@@ -64,7 +64,7 @@ const statusOptions: OptionType[] = Object.entries(statusLabels).map(
   ([value, label]) => ({
     value,
     label,
-  })
+  }),
 );
 
 const highlightOptions: OptionType[] = [
@@ -83,7 +83,7 @@ export default function FormUpdateCompany({
   const { listPortals, ListPortals } = useContext(PortalContext);
   const [whatsappDisplay, setWhatsappDisplay] = useState("");
   const { listCompanyCategory, ListCompanyCategory } = useContext(
-    CompanyCategoryContext
+    CompanyCategoryContext,
   );
 
   const [isLoading, setIsLoading] = useState(true);
@@ -176,7 +176,7 @@ export default function FormUpdateCompany({
     }
 
     const selectedPortal = listPortals?.find((portal) =>
-      selectedPortalIds.includes(portal.id)
+      selectedPortalIds.includes(portal.id),
     );
 
     if (selectedPortal) {
@@ -195,7 +195,7 @@ export default function FormUpdateCompany({
       const phoneNumber = match[1];
       return `(${phoneNumber.substring(0, 2)}) ${phoneNumber.substring(
         2,
-        7
+        7,
       )}-${phoneNumber.substring(7)}`;
     }
 
@@ -228,7 +228,7 @@ export default function FormUpdateCompany({
         data?.portals?.filter((p) => p && p.id).map((p) => p.id) || [];
 
       const whatsappFormatted = extractPhoneFromWhatsappLink(
-        data?.linkWhatsapp || ""
+        data?.linkWhatsapp || "",
       );
       setWhatsappDisplay(whatsappFormatted);
 
@@ -336,7 +336,7 @@ export default function FormUpdateCompany({
           ? `(${value.substring(0, 2)}) ${value.substring(2)}`
           : `(${value.substring(0, 2)}) ${value.substring(
               2,
-              7
+              7,
             )}-${value.substring(7)}`;
     }
 
@@ -359,7 +359,7 @@ export default function FormUpdateCompany({
       const message = encodeURIComponent(dynamicMessage);
       setValue(
         "linkWhatsapp",
-        `https://wa.me/55${currentWhatsapp}?text=${message}`
+        `https://wa.me/55${currentWhatsapp}?text=${message}`,
       );
     }
   }, [watch("portalIds"), listPortals]);
@@ -374,6 +374,13 @@ export default function FormUpdateCompany({
     try {
       const { "user:token": token } = parseCookies();
 
+      if (!token) {
+        toast.error("Token de autenticação não encontrado");
+        return;
+      }
+
+      console.log("Iniciando upload da imagem para empresa:", company_id);
+
       const response_upload = await api.post(
         `/company/${company_id}/upload-company-image`,
         {
@@ -384,22 +391,29 @@ export default function FormUpdateCompany({
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       const presignedUrl = response_upload.data.uploadUrl;
 
+      console.log("Presigned URL obtida, fazendo upload do arquivo...");
+
       const uploadRes = await api.put(presignedUrl, file, {
         headers: {
-          "Content-Type": file.type, // importante para manter o tipo do arquivo
+          "Content-Type": file.type,
         },
       });
 
       if (uploadRes.status == 200) {
-        toast.success("Imagem da empresa cadastrada com sucesso!");
+        toast.success("Imagem da empresa atualizada com sucesso!");
       }
     } catch (error: any) {
-      toast.error("Erro ao fazer upload do logo");
+      console.error("Erro ao fazer upload do logo:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Erro ao fazer upload do logo";
+      toast.error(errorMessage);
     }
   };
 
@@ -869,7 +883,8 @@ export default function FormUpdateCompany({
                               <p className="text-gray-500 italic text-xs">
                                 Mensagem: "
                                 {decodeURIComponent(
-                                  watch("linkWhatsapp")?.split("text=")[1] || ""
+                                  watch("linkWhatsapp")?.split("text=")[1] ||
+                                    "",
                                 )}
                                 "
                               </p>
