@@ -459,11 +459,11 @@ export default function FormUpdateCompany({
       }
 
       toast.success("Empresa atualizada com sucesso!");
+      router.push("/comercio");
     } catch (error) {
       toast.error("Erro ao atualizar empresa. Tente novamente.");
     } finally {
       setIsSubmitting(false);
-      router.push("/comercio");
     }
   };
 
