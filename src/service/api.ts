@@ -20,11 +20,11 @@ let apiBaseURL: string;
 if (useMockApi) {
   // Se estiver no browser (client-side), sempre usar localhost
   if (typeof window !== "undefined") {
-    apiBaseURL = "http://localhost:5555";
+    apiBaseURL = "http://localhost:3000";
   } else {
     // Se estiver no servidor (server-side), pode usar a URL da variável de ambiente
     // ou localhost como fallback
-    apiBaseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5555";
+    apiBaseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
   }
 } else {
   // Usar a URL do .env ou fallback para produção
