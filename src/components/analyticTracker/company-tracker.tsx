@@ -148,7 +148,7 @@ export default function CompanyTracker({
 
   // Buscar dados iniciais imediatamente
   useEffect(() => {
-    Get100EventsCompany(itemsPerPage);
+    Get100EventsCompany(itemsPerPage, "print");
   }, [itemsPerPage, Get100EventsCompany]);
 
   useEffect(() => {
@@ -156,23 +156,21 @@ export default function CompanyTracker({
 
     // Intervalo de 5 segundos para atualização automática
     const interval = setInterval(() => {
-      Get100EventsCompany(itemsPerPage, undefined, true);
-    }, 1000);
+      Get100EventsCompany(itemsPerPage, "print", true);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [isLive, Get100EventsCompany, itemsPerPage]);
 
   const [eventFilter, setEventFilter] = useState<
-    "all" | "view" | "view_end" | "click" | "whatsapp_click"
+    "all" | "view" | "whatsapp_click"
   >("all");
 
   const filteredEvents = useMemo(() => {
     return lastEventsCompany.filter((event) => {
-      // Filtrar apenas view e whatsapp_click
       const isAllowedType =
         event.event_type === "view" || event.event_type === "whatsapp_click";
       if (!isAllowedType) return false;
-
       return eventFilter === "all" ? true : event.event_type === eventFilter;
     });
   }, [lastEventsCompany, eventFilter]);
@@ -224,8 +222,6 @@ export default function CompanyTracker({
           >
             <option value="all">Todas as ações</option>
             <option value="view">Visualizações</option>
-            <option value="view_end">Explorou</option>
-            <option value="click">Interações</option>
             <option value="whatsapp_click">Cliques no WhatsApp</option>
           </select>
         </div>
