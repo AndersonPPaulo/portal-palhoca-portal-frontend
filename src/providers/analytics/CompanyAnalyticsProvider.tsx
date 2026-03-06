@@ -90,6 +90,7 @@ interface ICompanyAnalyticsData {
   Get100EventsCompany(
     limit?: number,
     excludeType?: string,
+    merge?: boolean,
   ): Promise<IVirtualEventResponse>;
 
   lastEventsCompany: IEvent[];
@@ -130,6 +131,7 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
     async (
       limit: number = 100,
       excludeType?: string,
+      merge: boolean = false,
     ): Promise<IVirtualEventResponse> => {
       try {
         const validLimit = Math.min(Math.max(limit, 1), 300);
@@ -137,7 +139,16 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
         const res = await api.get<IVirtualEventResponse>(
           `/analytics/last-company-events/${validLimit}${queryParams}`,
         );
-        setLastEventsCompany(res.data.response.companyEvents);
+        const incoming = res.data.response.companyEvents;
+        if (merge) {
+          setLastEventsCompany((prev) => {
+            const existingIds = new Set(prev.map((e) => e.id));
+            const newEvents = incoming.filter((e) => !existingIds.has(e.id));
+            return newEvents.length > 0 ? [...newEvents, ...prev] : prev;
+          });
+        } else {
+          setLastEventsCompany(incoming);
+        }
         return res.data;
       } catch (err) {
         throw err;

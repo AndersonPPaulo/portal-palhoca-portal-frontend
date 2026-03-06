@@ -182,7 +182,7 @@ export default function ArticleTracker({
   useEffect(() => {
     const timer = setTimeout(() => {
       Get100EventsArticle(itemsPerPage);
-    }, 30000);
+    }, 1000);
     return () => clearTimeout(timer);
   }, [itemsPerPage, Get100EventsArticle]);
 

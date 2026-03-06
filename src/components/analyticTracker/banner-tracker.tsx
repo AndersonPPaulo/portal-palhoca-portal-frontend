@@ -148,7 +148,7 @@ export default function BannerTracker({
   useEffect(() => {
     const timer = setTimeout(() => {
       Get100EventsBanner(itemsPerPage);
-    }, 30000);
+    }, 1000);
     return () => clearTimeout(timer);
   }, [itemsPerPage, Get100EventsBanner]);
 

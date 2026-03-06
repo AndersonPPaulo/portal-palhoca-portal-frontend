@@ -154,10 +154,10 @@ export default function CompanyTracker({
   useEffect(() => {
     if (!isLive) return;
 
-    // Intervalo de 30 segundos para atualização automática
+    // Intervalo de 5 segundos para atualização automática
     const interval = setInterval(() => {
-      Get100EventsCompany(itemsPerPage);
-    }, 30000);
+      Get100EventsCompany(itemsPerPage, undefined, true);
+    }, 1000);
 
     return () => clearInterval(interval);
   }, [isLive, Get100EventsCompany, itemsPerPage]);
