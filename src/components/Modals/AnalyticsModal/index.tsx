@@ -341,6 +341,7 @@ export default function ReusableAnalyticsModal({
         <AnalyticsReportPDF
           entityId={entityId}
           entityTitle={entityTitle}
+          entityType={entityType}
           events={editableEvents}
           eventTypeConfigs={eventTypeConfigs}
           metricConfigs={metricConfigs}

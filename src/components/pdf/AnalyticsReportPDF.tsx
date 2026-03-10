@@ -194,6 +194,7 @@ export interface DetailedEvent {
 interface AnalyticsReportPDFProps {
   entityId: string;
   entityTitle: string;
+  entityType?: string;
   events: Record<string, number>;
   eventTypeConfigs: EventTypeConfig[];
   metricConfigs?: MetricConfig[];
@@ -205,6 +206,7 @@ interface AnalyticsReportPDFProps {
 const AnalyticsReportPDF: React.FC<AnalyticsReportPDFProps> = ({
   entityId,
   entityTitle,
+  entityType,
   events,
   eventTypeConfigs,
   metricConfigs,
@@ -236,7 +238,7 @@ const AnalyticsReportPDF: React.FC<AnalyticsReportPDFProps> = ({
     if (metricConfigs) {
       return metricConfigs.map((metric) => ({
         label: metric.label,
-        value: metric.calculation(events),
+        value: metric.calculation(events, detailedEvents),
       }));
     }
 
@@ -330,6 +332,41 @@ const AnalyticsReportPDF: React.FC<AnalyticsReportPDFProps> = ({
               {eventTypeConfigs.map((config) => {
                 const value = events[config.type] || 0;
                 const totalViews = events.view || 0;
+                const totalPrints = events.print || 0;
+                const totalClicks = events.click || 0;
+                
+                // Lógica especial para view_source em company
+                if (config.type === "view_source" && entityType === "company") {
+                  const portalViews = totalClicks;
+                  const externalViews = totalViews - totalClicks;
+                  const portalPercent = totalViews > 0 ? ((portalViews / totalViews) * 100).toFixed(1) : "0";
+                  const externalPercent = totalViews > 0 ? ((externalViews / totalViews) * 100).toFixed(1) : "0";
+                  
+                  return (
+                    <View key={config.type} style={styles.eventContainer}>
+                      <View style={styles.eventHeader}>
+                        <Text style={styles.eventLabel}>{config.label}</Text>
+                        <Text style={styles.eventValue}>
+                          Total: {totalViews.toLocaleString()}
+                        </Text>
+                      </View>
+                      <Text style={styles.eventDescription}>
+                        {config.description}
+                      </Text>
+                      <Text style={styles.eventDescription}>
+                        Portal: {portalPercent}% ({portalViews}) | Externa: {externalPercent}% ({externalViews})
+                      </Text>
+                    </View>
+                  );
+                }
+                
+                // Percentagem em relação a impressões para view em company
+                const viewPercentage =
+                  config.type === "view" && entityType === "company" && totalPrints > 0
+                    ? ((value / totalPrints) * 100).toFixed(1)
+                    : null;
+                
+                // Percentagem padrão em relação a views
                 const percentage =
                   config.type !== "view" && totalViews > 0
                     ? ((value / totalViews) * 100).toFixed(1)
@@ -346,6 +383,11 @@ const AnalyticsReportPDF: React.FC<AnalyticsReportPDFProps> = ({
                     <Text style={styles.eventDescription}>
                       {config.description}
                     </Text>
+                    {viewPercentage && (
+                      <Text style={styles.eventDescription}>
+                        {viewPercentage}% das impressões
+                      </Text>
+                    )}
                     {percentage && (
                       <Text style={styles.eventDescription}>
                         {percentage}% do total de visualizações
@@ -356,21 +398,23 @@ const AnalyticsReportPDF: React.FC<AnalyticsReportPDFProps> = ({
               })}
             </View>
 
-            {/* Informações Contextuais */}
-            <View style={styles.infoBox}>
-              <Text style={styles.infoTitle}>Como interpretar as métricas</Text>
-              <Text style={styles.infoText}>
-                • Taxa de Conclusão: (Leituras Completas ÷ Visualizações) × 100.
-                Mede o engajamento até o fim do conteúdo.
-              </Text>
-              <Text style={styles.infoText}>
-                • CTR: (Cliques ÷ Visualizações) × 100. Indica a proporção de
-                usuários que clicaram.
-              </Text>
-              <Text style={styles.infoText}>
-                • Os dados refletem o período selecionado ou todo o histórico.
-              </Text>
-            </View>
+            {/* Informações Contextuais - não exibir para company */}
+            {entityType !== "company" && (
+              <View style={styles.infoBox}>
+                <Text style={styles.infoTitle}>Como interpretar as métricas</Text>
+                <Text style={styles.infoText}>
+                  • Taxa de Conclusão: (Leituras Completas ÷ Visualizações) × 100.
+                  Mede o engajamento até o fim do conteúdo.
+                </Text>
+                <Text style={styles.infoText}>
+                  • CTR: (Cliques ÷ Visualizações) × 100. Indica a proporção de
+                  usuários que clicaram.
+                </Text>
+                <Text style={styles.infoText}>
+                  • Os dados refletem o período selecionado ou todo o histórico.
+                </Text>
+              </View>
+            )}
 
             {/* Listagem Detalhada de Eventos */}
             {eventsWithTimestamp.length > 0 && (
