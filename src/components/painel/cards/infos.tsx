@@ -27,6 +27,10 @@ export default function CardInfoPainel({
 }: Props) {
   const { push } = useRouter();
 
+  const formatNumber = (num: number): string => {
+    return num.toLocaleString('pt-BR');
+  };
+
   if (isAdmin === false) return null;
 
   return (
@@ -35,7 +39,7 @@ export default function CardInfoPainel({
     >
       <CardContent className="flex flex-col justify-evenly py-4 px-8 h-full w-full items-start">
         <span className="h-8 w-8">{icon}</span>
-        <span className={`text-header-g`}>{value}</span>
+        <span className={`text-header-g`}>{formatNumber(value)}</span>
         <div className="flex items-center justify-between w-full">
           <span className="text-body-gg text-gray-40">{title}</span>
           <ArrowRight
