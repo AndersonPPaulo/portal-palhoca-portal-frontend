@@ -74,7 +74,14 @@ export interface MetricConfig {
   icon: LucideIcon;
   color: string;
   bgColor: string;
-  calculation: (events: Record<string, number>) => number | string;
+  calculation: (
+    events: Record<string, number>,
+    rawEvents?: Array<{
+      event_type: string;
+      timestamp?: string;
+      extra_data?: Record<string, unknown>;
+    }>,
+  ) => number | string;
 }
 
 // PROPS DO COMPONENTE
@@ -764,10 +771,13 @@ export default function ReusableAnalyticsModal({
             <div className="p-6 space-y-8">
               {/* Métricas Principais */}
               {metricConfigs ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                   {metricConfigs.map((metric) => {
                     const Icon = metric.icon;
-                    const value = metric.calculation(editableEvents);
+                    const value = metric.calculation(
+                      editableEvents,
+                      analyticsData.rawEvents,
+                    );
 
                     return (
                       <Card
@@ -918,7 +928,69 @@ export default function ReusableAnalyticsModal({
                         </CardHeader>
 
                         <CardContent className="pt-0">
-                          {isEditing ? (
+                          {/* Card especial para view_source */}
+                          {config.type === "view_source" &&
+                          entityType === "company" ? (
+                            <div className="space-y-3">
+                              {(() => {
+                                // Para ver pelo portal é obrigatório ter um click
+                                // Views sem clicks = vieram de fonte externa (ex: Google)
+                                const totalViews = editableEvents.view || 0;
+                                const totalClicks = editableEvents.click || 0;
+
+                                if (totalViews === 0) {
+                                  return (
+                                    <div className="text-gray-500 text-sm">
+                                      Nenhuma visualização registrada
+                                    </div>
+                                  );
+                                }
+
+                                // Clicks = Views do Portal (precisa clicar para visualizar)
+                                const portalViews = totalClicks;
+                                // Views sem clicks = Views Externas (Google, links diretos, etc)
+                                const externalViews = totalViews - totalClicks;
+
+                                const portalPercent =
+                                  totalViews > 0
+                                    ? (
+                                        (portalViews / totalViews) *
+                                        100
+                                      ).toFixed(1)
+                                    : "0";
+                                const externalPercent =
+                                  totalViews > 0
+                                    ? (
+                                        (externalViews / totalViews) *
+                                        100
+                                      ).toFixed(1)
+                                    : "0";
+
+                                return (
+                                  <div className="space-y-3">
+                                    <div className="text-xs text-gray-600 space-y-2">
+                                      <div className="flex items-center justify-between p-2 bg-blue-50 rounded">
+                                        <span className="font-medium">
+                                          🌐 Portal:
+                                        </span>
+                                        <span className="font-bold text-blue-700">
+                                          {portalPercent}% ({portalViews})
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between p-2 bg-green-50 rounded">
+                                        <span className="font-medium">
+                                          🔗 Externa:
+                                        </span>
+                                        <span className="font-bold text-green-700">
+                                          {externalPercent}% ({externalViews})
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          ) : isEditing ? (
                             <div className="space-y-3">
                               <div>
                                 <Label
@@ -966,6 +1038,20 @@ export default function ReusableAnalyticsModal({
                                 {value.toLocaleString()}
                               </div>
 
+                              {/* Mostrar porcentagem em relação às impressões para view em company */}
+                              {config.type === "view" &&
+                                entityType === "company" &&
+                                editableEvents.print > 0 &&
+                                value > 0 && (
+                                  <div className="text-xs text-gray-500">
+                                    {(
+                                      (value / editableEvents.print) *
+                                      100
+                                    ).toFixed(1)}
+                                    % do total das impressões
+                                  </div>
+                                )}
+
                               {/* Mostrar porcentagem em relação aos views */}
                               {config.type !== "view" &&
                                 defaultMetrics.totalViews > 0 &&
@@ -986,30 +1072,32 @@ export default function ReusableAnalyticsModal({
                   })}
                 </div>
               </div>
-              {/* Informações Contextuais */}
-              <div className="bg-white rounded-xl p-6 border border-gray-100">
-                <h4 className="font-semibold text-gray-900 mb-4">
-                  Como interpretar as métricas
-                </h4>
-                <div className="text-sm text-gray-600 space-y-2">
-                  <div className="space-y-2">
-                    <p>
-                      <strong>Taxa de Conclusão:</strong> (Leituras Completas ÷
-                      Visualizações) × 100. Mede o engajamento do usuário até o
-                      fim do conteúdo.
-                    </p>
-                    <p>
-                      <strong>CTR:</strong> (Cliques ÷ Visualizações) × 100.
-                      Indica a proporção de usuários que clicaram em algum
-                      elemento.
-                    </p>
-                    <p>
-                      <strong>Atualização:</strong> Os dados são atualizados em
-                      tempo real.
-                    </p>
+              {/* Informações Contextuais - não exibir para company */}
+              {entityType !== "company" && (
+                <div className="bg-white rounded-xl p-6 border border-gray-100">
+                  <h4 className="font-semibold text-gray-900 mb-4">
+                    Como interpretar as métricas
+                  </h4>
+                  <div className="text-sm text-gray-600 space-y-2">
+                    <div className="space-y-2">
+                      <p>
+                        <strong>Taxa de Conclusão:</strong> (Leituras Completas
+                        ÷ Visualizações) × 100. Mede o engajamento do usuário
+                        até o fim do conteúdo.
+                      </p>
+                      <p>
+                        <strong>CTR:</strong> (Cliques ÷ Visualizações) × 100.
+                        Indica a proporção de usuários que clicaram em algum
+                        elemento.
+                      </p>
+                      <p>
+                        <strong>Atualização:</strong> Os dados são atualizados
+                        em tempo real.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>

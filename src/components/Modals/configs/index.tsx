@@ -214,6 +214,15 @@ export const bannerMetricConfigs: MetricConfig[] = [
 // Configuração específica para comércios baseada no seu EventType
 export const companyEventConfigs: EventTypeConfig[] = [
   {
+    type: "print",
+    label: "Impressões",
+    icon: Eye,
+    color: "text-slate-600",
+    bgColor: "bg-slate-50",
+    borderColor: "border-slate-200",
+    description: "Aparições na tela principal e busca sem cliques",
+  },
+  {
     type: "view",
     label: "Visualizações",
     icon: Eye,
@@ -221,15 +230,6 @@ export const companyEventConfigs: EventTypeConfig[] = [
     bgColor: "bg-blue-50",
     borderColor: "border-blue-200",
     description: "Total de visualizações do comércio",
-  },
-  {
-    type: "view_end",
-    label: "Visualizações Completas",
-    icon: BarChart3,
-    color: "text-green-600",
-    bgColor: "bg-green-50",
-    borderColor: "border-green-200",
-    description: "Usuários que visualizaram completamente o perfil do comércio",
   },
   {
     type: "click",
@@ -259,21 +259,33 @@ export const companyEventConfigs: EventTypeConfig[] = [
     description: "Cliques na localização do comércio",
   },
   {
-    type: "profile_view",
-    label: "Visualizações de Perfil",
-    icon: User,
-    color: "text-orange-600",
-    bgColor: "bg-orange-50",
-    borderColor: "border-orange-200",
-    description: "Visualizações do perfil completo do comércio",
+    type: "view_source",
+    label: "Origem das Visualizações",
+    icon: TrendingUp,
+    color: "text-indigo-600",
+    bgColor: "bg-indigo-50",
+    borderColor: "border-indigo-200",
+    description: "Proporção de views do portal (com click) vs externas (sem click)",
   },
 ];
 
 // Métricas calculadas específicas para comércios
 export const companyMetricConfigs: MetricConfig[] = [
   {
+    key: "print",
+    label: "Impressões",
+    icon: Eye,
+    color: "text-slate-600",
+    bgColor: "border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100",
+    calculation: (events) => {
+      // Impressões = aparições na tela principal e busca sem cliques
+      const prints = events.print || 0;
+      return prints;
+    },
+  },
+  {
     key: "total_views",
-    label: "Total Views",
+    label: "Total Visualizações",
     icon: Eye,
     color: "text-blue-600",
     bgColor: "border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100",
@@ -288,23 +300,19 @@ export const companyMetricConfigs: MetricConfig[] = [
     calculation: (events) => events.click || 0,
   },
   {
+    key: "map_clicks",
+    label: "Cliques no Mapa",
+    icon: MapPin,
+    color: "text-red-600",
+    bgColor: "border-red-200 bg-gradient-to-br from-red-50 to-red-100",
+    calculation: (events) => events.map_click || 0,
+  },
+  {
     key: "whatsapp_clicks",
-    label: "Cliques no Whatsapp",
+    label: "Cliques no WhatsApp",
     icon: MessageCircle,
     color: "text-green-600",
     bgColor: "border-green-200 bg-gradient-to-br from-green-50 to-green-100",
     calculation: (events) => events.whatsapp_click || 0,
-  },
-  {
-    key: "conversion_rate",
-    label: "Taxa Conversão",
-    icon: BarChart3,
-    color: "text-orange-600",
-    bgColor: "border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100",
-    calculation: (events) => {
-      const views = events.view || 0;
-      const whatsapp = events.whatsapp_click || 0;
-      return views > 0 ? `${((whatsapp / views) * 100).toFixed(1)}%` : "0%";
-    },
   },
 ];

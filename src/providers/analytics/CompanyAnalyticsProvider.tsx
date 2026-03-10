@@ -8,6 +8,7 @@ import { ExtraData } from "./ArticleAnalyticsProvider";
 
 // Enums
 export enum EventType {
+  PRINT = "print",
   VIEW = "view",
   VIEW_END = "view_end",
   CLICK = "click",
