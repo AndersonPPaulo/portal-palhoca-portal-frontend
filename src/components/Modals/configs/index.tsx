@@ -6,6 +6,7 @@ import {
   MapPin,
   User,
   BarChart3,
+  EyeOff,
 } from "lucide-react";
 import type { EventTypeConfig, MetricConfig } from "../AnalyticsModal/index";
 
@@ -216,7 +217,7 @@ export const companyEventConfigs: EventTypeConfig[] = [
   {
     type: "print",
     label: "Impressões",
-    icon: Eye,
+    icon: EyeOff,
     color: "text-slate-600",
     bgColor: "bg-slate-50",
     borderColor: "border-slate-200",
@@ -274,7 +275,7 @@ export const companyMetricConfigs: MetricConfig[] = [
   {
     key: "print",
     label: "Impressões",
-    icon: Eye,
+    icon: EyeOff,
     color: "text-slate-600",
     bgColor: "border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100",
     calculation: (events) => {
