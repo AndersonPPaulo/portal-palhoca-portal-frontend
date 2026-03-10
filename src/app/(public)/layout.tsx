@@ -4,7 +4,7 @@ import { Providers } from "@/providers";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
-  title: "Si3 Sistemas",
+  title: "Si3 Portais",
    icons: {
     icon: '/favicon-32x32.png',
     shortcut: '/favicon-16x16.png',
