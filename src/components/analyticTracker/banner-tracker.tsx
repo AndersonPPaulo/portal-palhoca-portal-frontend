@@ -49,6 +49,29 @@ const eventTypeConfig = {
   },
 };
 
+const portalColors: Record<string, { bg: string; border: string; text: string }> = {
+  "PORTAL PALHOÇA": { 
+    bg: "bg-[#00a550]", 
+    border: "border-[#00a550]", 
+    text: "text-[#00a550]" 
+  },
+  "PORTAL FLORIANÓPOLIS": { 
+    bg: "bg-[#007fc2]", 
+    border: "border-[#007fc2]", 
+    text: "text-[#007fc2]" 
+  },
+  "PORTAL BIGUAÇU": { 
+    bg: "bg-[#f59e0b]", 
+    border: "border-[#f59e0b]", 
+    text: "text-[#f59e0b]" 
+  },
+  "PORTAL SÃO JOSÉ": { 
+    bg: "bg-[#dc2626]", 
+    border: "border-[#dc2626]", 
+    text: "text-[#dc2626]" 
+  },
+};
+
 function formatTimeAgo(timestamp: string): string {
   const date = new Date(timestamp);
   const now = new Date();
@@ -64,6 +87,9 @@ function formatTimeAgo(timestamp: string): string {
 }
 
 function BannerEventItem({ event }: { event: IEvent }) {
+  const portalName = event.extra_data?.portal;
+  const portalStyle = portalName ? portalColors[portalName] : null;
+  
   const eventConfig = eventTypeConfig[
     event.event_type as keyof typeof eventTypeConfig
   ] ?? {
@@ -114,17 +140,24 @@ function BannerEventItem({ event }: { event: IEvent }) {
               {event.banner.name}
             </h4>
 
-            <div className="flex items-center gap-4 text-xs text-gray-500">
-              <div className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {formatTimeAgo(event.timestamp)}
-              </div>
-
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              {portalName && (
+                <Badge
+                  variant="outline"
+                  className={`text-xs ${portalStyle ? `${portalStyle.border} ${portalStyle.text}` : 'border-blue-300 text-blue-700'}`}
+                >
+                  {portalName}
+                </Badge>
+              )}
               {event.extra_data?.deviceType && (
                 <Badge variant="outline" className="text-xs">
                   {event.extra_data.deviceType}
                 </Badge>
               )}
+              <div className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {formatTimeAgo(event.timestamp)}
+              </div>
             </div>
           </div>
         </div>

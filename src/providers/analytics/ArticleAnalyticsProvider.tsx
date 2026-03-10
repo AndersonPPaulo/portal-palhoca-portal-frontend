@@ -73,6 +73,7 @@ export interface ExtraData {
   categoryName?: string;
   gridPosition?: string;
   intersectionRatio?: number;
+  portal?: string;
   [key: string]: unknown; // garante que pode ter qualquer outro campo
 }
 

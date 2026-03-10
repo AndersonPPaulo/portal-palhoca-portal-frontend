@@ -73,7 +73,33 @@ const categoryColors: Record<string, string> = {
   Cultura: "bg-indigo-500",
 };
 
+const portalColors: Record<string, { bg: string; border: string; text: string }> = {
+  "PORTAL PALHOÇA": { 
+    bg: "bg-[#00a550]", 
+    border: "border-[#00a550]", 
+    text: "text-[#00a550]" 
+  },
+  "PORTAL FLORIANÓPOLIS": { 
+    bg: "bg-[#007fc2]", 
+    border: "border-[#007fc2]", 
+    text: "text-[#007fc2]" 
+  },
+  "PORTAL BIGUAÇU": { 
+    bg: "bg-[#f59e0b]", 
+    border: "border-[#f59e0b]", 
+    text: "text-[#f59e0b]" 
+  },
+  "PORTAL SÃO JOSÉ": { 
+    bg: "bg-[#dc2626]", 
+    border: "border-[#dc2626]", 
+    text: "text-[#dc2626]" 
+  },
+};
+
 function ArticleEventItem({ event }: { event: IEvent }) {
+  const portalName = event.extra_data?.portal;
+  const portalStyle = portalName ? portalColors[portalName] : null;
+  
   const eventConfig = eventTypeConfig[
     event.event_type as keyof typeof eventTypeConfig
   ] ?? {
@@ -132,6 +158,13 @@ function ArticleEventItem({ event }: { event: IEvent }) {
               >
                 Notícia
               </Badge>
+              <Badge
+                variant="secondary"
+                className={`${categoryColor} text-white text-xs`}
+              >
+                <Tag className="w-3 h-3 mr-1" />
+                {event.article.category.name}
+              </Badge>
               <span className={`text-sm font-medium ${eventConfig.color}`}>
                 {eventConfig.label}
               </span>
@@ -141,14 +174,20 @@ function ArticleEventItem({ event }: { event: IEvent }) {
               {event.article.title}
             </h4>
 
-            <div className="flex items-center gap-3 text-sm text-gray-600 mb-2">
-              <Badge
-                variant="secondary"
-                className={`${categoryColor} text-white text-xs`}
-              >
-                <Tag className="w-3 h-3 mr-1" />
-                {event.article.category.name}
-              </Badge>
+            <div className="flex items-center gap-2 text-xs text-gray-600">
+              {portalName && (
+                <Badge
+                  variant="outline"
+                  className={`text-xs ${portalStyle ? `${portalStyle.border} ${portalStyle.text}` : 'border-purple-300 text-purple-700'}`}
+                >
+                  {portalName}
+                </Badge>
+              )}
+              {event.extra_data?.deviceType && (
+                <Badge variant="outline" className="text-xs">
+                  {event.extra_data.deviceType}
+                </Badge>
+              )}
               <div className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 {formatTimeAgo(event.timestamp)}
