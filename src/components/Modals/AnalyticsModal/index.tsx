@@ -772,7 +772,7 @@ export default function ReusableAnalyticsModal({
             <div className="p-6 space-y-8">
               {/* Métricas Principais */}
               {metricConfigs ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${entityType === "banner" ? "lg:grid-cols-3" : "lg:grid-cols-5"}`}>
                   {metricConfigs.map((metric) => {
                     const Icon = metric.icon;
                     const value = metric.calculation(
@@ -1073,8 +1073,8 @@ export default function ReusableAnalyticsModal({
                   })}
                 </div>
               </div>
-              {/* Informações Contextuais - não exibir para company */}
-              {entityType !== "company" && (
+              {/* Informações Contextuais - não exibir para company e banner */}
+              {entityType !== "company" && entityType !== "banner" && (
                 <div className="bg-white rounded-xl p-6 border border-gray-100">
                   <h4 className="font-semibold text-gray-900 mb-4">
                     Como interpretar as métricas

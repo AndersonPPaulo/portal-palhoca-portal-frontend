@@ -131,15 +131,6 @@ export const bannerEventConfigs: EventTypeConfig[] = [
     description: "Total de visualizações do banner",
   },
   {
-    type: "view_end",
-    label: "Visualizações Completas",
-    icon: BarChart3,
-    color: "text-green-600",
-    bgColor: "bg-green-50",
-    borderColor: "border-green-200",
-    description: "Usuários que visualizaram o banner por completo",
-  },
-  {
     type: "click",
     label: "Cliques",
     icon: MousePointer,
@@ -148,40 +139,13 @@ export const bannerEventConfigs: EventTypeConfig[] = [
     borderColor: "border-purple-200",
     description: "Total de cliques no banner",
   },
-  {
-    type: "whatsapp_click",
-    label: "Cliques WhatsApp",
-    icon: MessageCircle,
-    color: "text-green-600",
-    bgColor: "bg-green-50",
-    borderColor: "border-green-200",
-    description: "Cliques no botão WhatsApp do banner",
-  },
-  {
-    type: "map_click",
-    label: "Cliques no Mapa",
-    icon: MapPin,
-    color: "text-red-600",
-    bgColor: "bg-red-50",
-    borderColor: "border-red-200",
-    description: "Cliques em mapas ou localização no banner",
-  },
-  {
-    type: "profile_view",
-    label: "Visualizações de Perfil",
-    icon: User,
-    color: "text-orange-600",
-    bgColor: "bg-orange-50",
-    borderColor: "border-orange-200",
-    description: "Visualizações de perfil através do banner",
-  },
 ];
 
 // Métricas calculadas específicas para banners
 export const bannerMetricConfigs: MetricConfig[] = [
   {
     key: "total_impressions",
-    label: "Total Impressões",
+    label: "Total de Visualizações",
     icon: Eye,
     color: "text-blue-600",
     bgColor: "border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100",
@@ -189,34 +153,23 @@ export const bannerMetricConfigs: MetricConfig[] = [
   },
   {
     key: "total_interactions",
-    label: "Total Interações",
+    label: "Total de Cliques",
     icon: MousePointer,
     color: "text-purple-600",
     bgColor: "border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100",
-    calculation: (events) =>
-      (events.click || 0) +
-      (events.whatsapp_click || 0) +
-      (events.map_click || 0),
+    calculation: (events) => events.click || 0,
   },
   {
-    key: "view_completion_rate",
-    label: "Taxa Visualização",
+    key: "interaction_rate",
+    label: "Taxa de Interação",
     icon: TrendingUp,
     color: "text-green-600",
     bgColor: "border-green-200 bg-gradient-to-br from-green-50 to-green-100",
     calculation: (events) => {
       const views = events.view || 0;
-      const ends = events.view_end || 0;
-      return views > 0 ? `${((ends / views) * 100).toFixed(1)}%` : "0%";
+      const clicks = events.click || 0;
+      return views > 0 ? `${((clicks / views) * 100).toFixed(1)}%` : "0%";
     },
-  },
-  {
-    key: "whatsapp_clicks",
-    label: "Cliques no Whatsapp",
-    icon: MessageCircle,
-    color: "text-green-600",
-    bgColor: "border-green-200 bg-gradient-to-br from-green-50 to-green-100",
-    calculation: (events) => events.whatsapp_click || 0,
   },
 ];
 

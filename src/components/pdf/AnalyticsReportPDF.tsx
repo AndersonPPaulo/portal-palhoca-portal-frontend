@@ -398,8 +398,8 @@ const AnalyticsReportPDF: React.FC<AnalyticsReportPDFProps> = ({
               })}
             </View>
 
-            {/* Informações Contextuais - não exibir para company */}
-            {entityType !== "company" && (
+            {/* Informações Contextuais - não exibir para company e banner */}
+            {entityType !== "company" && entityType !== "banner" && (
               <View style={styles.infoBox}>
                 <Text style={styles.infoTitle}>Como interpretar as métricas</Text>
                 <Text style={styles.infoText}>
