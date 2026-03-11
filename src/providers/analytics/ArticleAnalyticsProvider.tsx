@@ -10,7 +10,7 @@ export enum EventType {
   VIEW_END = "view_end",
   CLICK = "click",
   WHATSAPP_CLICK = "whatsapp_click",
-  MAP_CLICK = "map_click",
+  VIEW_SOURCE = "view_source",
   PROFILE_VIEW = "profile_view",
 }
 

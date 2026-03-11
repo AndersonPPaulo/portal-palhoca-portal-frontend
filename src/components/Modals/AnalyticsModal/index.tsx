@@ -931,7 +931,7 @@ export default function ReusableAnalyticsModal({
                         <CardContent className="pt-0">
                           {/* Card especial para view_source */}
                           {config.type === "view_source" &&
-                          entityType === "company" ? (
+                          (entityType === "company" || entityType === "article") ? (
                             <div className="space-y-3">
                               {(() => {
                                 // Para ver pelo portal é obrigatório ter um click

@@ -335,8 +335,8 @@ const AnalyticsReportPDF: React.FC<AnalyticsReportPDFProps> = ({
                 const totalPrints = events.print || 0;
                 const totalClicks = events.click || 0;
                 
-                // Lógica especial para view_source em company
-                if (config.type === "view_source" && entityType === "company") {
+                // Lógica especial para view_source em company ou article
+                if (config.type === "view_source" && (entityType === "company" || entityType === "article")) {
                   const portalViews = totalClicks;
                   const externalViews = totalViews - totalClicks;
                   const portalPercent = totalViews > 0 ? ((portalViews / totalViews) * 100).toFixed(1) : "0";

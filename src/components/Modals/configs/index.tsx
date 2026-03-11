@@ -48,13 +48,13 @@ export const articleEventConfigs: EventTypeConfig[] = [
     description: "Cliques no botão WhatsApp",
   },
   {
-    type: "map_click",
-    label: "Cliques no Mapa",
-    icon: MapPin,
-    color: "text-red-600",
-    bgColor: "bg-red-50",
-    borderColor: "border-red-200",
-    description: "Cliques em mapas ou localização",
+    type: "view_source",
+    label: "Origem das Visualizações",
+    icon: TrendingUp,
+    color: "text-indigo-600",
+    bgColor: "bg-indigo-50",
+    borderColor: "border-indigo-200",
+    description: "Proporção de views do portal (com click) vs externas (sem click)",
   },
   {
     type: "profile_view",
@@ -63,7 +63,7 @@ export const articleEventConfigs: EventTypeConfig[] = [
     color: "text-orange-600",
     bgColor: "bg-orange-50",
     borderColor: "border-orange-200",
-    description: "Visualizações de perfil relacionadas",
+    description: "Visualizações de perfil relacionadas a colunista",
   },
 ];
 
@@ -71,7 +71,7 @@ export const articleEventConfigs: EventTypeConfig[] = [
 export const articleMetricConfigs: MetricConfig[] = [
   {
     key: "total_views",
-    label: "Total Views",
+    label: "Total Leituras",
     icon: Eye,
     color: "text-blue-600",
     bgColor: "border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100",
@@ -108,6 +108,14 @@ export const articleMetricConfigs: MetricConfig[] = [
       const clicks = events.click || 0;
       return views > 0 ? `${((clicks / views) * 100).toFixed(1)}%` : "0%";
     },
+  },
+  {
+    key: "whatsapp_clicks",
+    label: "Cliques no WhatsApp",
+    icon: MessageCircle,
+    color: "text-green-600",
+    bgColor: "border-green-200 bg-gradient-to-br from-green-50 to-green-100",
+    calculation: (events) => events.whatsapp_click || 0,
   },
 ];
 
