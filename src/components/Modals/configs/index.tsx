@@ -168,7 +168,7 @@ export const bannerMetricConfigs: MetricConfig[] = [
     calculation: (events) => {
       const views = events.view || 0;
       const clicks = events.click || 0;
-      return views > 0 ? `${((clicks / views) * 100).toFixed(1)}%` : "0%";
+      return views > 0 ? `${((clicks / views) * 100).toFixed(2)}%` : "0,00%";
     },
   },
 ];
