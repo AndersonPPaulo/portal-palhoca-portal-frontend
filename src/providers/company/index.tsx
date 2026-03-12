@@ -244,12 +244,12 @@ export const CompanyProvider = ({ children }: IChildrenReact) => {
     };
     try {
       const response = await api.post("/company", data, config);
+      const raw = response.data.response ?? response.data;
       const companyData = {
-        ...response.data,
-        status: response.data.status || "inactive",
+        ...raw,
+        status: raw.status || "inactive",
       };
       toast.success("Empresa criada com sucesso!");
-      push("/comercio");
       return companyData;
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Erro ao criar empresa");

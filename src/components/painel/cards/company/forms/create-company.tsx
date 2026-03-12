@@ -387,6 +387,9 @@ export default function FormCreateCompany() {
       reset();
       setSelectedImage(null);
       setWhatsappDisplay("");
+
+      // Navegar após tudo concluído (criação + upload da logo)
+      back();
     } catch (error: any) {
       console.error("Erro ao criar empresa:", error);
       toast.error(error.message || "Erro ao criar empresa");
