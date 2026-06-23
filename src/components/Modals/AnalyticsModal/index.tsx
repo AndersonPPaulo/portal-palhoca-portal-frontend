@@ -235,33 +235,47 @@ export default function ReusableAnalyticsModal({
   ]);
 
   const handleSave = async () => {
+    if (!analyticsActions.updateEvent) {
+      console.warn(
+        "updateEvent não foi fornecido. Não é possível persistir as alterações.",
+      );
+      return;
+    }
+
     setIsSaving(true);
 
     try {
-      // EDIÇÃO APENAS LOCAL - NÃO ENVIA PARA API
-      // Os valores editados ficam apenas em editableEvents (useState)
-      // Útil para testes e visualizações sem persistir dados no backend
+      // Identificar apenas os eventos que realmente mudaram
+      const changedEventTypes = Object.keys(editableEvents).filter(
+        (eventType) =>
+          editableEvents[eventType] !== (originalEvents[eventType] ?? 0),
+      );
 
-      // Atualizar originalEvents com os valores editados
+      // Enviar uma requisição PATCH para cada evento alterado
+      for (const eventType of changedEventTypes) {
+        await analyticsActions.updateEvent(
+          entityId,
+          eventType,
+          editableEvents[eventType],
+        );
+      }
+
+      // Atualizar originalEvents com os valores salvos
       // para que não sejam considerados como "modificações pendentes"
       setOriginalEvents({ ...editableEvents });
 
-      // Marcar que acabamos de salvar para evitar reprocessamento
+      // Marcar que acabamos de salvar para evitar que o reload da API
+      // (disparado dentro do updateEvent) reprocesse e sobrescreva os valores
       justSavedRef.current = true;
 
       setIsEditing(false);
 
-      // Resetar a flag após 1 segundo
+      // Resetar a flag após o reload da API ter chance de chegar
       setTimeout(() => {
         justSavedRef.current = false;
-      }, 1000);
-
-      // Valores editados permanecem localmente até:
-      // 1. Fechar o modal
-      // 2. Clicar em "Atualizar"
-      // 3. Aplicar filtros de data
+      }, 1500);
     } catch (error) {
-      console.error(`Erro ao processar edição local:`, error);
+      console.error(`Erro ao salvar eventos:`, error);
     } finally {
       setIsSaving(false);
     }

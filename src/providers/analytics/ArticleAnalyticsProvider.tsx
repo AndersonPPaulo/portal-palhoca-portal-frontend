@@ -201,7 +201,7 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
 
       const response = await api
         .get(endpoint, config)
-        .then((res) => {
+        .then(async (res) => {
           const responseData = res.data;
 
           // Nova estrutura da API com aggregated e detailed_events
@@ -215,13 +215,59 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
             [articleId]: detailedEvents,
           }));
 
-          // Usar os dados agregados da API (COUNT real do banco)
-          const processedEvents: ArticleEvent[] = aggregated.map(
-            (item: any) => ({
-              event_type: item.event_type as EventType,
-              virtual_count: item.total_count || 0,
-            })
-          );
+          // Buscar os contadores virtuais (valores editados) via logs de auditoria.
+          // A rota /events agrega apenas o COUNT real dos eventos, então o
+          // virtual_count editado é recuperado pelo log mais recente de cada tipo.
+          const virtualCountByType: Record<string, number> = {};
+          try {
+            const logsRes = await api.get(
+              `/analytics/event-article/${articleId}/virtual-logs`,
+              config
+            );
+            const logs: Array<{
+              event_type: string;
+              new_virtual_count: number;
+              changed_at: string;
+            }> = logsRes.data?.logs || [];
+
+            // Mais recentes primeiro; o primeiro de cada tipo é o valor atual
+            [...logs]
+              .sort(
+                (a, b) =>
+                  new Date(b.changed_at).getTime() -
+                  new Date(a.changed_at).getTime()
+              )
+              .forEach((log) => {
+                if (!(log.event_type in virtualCountByType)) {
+                  virtualCountByType[log.event_type] = log.new_virtual_count;
+                }
+              });
+          } catch {
+            // Sem logs ou erro ao buscá-los: mantém apenas o total_count agregado
+          }
+
+          // Indexar os agregados (COUNT real) por tipo
+          const aggregatedByType: Record<string, number> = {};
+          aggregated.forEach((item: any) => {
+            aggregatedByType[item.event_type] =
+              item.virtual_count ?? item.total_count ?? 0;
+          });
+
+          // União dos tipos: cobre overrides em tipos sem eventos reais
+          const allEventTypes = new Set<string>([
+            ...Object.keys(aggregatedByType),
+            ...Object.keys(virtualCountByType),
+          ]);
+
+          // Preferir o virtual_count (valor editado) quando houver log;
+          // caso contrário, usar o total_count (COUNT real do banco).
+          const processedEvents: ArticleEvent[] = Array.from(
+            allEventTypes
+          ).map((type) => ({
+            event_type: type as EventType,
+            virtual_count:
+              virtualCountByType[type] ?? aggregatedByType[type] ?? 0,
+          }));
 
           setArticleEvents((prev) => ({
             ...prev,

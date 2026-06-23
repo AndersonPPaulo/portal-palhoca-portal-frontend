@@ -196,11 +196,13 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
             [bannerId]: detailedEvents,
           }));
 
-          // Usar os dados agregados da API (COUNT real do banco)
+          // Usar os dados agregados da API.
+          // Preferir o virtual_count (valor editado/override) quando ele vier;
+          // caso contrário, usar o total_count (COUNT real do banco).
           const processedEvents: BannerEvent[] = aggregated.map(
             (item: any) => ({
               event_type: item.event_type as EventType,
-              virtual_count: item.total_count || 0,
+              virtual_count: item.virtual_count ?? item.total_count ?? 0,
             })
           );
 
