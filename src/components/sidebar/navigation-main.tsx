@@ -55,7 +55,7 @@ export function NavigationMain({ isCollapsed = false }: NavigationMainProps) {
         return ["/dashboard", "/postagens"];
 
       case "chefe de redação":
-        return ["/dashboard", "/postagens", "/relatorios"];
+        return ["/dashboard", "/postagens", "/relatorios", "/banners", "/comercio",];
 
       case "gerente comercial":
       case "vendedor":
