@@ -17,11 +17,10 @@ import { toast } from "sonner";
 import { BannerContext } from "@/providers/banner";
 import { bannerDimensions, type BannerType } from "../bannerDimensions";
 import CustomInput from "@/components/input/custom-input";
-import { CompanyContext } from "@/providers/company";
-import { CompanySelectCombobox } from "../comboboxSelect";
 import ReturnPageButton from "@/components/button/returnPage";
 import { PortalContext } from "@/providers/portal";
 import CustomSelect from "@/components/select/custom-select";
+import { useActiveCompanyOptions } from "@/hooks/useActiveCompanyOptions";
 
 const bannerSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -29,7 +28,7 @@ const bannerSchema = z.object({
   banner_style: z.enum(["topo", "destaque", "sidebar", "noticia"]),
   date_active: z.string().min(1, "Data de ativação é obrigatória"),
   date_expiration: z.string().min(1, "Data de expiração é obrigatória"),
-  company_id: z.string().min(1),
+  company_id: z.string().min(1, "Selecione uma empresa"),
   banner: z.any().refine((file) => file?.length === 1, "Imagem é obrigatória"),
   portal_id: z.string().min(1, "Selecione um portal"), // MUDANÇA: de array para string
 });
@@ -41,12 +40,11 @@ export type OptionType = { value: string; label: string };
 
 export function CreateBannerForm() {
   const { CreateBanner } = useContext(BannerContext);
-  const { ListCompany, listCompany } = useContext(CompanyContext);
   const { listPortals, ListPortals } = useContext(PortalContext);
+  const { companyOptions, loadingCompanies } = useActiveCompanyOptions();
 
   useEffect(() => {
-    ListCompany(); // buscar todas as empresas
-    ListPortals(); // MUDANÇA: adicionar busca dos portais
+    ListPortals();
   }, []);
 
   const {
@@ -367,23 +365,28 @@ export function CreateBannerForm() {
           </div>
 
           {/* Empresa */}
-          {listCompany && (
-            <div>
-              <Label className="mb-2 block text-base text-black">Empresa</Label>
-              <CompanySelectCombobox
-                companies={listCompany.data.filter(
-                  (c) => c.status === "active"
-                )}
-                value={watch("company_id")}
-                onChange={(val) => setValue("company_id", val)}
-              />
-              {errors.company_id && (
-                <span className="text-red-500 text-sm">
-                  {errors.company_id.message}
-                </span>
-              )}
-            </div>
-          )}
+          <div className="block">
+            <CustomSelect
+              id="company_id"
+              label="Empresa"
+              placeholder={
+                loadingCompanies
+                  ? "Carregando empresas..."
+                  : "Selecione uma empresa"
+              }
+              options={companyOptions}
+              value={watch("company_id") || ""}
+              onChange={(value) =>
+                setValue("company_id", value as string, {
+                  shouldValidate: true,
+                })
+              }
+              isMulti={false}
+              disable={loadingCompanies}
+              noOptionsMessage="Nenhuma empresa encontrada"
+              error={errors.company_id?.message}
+            />
+          </div>
 
           {/* Portal - */}
           <div>

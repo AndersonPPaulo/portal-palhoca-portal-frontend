@@ -14,13 +14,12 @@ import {
 import { toast } from "sonner";
 import { bannerDimensions, type BannerType } from "../bannerDimensions";
 import CustomInput from "@/components/input/custom-input";
-import { CompanyContext } from "@/providers/company";
-import { CompanySelectCombobox } from "../comboboxSelect";
 import { useRouter } from "next/navigation";
 import ReturnPageButton from "@/components/button/returnPage";
 import formatDateForInput from "@/utils/formatDateForInput";
 import { PortalContext } from "@/providers/portal";
 import CustomSelect from "@/components/select/custom-select";
+import { useActiveCompanyOptions } from "@/hooks/useActiveCompanyOptions";
 
 interface IBannerFormProps {
   bannerData?: Partial<BannerItem>;
@@ -48,8 +47,8 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
   const { back } = useRouter();
 
   const { UpdateBanner } = useContext(BannerContext);
-  const { ListCompany, listCompany } = useContext(CompanyContext);
   const { listPortals, ListPortals } = useContext(PortalContext);
+  const { companyOptions, loadingCompanies } = useActiveCompanyOptions();
 
   const [name, setName] = useState(bannerData?.name ?? "");
   const [linkDirection, setLinkDirection] = useState(
@@ -82,7 +81,6 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
   const [imageLoadError, setImageLoadError] = useState(false);
 
   useEffect(() => {
-    ListCompany();
     ListPortals();
   }, []);
 
@@ -407,6 +405,19 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
     }
   };
 
+  // Garante que a empresa já vinculada ao banner apareça no select,
+  // mesmo que ela não esteja mais entre as empresas ativas.
+  const companySelectOptions: OptionType[] =
+    companyId && !companyOptions.some((option) => option.value === companyId)
+      ? [
+          {
+            value: companyId,
+            label: bannerData?.company?.name ?? "Empresa atual",
+          },
+          ...companyOptions,
+        ]
+      : companyOptions;
+
   const portalOptions: OptionType[] = Array.isArray(listPortals)
     ? listPortals.map((portal) => ({ value: portal.id, label: portal.name }))
     : [];
@@ -545,18 +556,23 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
             </Select>
           </div>
 
-          {listCompany && (
-            <div>
-              <Label className="mb-2 block text-base text-black">Empresa</Label>
-              <CompanySelectCombobox
-                companies={listCompany.data.filter(
-                  (c) => c.status === "active"
-                )}
-                value={companyId}
-                onChange={setCompanyId}
-              />
-            </div>
-          )}
+          <div className="block">
+            <CustomSelect
+              id="company_id"
+              label="Empresa"
+              placeholder={
+                loadingCompanies
+                  ? "Carregando empresas..."
+                  : "Selecione uma empresa"
+              }
+              options={companySelectOptions}
+              value={companyId}
+              onChange={(value) => setCompanyId(value as string)}
+              isMulti={false}
+              disable={loadingCompanies}
+              noOptionsMessage="Nenhuma empresa encontrada"
+            />
+          </div>
 
           {/* Portal Section */}
           <div>
