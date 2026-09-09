@@ -48,7 +48,12 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
 
   const { UpdateBanner } = useContext(BannerContext);
   const { listPortals, ListPortals } = useContext(PortalContext);
-  const { companyOptions, loadingCompanies } = useActiveCompanyOptions();
+  const {
+    companyOptions,
+    loadingCompanies,
+    loadMoreCompanies,
+    searchCompanies,
+  } = useActiveCompanyOptions();
 
   const [name, setName] = useState(bannerData?.name ?? "");
   const [linkDirection, setLinkDirection] = useState(
@@ -67,6 +72,9 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
     bannerData?.status?.toString() ?? "true"
   );
   const [companyId, setCompanyId] = useState(bannerData?.company?.id ?? "");
+  const [selectedCompanyName, setSelectedCompanyName] = useState(
+    bannerData?.company?.name ?? ""
+  );
   const [portalId, setPortalId] = useState(bannerData?.portal?.id ?? "");
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [previewBanner, setPreviewBanner] = useState<string | null>(
@@ -184,6 +192,7 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
       );
       setStatus(bannerData.status?.toString() ?? defaultValues.status);
       setCompanyId(bannerData.company?.id ?? defaultValues.companyId);
+      setSelectedCompanyName(bannerData.company?.name ?? "");
       // Fix this line:
       setPortalId(bannerData.portal?.id ?? defaultValues.portalId);
       setPreviewBanner(bannerData.url ?? defaultValues.previewBanner);
@@ -405,14 +414,14 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
     }
   };
 
-  // Garante que a empresa já vinculada ao banner apareça no select,
-  // mesmo que ela não esteja mais entre as empresas ativas.
+  // Garante que a empresa selecionada continue no select mesmo quando a busca
+  // ou a paginação trocam a lista carregada — ou quando ela não está mais ativa.
   const companySelectOptions: OptionType[] =
     companyId && !companyOptions.some((option) => option.value === companyId)
       ? [
           {
             value: companyId,
-            label: bannerData?.company?.name ?? "Empresa atual",
+            label: selectedCompanyName || "Empresa atual",
           },
           ...companyOptions,
         ]
@@ -560,16 +569,23 @@ export function FormUpdateBanner({ bannerData }: IBannerFormProps) {
             <CustomSelect
               id="company_id"
               label="Empresa"
-              placeholder={
-                loadingCompanies
-                  ? "Carregando empresas..."
-                  : "Selecione uma empresa"
-              }
+              placeholder="Selecione uma empresa"
               options={companySelectOptions}
               value={companyId}
-              onChange={(value) => setCompanyId(value as string)}
+              onChange={(value) => {
+                const nextCompanyId = value as string;
+                setSelectedCompanyName(
+                  companySelectOptions.find(
+                    (option) => option.value === nextCompanyId
+                  )?.label ?? ""
+                );
+                setCompanyId(nextCompanyId);
+              }}
               isMulti={false}
-              disable={loadingCompanies}
+              isLoading={loadingCompanies}
+              onSearch={searchCompanies}
+              onMenuScrollToBottom={loadMoreCompanies}
+              disableLocalFilter
               noOptionsMessage="Nenhuma empresa encontrada"
             />
           </div>

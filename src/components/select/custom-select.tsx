@@ -17,6 +17,17 @@ interface CustomSelectProps {
   error?: string;
   noOptionsMessage?: string;
   disable?: boolean;
+  /** Exibe o indicador de carregamento do select. */
+  isLoading?: boolean;
+  /** Recebe o texto digitado (vazio quando o menu fecha). Use para busca no servidor. */
+  onSearch?: (term: string) => void;
+  /** Chamado quando a rolagem do menu chega ao fim. Use para carregar a próxima página. */
+  onMenuScrollToBottom?: () => void;
+  /**
+   * Desliga o filtro local do react-select. Necessário quando a busca é feita
+   * no servidor, senão opções válidas (acentos, maiúsculas) seriam escondidas.
+   */
+  disableLocalFilter?: boolean;
 }
 
 // Estilo comum para todos os ReactSelects
@@ -93,6 +104,10 @@ const CustomSelect = ({
   error,
   noOptionsMessage = "Nenhuma opção disponível",
   disable = false,
+  isLoading = false,
+  onSearch,
+  onMenuScrollToBottom,
+  disableLocalFilter = false,
 }: CustomSelectProps) => {
   const [isClient, setIsClient] = useState(false);
 
@@ -145,6 +160,21 @@ const CustomSelect = ({
           value={getSelectedOptions()}
           onChange={handleChange}
           options={options}
+          isLoading={isLoading}
+          loadingMessage={() => "Carregando..."}
+          onMenuScrollToBottom={onMenuScrollToBottom}
+          filterOption={disableLocalFilter ? null : undefined}
+          onInputChange={(inputValue, actionMeta) => {
+            if (!onSearch) return;
+            if (actionMeta.action === "input-change") {
+              onSearch(inputValue);
+            } else if (
+              actionMeta.action === "menu-close" ||
+              actionMeta.action === "input-blur"
+            ) {
+              onSearch("");
+            }
+          }}
           styles={selectStyles}
           menuPortalTarget={document.body} // ADICIONADO: renderizar o menu no body
           menuPosition="fixed" // ADICIONADO: posição fixa para evitar problemas de overflow

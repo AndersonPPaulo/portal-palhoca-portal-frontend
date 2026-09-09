@@ -41,7 +41,15 @@ export type OptionType = { value: string; label: string };
 export function CreateBannerForm() {
   const { CreateBanner } = useContext(BannerContext);
   const { listPortals, ListPortals } = useContext(PortalContext);
-  const { companyOptions, loadingCompanies } = useActiveCompanyOptions();
+  const {
+    companyOptions,
+    loadingCompanies,
+    loadMoreCompanies,
+    searchCompanies,
+  } = useActiveCompanyOptions();
+  const [selectedCompany, setSelectedCompany] = useState<OptionType | null>(
+    null
+  );
 
   useEffect(() => {
     ListPortals();
@@ -255,6 +263,14 @@ export function CreateBannerForm() {
     };
   };
 
+  // A empresa escolhida precisa continuar no select mesmo quando a busca
+  // ou a paginação trocam a lista de opções carregadas.
+  const companySelectOptions: OptionType[] =
+    selectedCompany &&
+    !companyOptions.some((option) => option.value === selectedCompany.value)
+      ? [selectedCompany, ...companyOptions]
+      : companyOptions;
+
   const portalOptions: OptionType[] = Array.isArray(listPortals)
     ? listPortals.map((portal) => ({ value: portal.id, label: portal.name }))
     : [];
@@ -369,20 +385,23 @@ export function CreateBannerForm() {
             <CustomSelect
               id="company_id"
               label="Empresa"
-              placeholder={
-                loadingCompanies
-                  ? "Carregando empresas..."
-                  : "Selecione uma empresa"
-              }
-              options={companyOptions}
+              placeholder="Selecione uma empresa"
+              options={companySelectOptions}
               value={watch("company_id") || ""}
-              onChange={(value) =>
-                setValue("company_id", value as string, {
-                  shouldValidate: true,
-                })
-              }
+              onChange={(value) => {
+                const companyId = value as string;
+                setSelectedCompany(
+                  companySelectOptions.find(
+                    (option) => option.value === companyId
+                  ) ?? null
+                );
+                setValue("company_id", companyId, { shouldValidate: true });
+              }}
               isMulti={false}
-              disable={loadingCompanies}
+              isLoading={loadingCompanies}
+              onSearch={searchCompanies}
+              onMenuScrollToBottom={loadMoreCompanies}
+              disableLocalFilter
               noOptionsMessage="Nenhuma empresa encontrada"
               error={errors.company_id?.message}
             />
