@@ -8,8 +8,11 @@ import type { OptionType } from "@/components/select/custom-select";
 const COMPANIES_PER_PAGE = 100;
 
 /**
- * Busca TODAS as empresas ativas percorrendo as páginas da API
- * e devolve já no formato usado pelos selects do painel.
+ * Busca TODAS as empresas percorrendo as páginas da API e devolve
+ * apenas as ativas, já no formato usado pelos selects do painel.
+ *
+ * O filtro de status é feito aqui no cliente porque a API não tem
+ * filtro de status funcional em GET /company.
  */
 export function useActiveCompanyOptions() {
   const { ListCompany } = useContext(CompanyContext);
@@ -22,17 +25,13 @@ export function useActiveCompanyOptions() {
     const loadAllCompanies = async () => {
       setLoadingCompanies(true);
       try {
-        const firstPage = await ListCompany(1, COMPANIES_PER_PAGE, {
-          isActive: true,
-        });
+        const firstPage = await ListCompany(1, COMPANIES_PER_PAGE);
 
         let companies = firstPage?.data ?? [];
         const totalPages = Number(firstPage?.totalPages) || 1;
 
         for (let page = 2; page <= totalPages; page++) {
-          const nextPage = await ListCompany(page, COMPANIES_PER_PAGE, {
-            isActive: true,
-          });
+          const nextPage = await ListCompany(page, COMPANIES_PER_PAGE);
           companies = [...companies, ...(nextPage?.data ?? [])];
         }
 
