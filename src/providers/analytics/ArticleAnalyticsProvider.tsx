@@ -24,6 +24,7 @@ export interface ArticleEventRaw {
 export interface ArticleEvent {
   event_type: EventType;
   virtual_count: number;
+  total_count: number; // COUNT real do banco
 }
 
 export interface TotalArticleEvent {
@@ -246,11 +247,13 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
             // Sem logs ou erro ao buscá-los: mantém apenas o total_count agregado
           }
 
-          // Indexar os agregados (COUNT real) por tipo
+          // Indexar os agregados por tipo (valor virtual e COUNT real)
           const aggregatedByType: Record<string, number> = {};
+          const totalCountByType: Record<string, number> = {};
           aggregated.forEach((item: any) => {
             aggregatedByType[item.event_type] =
               item.virtual_count ?? item.total_count ?? 0;
+            totalCountByType[item.event_type] = item.total_count ?? 0;
           });
 
           // União dos tipos: cobre overrides em tipos sem eventos reais
@@ -267,6 +270,7 @@ export const ArticleAnalyticsProvider = ({ children }: IChildrenReact) => {
             event_type: type as EventType,
             virtual_count:
               virtualCountByType[type] ?? aggregatedByType[type] ?? 0,
+            total_count: totalCountByType[type] ?? 0,
           }));
 
           setArticleEvents((prev) => ({

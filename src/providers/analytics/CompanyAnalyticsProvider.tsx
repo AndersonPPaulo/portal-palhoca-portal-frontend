@@ -27,6 +27,7 @@ export interface CompanyEventRaw {
 export interface CompanyEvent {
   event_type: EventType;
   virtual_count: number;
+  total_count: number; // COUNT real do banco
 }
 
 export interface TotalCompanyEvent {
@@ -214,6 +215,7 @@ export const CompanyAnalyticsProvider = ({ children }: IChildrenReact) => {
             (item: any) => ({
               event_type: item.event_type as EventType,
               virtual_count: item.virtual_count ?? item.total_count ?? 0,
+              total_count: item.total_count ?? 0,
             }),
           );
 

@@ -25,6 +25,7 @@ export interface BannerEventRaw {
 export interface BannerEvent {
   event_type: EventType;
   virtual_count: number;
+  total_count: number; // COUNT real do banco
 }
 
 export interface TotalBannerEvent {
@@ -77,6 +78,17 @@ export interface IVirtualEventResponse {
   response: { bannerEvents: IEvent[] };
 }
 
+export interface BannerDailyEvents {
+  day: string; // "YYYY-MM-DD", no horário de Brasília
+  views: number;
+  clicks: number;
+}
+
+interface IBannerDailyResponse {
+  timezone: string;
+  data: BannerDailyEvents[];
+}
+
 // Interface principal do contexto
 interface IBannerAnalyticsData {
   GetEventsByBanner(
@@ -85,6 +97,11 @@ interface IBannerAnalyticsData {
     endDate?: string
   ): Promise<void>;
   GetTotalEvents(): Promise<void>;
+  GetBannerDailyEvents(
+    bannerId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<BannerDailyEvents[]>;
   UpdateVirtualEvent(data: IUpdateVirtualEventProps): Promise<void>;
   Get100EventsBanner(limit?: number): Promise<IVirtualEventResponse>;
 
@@ -203,6 +220,7 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
             (item: any) => ({
               event_type: item.event_type as EventType,
               virtual_count: item.virtual_count ?? item.total_count ?? 0,
+              total_count: item.total_count ?? 0,
             })
           );
 
@@ -246,6 +264,31 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
         });
 
       return response;
+    },
+    []
+  );
+
+  // Totais reais de visualizações/cliques por dia (relatório em PDF)
+  const GetBannerDailyEvents = useCallback(
+    async (
+      bannerId: string,
+      startDate?: string,
+      endDate?: string
+    ): Promise<BannerDailyEvents[]> => {
+      const { "user:token": token } = parseCookies();
+
+      const res = await api.get<IBannerDailyResponse>(
+        `/banner/${bannerId}/events/daily`,
+        {
+          headers: { Authorization: `bearer ${token}` },
+          params: {
+            startDate: startDate ? new Date(startDate).toISOString() : undefined,
+            endDate: endDate ? new Date(endDate).toISOString() : undefined,
+          },
+        }
+      );
+
+      return res.data.data || [];
     },
     []
   );
@@ -326,6 +369,7 @@ export const BannerAnalyticsProvider = ({ children }: IChildrenReact) => {
       value={{
         GetEventsByBanner,
         GetTotalEvents,
+        GetBannerDailyEvents,
         UpdateVirtualEvent,
         bannerEvents,
         detailedBannerEvents,

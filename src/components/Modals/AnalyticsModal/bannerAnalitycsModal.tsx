@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useContext, useEffect } from "react";
-import ReusableAnalyticsModal from "./index";
+import ReusableAnalyticsModal, { type EntityDetail } from "./index";
 import { BannerAnalyticsContext } from "@/providers/analytics/BannerAnalyticsProvider";
 import { bannerEventConfigs, bannerMetricConfigs } from "../configs";
 import { EventType } from "@/providers/analytics/BannerAnalyticsProvider";
@@ -11,6 +11,8 @@ interface BannerAnalyticsModalProps {
   onClose: () => void;
   bannerId: string;
   bannerTitle: string;
+  bannerImageUrl?: string;
+  bannerDetails?: EntityDetail[];
 }
 
 export default function BannerAnalyticsModal({
@@ -18,6 +20,8 @@ export default function BannerAnalyticsModal({
   onClose,
   bannerId,
   bannerTitle,
+  bannerImageUrl,
+  bannerDetails,
 }: BannerAnalyticsModalProps) {
   // Usando seu provider de banner
   const {
@@ -27,6 +31,7 @@ export default function BannerAnalyticsModal({
     loading,
     error,
     GetEventsByBanner,
+    GetBannerDailyEvents,
     UpdateVirtualEvent,
     ClearError,
   } = useContext(BannerAnalyticsContext);
@@ -70,6 +75,7 @@ export default function BannerAnalyticsModal({
         console.error("Erro ao atualizar evento do banner:", error);
       }
     },
+    loadDailyTotals: GetBannerDailyEvents,
     clearError: ClearError || (() => {}),
   };
 
@@ -80,6 +86,8 @@ export default function BannerAnalyticsModal({
       entityId={bannerId}
       entityTitle={bannerTitle}
       entityType="banner"
+      entityImageUrl={bannerImageUrl}
+      entityDetails={bannerDetails}
       analyticsData={analyticsData}
       analyticsActions={analyticsActions}
       eventTypeConfigs={bannerEventConfigs}

@@ -108,6 +108,24 @@ const AnalyticsCell = ({ banner }: { banner: BannerItem }) => {
         onClose={() => setIsAnalyticsModalOpen(false)}
         bannerId={banner.id}
         bannerTitle={banner.name}
+        bannerImageUrl={banner.url}
+        bannerDetails={[
+          {
+            label: "Posição",
+            value:
+              banner.banner_style &&
+              banner.banner_style.charAt(0).toUpperCase() +
+                banner.banner_style.slice(1),
+          },
+          { label: "Portal", value: banner.portal?.name },
+          {
+            label: "Veiculação",
+            value: `${formatDate(banner.date_active, "dd/MM/yyyy")} a ${formatDate(
+              banner.date_expiration,
+              "dd/MM/yyyy",
+            )}`,
+          },
+        ]}
       />
     </>
   );

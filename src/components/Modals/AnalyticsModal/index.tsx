@@ -19,16 +19,25 @@ import {
   Calendar,
   Clock,
   Infinity,
+  Database,
 } from "lucide-react";
-import { useEffect, useState, useCallback, useContext, useRef } from "react";
+import {
+  useEffect,
+  useState,
+  useCallback,
+  useContext,
+  useRef,
+  useMemo,
+} from "react";
 import type { LucideIcon } from "lucide-react";
 import { format } from "date-fns";
-import { pdf } from "@react-pdf/renderer";
 import { Download } from "lucide-react";
+import { toast } from "sonner";
 
 export interface GenericEvent {
   event_type: string;
   virtual_count: number;
+  total_count?: number; // COUNT real do banco
   timestamp?: string;
   extra_data?: Record<string, unknown>;
 }
@@ -65,8 +74,62 @@ export interface AnalyticsActions {
     eventType: string,
     newValue: number,
   ) => Promise<void>;
+  // Totais de visualizações por dia para a tabela do PDF
+  loadDailyTotals?: (
+    entityId: string,
+    startDate?: string,
+    endDate?: string,
+  ) => Promise<Array<{ day: string; views: number }>>;
   clearError: () => void;
 }
+
+interface ExportProgress {
+  label: string;
+  loaded?: number;
+  total?: number;
+  unit?: string;
+  secondsLeft?: number;
+}
+
+const EXPORT_BACKGROUND_HINT =
+  "Pode fechar a janela de analytics: o download começa sozinho ao terminar. Mantenha esta aba aberta.";
+
+const formatExportProgress = ({
+  label,
+  loaded,
+  total,
+  unit,
+  secondsLeft,
+}: ExportProgress) => {
+  const count = total
+    ? `: ${(loaded ?? 0).toLocaleString("pt-BR")} de ${total.toLocaleString("pt-BR")}${unit ? ` ${unit}` : ""}`
+    : "...";
+  const eta =
+    secondsLeft === undefined
+      ? ""
+      : secondsLeft < 60
+        ? " · menos de 1 min restante"
+        : ` · cerca de ${Math.ceil(secondsLeft / 60)} min restantes`;
+  return `${label}${count}${eta}`;
+};
+
+// Callback de progresso que também estima o tempo restante pelo ritmo atual
+const trackProgress = (
+  label: string,
+  unit: string,
+  report: (progress: ExportProgress) => void,
+) => {
+  const startedAt = Date.now();
+  let baseline: number | null = null;
+  return (loaded: number, total: number) => {
+    baseline ??= loaded;
+    const elapsed = (Date.now() - startedAt) / 1000;
+    const rate = (loaded - baseline) / elapsed;
+    const secondsLeft =
+      elapsed > 2 && rate > 0 ? (total - loaded) / rate : undefined;
+    report({ label, unit, loaded, total, secondsLeft });
+  };
+};
 
 export interface MetricConfig {
   key: string;
@@ -84,6 +147,12 @@ export interface MetricConfig {
   ) => number | string;
 }
 
+// Informação extra da entidade exibida no relatório (ex.: posição do banner)
+export interface EntityDetail {
+  label: string;
+  value?: string;
+}
+
 // PROPS DO COMPONENTE
 
 interface ReusableAnalyticsModalProps {
@@ -96,6 +165,8 @@ interface ReusableAnalyticsModalProps {
   entityId: string;
   entityTitle: string;
   entityType: string; // "article", "banner", "company", etc.
+  entityImageUrl?: string; // imagem exibida no PDF
+  entityDetails?: EntityDetail[]; // dados extras exibidos no PDF
 
   // Dados e ações (provider-agnostic)
   analyticsData: AnalyticsData;
@@ -123,6 +194,8 @@ export default function ReusableAnalyticsModal({
   entityId,
   entityTitle,
   entityType,
+  entityImageUrl,
+  entityDetails,
   analyticsData,
   analyticsActions,
   eventTypeConfigs,
@@ -149,6 +222,10 @@ export default function ReusableAnalyticsModal({
   );
 
   const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState<ExportProgress | null>(
+    null,
+  );
+  const [showRealValues, setShowRealValues] = useState(false);
   const isMobile = useIsMobile();
 
   // Ref para controlar se acabamos de salvar (evita reprocessamento)
@@ -157,7 +234,10 @@ export default function ReusableAnalyticsModal({
   const lastProcessedEventsRef = useRef<string>("");
 
   const processEventData = useCallback(
-    (events: GenericEvent[]) => {
+    (
+      events: GenericEvent[],
+      source: "virtual_count" | "total_count" = "virtual_count",
+    ) => {
       const processed: Record<string, number> = {};
 
       // Inicializar todos os tipos com 0
@@ -168,7 +248,7 @@ export default function ReusableAnalyticsModal({
       // Aplicar valores da API
       events.forEach((event) => {
         if (processed.hasOwnProperty(event.event_type)) {
-          processed[event.event_type] = event.virtual_count || 0;
+          processed[event.event_type] = event[source] || 0;
         }
       });
 
@@ -176,6 +256,20 @@ export default function ReusableAnalyticsModal({
     },
     [eventTypeConfigs],
   );
+
+  // Valores reais (COUNT do banco), sem os overrides do virtual_count
+  const realEvents = useMemo(
+    () => processEventData(analyticsData.events || [], "total_count"),
+    [analyticsData.events, processEventData],
+  );
+
+  // O que vai para a tela e para o PDF: valores reais ou virtuais (editáveis)
+  const displayedEvents = showRealValues ? realEvents : editableEvents;
+
+  // Sempre reabrir o modal mostrando os valores virtuais
+  useEffect(() => {
+    if (!isOpen) setShowRealValues(false);
+  }, [isOpen]);
 
   // Carregar dados quando modal abrir
   useEffect(() => {
@@ -346,26 +440,67 @@ export default function ReusableAnalyticsModal({
 
   const handleExportPDF = async () => {
     setIsExporting(true);
+
+    // Progresso no modal e num toast, que continua visível se o modal for
+    // fechado: a exportação segue em segundo plano e baixa sozinha no fim
+    let toastId: string | number | undefined;
+    const report = (progress: ExportProgress) => {
+      setExportProgress(progress);
+      toastId = toast.loading(formatExportProgress(progress), {
+        id: toastId,
+        description: EXPORT_BACKGROUND_HINT,
+      });
+    };
+
     try {
       // Importação dinâmica do componente PDF
-      const { default: AnalyticsReportPDF } =
-        await import("@/components/pdf/AnalyticsReportPDF");
-
-      const doc = (
-        <AnalyticsReportPDF
-          entityId={entityId}
-          entityTitle={entityTitle}
-          entityType={entityType}
-          events={editableEvents}
-          eventTypeConfigs={eventTypeConfigs}
-          metricConfigs={metricConfigs}
-          startDate={startDate}
-          endDate={endDate}
-          detailedEvents={analyticsData.rawEvents || []}
-        />
+      const { generateAnalyticsReport, loadReportImage } = await import(
+        "@/components/pdf/AnalyticsReportPDF"
       );
 
-      const blob = await pdf(doc).toBlob();
+      // Se a imagem falhar, o PDF é gerado sem ela
+      let entityImage: Awaited<ReturnType<typeof loadReportImage>> = null;
+      if (entityImageUrl) {
+        report({ label: "Carregando imagem" });
+        entityImage = await loadReportImage(entityImageUrl);
+      }
+
+      // Se a busca falhar, o PDF sai sem a tabela por dia (e o toast avisa)
+      let dailyViews: Array<{ day: string; views: number }> | undefined;
+      let dailyFailed = false;
+      if (analyticsActions.loadDailyTotals) {
+        report({ label: "Buscando visualizações por dia" });
+        try {
+          dailyViews = await analyticsActions.loadDailyTotals(
+            entityId,
+            startDate || undefined,
+            endDate || undefined,
+          );
+        } catch (error) {
+          console.error("Erro ao buscar visualizações por dia:", error);
+          dailyFailed = true;
+        }
+      }
+
+      report({ label: "Gerando PDF" });
+      const blob = await generateAnalyticsReport(
+        {
+          entityId,
+          entityTitle,
+          entityType,
+          entityImage,
+          entityDetails,
+          events: displayedEvents,
+          eventTypeConfigs,
+          metricConfigs,
+          startDate,
+          endDate,
+          detailedEvents: analyticsData.rawEvents || [],
+          dailyViews,
+        },
+        trackProgress("Gerando PDF", "páginas", report),
+      );
+
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -374,18 +509,43 @@ export default function ReusableAnalyticsModal({
         .toLowerCase()}-${format(new Date(), "yyyy-MM-dd")}.pdf`;
       link.click();
       URL.revokeObjectURL(url);
+
+      if (dailyFailed) {
+        toast.warning("Relatório baixado sem a tabela de visualizações por dia", {
+          id: toastId,
+          description:
+            "Não foi possível carregar os totais por dia. Tente novamente mais tarde.",
+        });
+      } else {
+        toast.success("Relatório PDF baixado", {
+          id: toastId,
+          description: undefined,
+        });
+      }
     } catch (error) {
       console.error("Erro ao exportar PDF:", error);
-      alert("Erro ao gerar PDF. Tente novamente.");
+      toast.error("Erro ao gerar o PDF. Tente novamente.", {
+        id: toastId,
+        description: undefined,
+      });
     } finally {
       setIsExporting(false);
+      setExportProgress(null);
     }
   };
 
+  const exportPercent =
+    exportProgress?.total && exportProgress.loaded !== undefined
+      ? Math.min(
+          100,
+          Math.round((exportProgress.loaded / exportProgress.total) * 100),
+        )
+      : null;
+
   const calculateDefaultMetrics = () => {
-    const views = editableEvents.view || 0;
-    const clicks = editableEvents.click || 0;
-    const viewEnds = editableEvents.view_end || 0;
+    const views = displayedEvents.view || 0;
+    const clicks = displayedEvents.click || 0;
+    const viewEnds = displayedEvents.view_end || 0;
 
     return {
       totalViews: views,
@@ -399,7 +559,7 @@ export default function ReusableAnalyticsModal({
 
   const defaultMetrics = calculateDefaultMetrics();
 
-  const hasData = Object.values(editableEvents).some((value) => value > 0);
+  const hasData = Object.values(displayedEvents).some((value) => value > 0);
   const hasChanges =
     JSON.stringify(editableEvents) !== JSON.stringify(originalEvents);
 
@@ -441,10 +601,15 @@ export default function ReusableAnalyticsModal({
                   {hasData && (
                     <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
                       {
-                        Object.values(editableEvents).filter((v) => v > 0)
+                        Object.values(displayedEvents).filter((v) => v > 0)
                           .length
                       }{" "}
                       eventos ativos
+                    </span>
+                  )}
+                  {showRealValues && (
+                    <span className="text-xs text-amber-700 bg-amber-100 px-2 py-1 rounded">
+                      Valores reais
                     </span>
                   )}
                   {isEditing && hasChanges && (
@@ -490,6 +655,26 @@ export default function ReusableAnalyticsModal({
                       />
                     </Button>
                   )}
+
+                  {profile?.role?.name?.toLowerCase() === "administrador" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowRealValues((prev) => !prev)}
+                      disabled={analyticsData.loading}
+                      className={`${
+                        showRealValues
+                          ? "border-amber-400 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                          : "text-gray-700 hover:bg-gray-100"
+                      } ${isMobile ? "mb-6" : ""}`}
+                    >
+                      <Database className={`h-4 w-4 ${isMobile ? "" : "mr-2"}`} />
+                      {!isMobile &&
+                        (showRealValues
+                          ? "Ocultar valores reais"
+                          : "Ver valores reais")}
+                    </Button>
+                  )}
                 </>
               )}
 
@@ -529,7 +714,9 @@ export default function ReusableAnalyticsModal({
                           <Button
                             size="sm"
                             onClick={() => setIsEditing(true)}
-                            disabled={analyticsData.loading || !hasData}
+                            disabled={
+                              analyticsData.loading || !hasData || showRealValues
+                            }
                             className="bg-blue-600 hover:bg-blue-700 text-white"
                           >
                             Editar
@@ -723,6 +910,36 @@ export default function ReusableAnalyticsModal({
           </div>
         </div>
 
+        {/* Progresso da exportação do PDF */}
+        {exportProgress && (
+          <div className="bg-blue-50 border-b border-blue-100 px-6 py-3 flex-shrink-0">
+            <div className="flex items-center justify-between gap-4 text-sm mb-2">
+              <span className="flex items-center gap-2 font-medium text-blue-900">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                {formatExportProgress(exportProgress)}
+              </span>
+              {exportPercent !== null && (
+                <span className="text-blue-700 tabular-nums">
+                  {exportPercent}%
+                </span>
+              )}
+            </div>
+            <div className="h-2 rounded-full bg-blue-100 overflow-hidden">
+              {exportPercent !== null ? (
+                <div
+                  className="h-full rounded-full bg-blue-600 transition-[width] duration-300"
+                  style={{ width: `${exportPercent}%` }}
+                />
+              ) : (
+                <div className="h-full w-1/3 rounded-full bg-blue-600 animate-progress-indeterminate" />
+              )}
+            </div>
+            <p className="text-xs text-blue-700 mt-2">
+              {EXPORT_BACKGROUND_HINT}
+            </p>
+          </div>
+        )}
+
         {/* Content com Scroll */}
         <div className="flex-1 overflow-y-auto">
           {analyticsData.loading ? (
@@ -790,7 +1007,7 @@ export default function ReusableAnalyticsModal({
                   {metricConfigs.map((metric) => {
                     const Icon = metric.icon;
                     const value = metric.calculation(
-                      editableEvents,
+                      displayedEvents,
                       analyticsData.rawEvents,
                     );
 
@@ -906,7 +1123,7 @@ export default function ReusableAnalyticsModal({
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {eventTypeConfigs.map((config) => {
                     const Icon = config.icon;
-                    const value = editableEvents[config.type] || 0;
+                    const value = displayedEvents[config.type] || 0;
                     const originalValue = originalEvents[config.type] || 0;
                     const hasChanged = isEditing && value !== originalValue;
 
@@ -950,8 +1167,8 @@ export default function ReusableAnalyticsModal({
                               {(() => {
                                 // Para ver pelo portal é obrigatório ter um click
                                 // Views sem clicks = vieram de fonte externa (ex: Google)
-                                const totalViews = editableEvents.view || 0;
-                                const totalClicks = editableEvents.click || 0;
+                                const totalViews = displayedEvents.view || 0;
+                                const totalClicks = displayedEvents.click || 0;
 
                                 if (totalViews === 0) {
                                   return (
@@ -1056,11 +1273,11 @@ export default function ReusableAnalyticsModal({
                               {/* Mostrar porcentagem em relação às impressões para view em company */}
                               {config.type === "view" &&
                                 entityType === "company" &&
-                                editableEvents.print > 0 &&
+                                displayedEvents.print > 0 &&
                                 value > 0 && (
                                   <div className="text-xs text-gray-500">
                                     {(
-                                      (value / editableEvents.print) *
+                                      (value / displayedEvents.print) *
                                       100
                                     ).toFixed(1)}
                                     % do total das impressões
