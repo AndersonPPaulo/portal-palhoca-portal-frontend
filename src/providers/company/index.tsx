@@ -80,6 +80,11 @@ export interface ICompanyProps extends UpdateCompanyProps {
     created_at: string;
     updated_at: string;
   }[];
+  // Portal em que o lead se cadastrou (formulário dos sites)
+  origin_portal?: {
+    id: string;
+    name: string;
+  } | null;
   company_category?: {
     id: string;
     name: string;

@@ -156,6 +156,15 @@ export const columns: ColumnDef<ILeadProps>[] = [
     ),
   },
   {
+    accessorKey: "portal",
+    header: () => <div className="text-start">Portal</div>,
+    cell: ({ row }) => (
+      <div className="w-[180px] text-start truncate">
+        {row.original.portal || "-"}
+      </div>
+    ),
+  },
+  {
     accessorKey: "status",
     header: () => <div className="text-center w-[150px]">Status</div>,
     cell: ({ row }) => (

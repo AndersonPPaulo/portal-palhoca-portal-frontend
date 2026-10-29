@@ -21,6 +21,7 @@ export interface ILeadProps {
   phone: string;
   status: "active" | "inactive" | "blocked" | "new_lead" | "in_process";
   companyMessage?: string;
+  portal?: string;
   created_at?: Date;
   updated_at?: Date;
 }
@@ -123,6 +124,7 @@ export default function TableLeads({ filter }: TableLeadsProps) {
           responsibleName: item.responsibleName,
           phone: item.phone || "",
           companyMessage: item.companyMessage || "",
+          portal: item.origin_portal?.name || "",
           status: item.status,
           created_at: item.created_at,
           updated_at: item.update_at,
